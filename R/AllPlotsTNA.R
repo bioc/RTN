@@ -338,7 +338,7 @@ tna.plot.gsea2<-function(object, labPheno="tna", file=labPheno, filepath=".", re
 ##Plot 2-tailed enrichment analysis from TNA objects.
 plot.gsea2<-function(resgsea, rgcs, phenotype, nPermutations, exponent,
                      labPheno="tna", file=labPheno, filepath=".", regulon.order="Regulon.Size", 
-                     ntop=NULL, tfs=NULL, ylimPanels=c(-1.0,3.0,-0.5,0.5), heightPanels=c(1.5,0.7,5.0), 
+                     ntop=NULL, tfs=NULL, ylimPanels=c(-3.0,3.0,-0.5,0.5), heightPanels=c(1.5,0.7,5.0), 
                      width=4, height=3.5, ylabPanels=c("Phenotype","Regulon","Enrichment score"), 
                      xlab="Position in the ranked list of genes", alpha=1.0, 
                      sparsity=10, autoformat=TRUE, plotpdf=TRUE, ...) {
@@ -491,12 +491,13 @@ gsplot2 <- function(runningScoreUp, enrichmentScoreUp, runningScoreDown, enrichm
   if(heightPanels[1]>0){
     xlim<-c(0,length(geneList))
     nn<-ifelse(min(geneList)<0,4,3)
-    if(min(geneList)<min(ylimPanels) || max(geneList)>max(ylimPanels) ){
-      pp<-pretty(c(range(geneList),ylimPanels[1:2]),n=nn)
-      ylim<-c(min(pp),max(pp))
-    } else {
-      ylim<-ylimPanels[1:2]
-    }
+    # if(min(geneList)<min(ylimPanels) || max(geneList)>max(ylimPanels) ){
+    #   pp<-pretty(c(range(geneList),ylimPanels[1:2]),n=nn)
+    #   ylim<-c(min(pp),max(pp))
+    # } else {
+    #   ylim<-ylimPanels[1:2]
+    # }
+    ylim<-ylimPanels[1:2]
     par(mar=c(0.1, 5.0, 1.5, 1.5),mgp=c(2.2,0.6,0),tcl=-0.2,family="sans")
     plot(x=c(1,max(rsc.vec[,1])),y=c(min(geneList),max(geneList)), type="n", 
          axes= FALSE,xlab="", ylab=ylabPanels[1], cex.lab=cexlev[1], ylim=ylim,xlim=xlim, ...=...)

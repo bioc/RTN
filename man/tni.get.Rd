@@ -19,7 +19,7 @@ idkey=NULL)
 an object of class 'TNI' \code{\link[RTN:TNI-class]{TNI-class}}.
 }
 \item{what}{
-a single character value specifying which information should be retrieved from the slots. Options: 'gexp', 'tfs', 'para', 'refnet', 'tnet','refregulons','regulons','cdt', 'summary', 'annotation' and 'status'. Regulons can also be retrieved mapped to the assiged mode of action ('regulons.and.mode' or 'refregulons.and.mode').
+a single character value specifying which information should be retrieved from the slots. Options: 'gexp', 'regulatoryElements', 'para', 'refnet', 'tnet','refregulons','regulons','cdt', 'summary', 'annotation' and 'status'. Regulons can also be retrieved mapped to the assiged mode of action ('regulons.and.mode' or 'refregulons.and.mode').
 }
 \item{order}{
 a single logical value specifying whether or not the output data should be ordered by significance. 
@@ -48,12 +48,13 @@ Mauro Castro
 
 data(dt4rtn)
 
-tfs4test<-c("PTTG1","E2F2","FOXM1","E2F3","RUNX2")
-rtni <- new("TNI", gexp=dt4rtn$gexp, transcriptionFactors=dt4rtn$tfs[tfs4test])
+# select 5 regulatoryElements for a quick demonstration!
+tfs4test <- dt4rtn$tfs[c("PTTG1","E2F2","FOXM1","E2F3","RUNX2")]
 
 \dontrun{
 
-rtni<-tni.preprocess(rtni,gexpIDs=dt4rtn$gexpIDs)
+rtni <- tni.constructor(expData=dt4rtn$gexp, regulatoryElements=tfs4test, 
+        rowAnnotation=dt4rtn$gexpIDs)
 rtni<-tni.permutation(rtni)
 rtni<-tni.bootstrap(rtni)
 rtni<-tni.dpi.filter(rtni)

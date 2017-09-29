@@ -12,7 +12,9 @@
 ##and computes a partial mutal information matrix, i.e., between each TF 
 ##and all potential targets. Sig. mi values are inferred by permutation 
 ##analysis.
-tni.pmin<-function(x,tfs,estimator="pearson",setdg=0,simplified=FALSE,getadj=FALSE){
+tni.pmin<-function(x,tfs,estimator="pearson",setdg=0,
+                   simplified=FALSE,getadj=FALSE)
+  {
   x=t(x)
   pmim=cor(x[,tfs],x, method=estimator,use="complete.obs")^2
   if(length(tfs)>1){
@@ -91,16 +93,16 @@ tni.dpi<-function(pmim,eps=0){
 ## permutation analysis with separated null distribution
 tni.perm.separate<-function(object,verbose=TRUE){
   ##compute partial mi matrix
-  pmim<-tni.pmin(object@gexp,object@transcriptionFactors,object@para$perm$estimator)
+  pmim<-tni.pmin(object@gexp,object@regulatoryElements,object@para$perm$estimator)
   #compute null distributions
   ##check if package snow has been loaded and 
   ##a cluster object has been created
-  if(isParallel() && length(object@transcriptionFactors)>1){
+  if(isParallel() && length(object@regulatoryElements)>1){
     cl<-getOption("cluster")
     snow::clusterExport(cl, list(".perm.pmin.separate"),envir=environment())
     if(verbose)cat("-Performing permutation analysis (parallel version - ProgressBar disabled)...\n")
-    if(verbose)cat("--For", length(object@transcriptionFactors), "regulons...\n")
-    mipval<-parSapply(cl, object@transcriptionFactors, function(tf) {
+    if(verbose)cat("--For", length(object@regulatoryElements), "regulons...\n")
+    mipval<-parSapply(cl, object@regulatoryElements, function(tf) {
       pi<-which(tf==rownames(object@gexp))
       midist <- .perm.pmin.separate(object@gexp, pi, object@para$perm$estimator, object@para$perm$nPermutations)
       midist<-sort(midist)
@@ -116,10 +118,10 @@ tni.perm.separate<-function(object,verbose=TRUE){
     })
   } else {
     if(verbose)cat("-Performing permutation analysis...\n")
-    if(verbose)cat("--For", length(object@transcriptionFactors), "regulons...\n")
+    if(verbose)cat("--For", length(object@regulatoryElements), "regulons...\n")
     if(verbose) pb <- txtProgressBar(style=3)
-    mipval<-sapply(1:length(object@transcriptionFactors), function(i){
-      tf<-object@transcriptionFactors[i]
+    mipval<-sapply(1:length(object@regulatoryElements), function(i){
+      tf<-object@regulatoryElements[i]
       pi<-which(tf==rownames(object@gexp))
       midist <- .perm.pmin.separate(object@gexp, pi, object@para$perm$estimator, object@para$perm$nPermutations)
       midist<-sort(midist)
@@ -131,7 +133,7 @@ tni.perm.separate<-function(object,verbose=TRUE){
       if(!object@para$perm$globalAdjustment){
         midist <- p.adjust(midist,method=object@para$perm$pAdjustMethod)
       }
-      if(verbose) setTxtProgressBar(pb, i/length(object@transcriptionFactors))      
+      if(verbose) setTxtProgressBar(pb, i/length(object@regulatoryElements))      
       midist   
     })
     if(verbose)close(pb)
@@ -151,18 +153,18 @@ tni.perm.separate<-function(object,verbose=TRUE){
 ##permutation with pooled null distribution
 tni.perm.pooled<-function(object, parChunks=10, verbose=TRUE){
   ##compute partial mi matrix and get unique values
-  uniqueVec<-tni.pmin(object@gexp,object@transcriptionFactors,object@para$perm$estimator)
+  uniqueVec<-tni.pmin(object@gexp,object@regulatoryElements,object@para$perm$estimator)
   uniqueVec<-sort(unique(as.numeric(uniqueVec)))
   ##initialize permutation count
   ctsum<-numeric(length(uniqueVec))
   ##build the null distribution via permutation  
   ##check if package snow has been loaded and 
   ##a cluster object has been created
-  if(isParallel() && length(object@transcriptionFactors)>1) {
+  if(isParallel() && length(object@regulatoryElements)>1) {
     cl<-getOption("cluster")
     snow::clusterExport(cl, list(".perm.pmin.pooled"),envir=environment())
     if(verbose)cat("-Performing permutation analysis (parallel version)...\n")
-    if(verbose)cat("--For", length(object@transcriptionFactors), "regulons...\n")
+    if(verbose)cat("--For", length(object@regulatoryElements), "regulons...\n")
     if(parChunks>(object@para$perm$nPermutations/2)){
       parChunks<-as.integer(object@para$perm$nPermutations/2)
     }
@@ -172,7 +174,7 @@ tni.perm.pooled<-function(object, parChunks=10, verbose=TRUE){
     if(verbose)pb<-txtProgressBar(style=3)
     for(i in 1:parChunks){
       permdist<-parLapply(cl,1:nperChunks[i],function(j){
-        permt <- .perm.pmin.pooled(object@gexp,length(object@transcriptionFactors),object@para$perm$estimator)
+        permt <- .perm.pmin.pooled(object@gexp,length(object@regulatoryElements),object@para$perm$estimator)
         permt<-sort(permt)
         length(permt)-findInterval(uniqueVec,permt)
       })
@@ -185,10 +187,10 @@ tni.perm.pooled<-function(object, parChunks=10, verbose=TRUE){
     }
   } else {
     if(verbose)cat("-Performing permutation analysis...\n")
-    if(verbose)cat("--For", length(object@transcriptionFactors), "regulons...\n")
+    if(verbose)cat("--For", length(object@regulatoryElements), "regulons...\n")
     if(verbose)pb<-txtProgressBar(style=3)
     sapply(1:object@para$perm$nPermutations, function(i){
-      permt <- .perm.pmin.pooled(object@gexp,length(object@transcriptionFactors),object@para$perm$estimator)
+      permt <- .perm.pmin.pooled(object@gexp,length(object@regulatoryElements),object@para$perm$estimator)
       permt<-sort(permt)
       permt<-length(permt)-findInterval(uniqueVec,permt)
       ctsum<<-ctsum+permt
@@ -198,8 +200,8 @@ tni.perm.pooled<-function(object, parChunks=10, verbose=TRUE){
   }
   if(verbose)close(pb)
   ##compute pvals
-  pmim<-tni.pmin(object@gexp,object@transcriptionFactors,object@para$perm$estimator)
-  np <- object@para$perm$nPermutations * ( prod(dim(pmim)) - length(object@transcriptionFactors) )
+  pmim<-tni.pmin(object@gexp,object@regulatoryElements,object@para$perm$estimator)
+  np <- object@para$perm$nPermutations * ( prod(dim(pmim)) - length(object@regulatoryElements) )
   mipval <- (1 + ctsum)/(1 + np)
   mipval<-mipval[match(as.numeric(pmim),uniqueVec)]
   ##adjust pvals
@@ -233,11 +235,11 @@ tni.boot<-function(object, parChunks=10, verbose=TRUE){
   ##run bootstrap
   ##check if package snow has been loaded and 
   ##a cluster object has been created  
-  if(isParallel() && length(object@transcriptionFactors)>1) {
+  if(isParallel() && length(object@regulatoryElements)>1) {
     cl<-getOption("cluster")
     snow::clusterExport(cl, list("tni.pmin"),envir=environment())
     if(verbose)cat("-Performing bootstrap analysis (parallel version)...\n")
-    if(verbose)cat("--For", length(object@transcriptionFactors), "regulons...\n")
+    if(verbose)cat("--For", length(object@regulatoryElements), "regulons...\n")
     if(parChunks>(object@para$boot$nBootstraps/2)){
       parChunks<-as.integer(object@para$boot$nBootstraps/2)
     }
@@ -248,7 +250,7 @@ tni.boot<-function(object, parChunks=10, verbose=TRUE){
     for(i in 1:parChunks){
       bootdist<-parLapply(cl,1:nbootChunks[i],function(j){
         boott<-tni.pmin(object@gexp[,sample(ncol(object@gexp),replace=TRUE)], estimator=object@para$boot$estimator,
-                        object@transcriptionFactors, simplified=TRUE)
+                        object@regulatoryElements, simplified=TRUE)
         sapply(1:ncol(boott),function(k){as.numeric(boott[,k]>mimark[k])})
       })
       sapply(1:length(bootdist),function(j){
@@ -260,12 +262,12 @@ tni.boot<-function(object, parChunks=10, verbose=TRUE){
     }
   } else {
     if(verbose)cat("-Performing bootstrap analysis...\n")
-    if(verbose)cat("--For", length(object@transcriptionFactors), "regulons...\n")
+    if(verbose)cat("--For", length(object@regulatoryElements), "regulons...\n")
     if(verbose) pb <- txtProgressBar(style=3)    
     sapply(1:object@para$boot$nBootstraps,function(i){
       if(verbose) setTxtProgressBar(pb, i/object@para$boot$nBootstraps)
       bootdist<-tni.pmin(object@gexp[,sample(ncol(object@gexp),replace=TRUE)], estimator=object@para$boot$estimator,
-                         object@transcriptionFactors, simplified=TRUE)
+                         object@regulatoryElements, simplified=TRUE)
       bootdist<-sapply(1:ncol(bootdist),function(j){as.numeric(bootdist[,j]>mimark[j])})
       bcount <<- bcount + bootdist
       NULL
@@ -534,7 +536,7 @@ cv.filter<-function(gexp, ids){
   cvgx<-abs(sdgx/meangx)
   # aline ids
   ids <- data.frame(ids[rownames(gexp),], CV=cvgx, stringsAsFactors=FALSE)
-  # remove probes without annotation
+  # remove probes without rowAnnotation
   ids <- ids[!is.na(ids[,2]),]
   ids <- ids[ids[,2]!="",]
   # remove duplicated genes by CV
@@ -563,7 +565,7 @@ cv.filter<-function(gexp, ids){
 #   cvgx<-sdgx/meangx
 #   # aline ids
 #   ids <- data.frame(ids, CV=cvgx, stringsAsFactors=FALSE)
-#   # remove proves without annotation
+#   # remove proves without rowAnnotation
 #   ids <- ids[!is.na(ids[,2]),]
 #   ids <- ids[ids[,2]!="",]
 #   # remove duplicated genes by CV
@@ -761,9 +763,9 @@ tni.mmap<-function(object,mnet,tnet,pvnet,othertfs,testedtfs,modulators){
   return(g)
 }
 setregs1<-function(object,g,testedtfs,modulators){
-  #add annotation
-  if(.hasSlot(object, "annotation")){
-    if(nrow(object@annotation)>0)g<-att.mapv(g=g,dat=object@annotation,refcol=1)
+  #add rowAnnotation
+  if(.hasSlot(object, "rowAnnotation")){
+    if(nrow(object@rowAnnotation)>0)g<-att.mapv(g=g,dat=object@rowAnnotation,refcol=1)
   }
   #set names if available
   if(!is.null(V(g)$SYMBOL)){
@@ -947,8 +949,8 @@ tni.mmap.detailed<-function(object,mnet,testedtfs,mds,ntop,nbottom){
   #---
   gLists<-lapply(gLists,function(gg){
     gg<-lapply(gg,function(g){
-      if(.hasSlot(object, "annotation") && nrow(object@annotation)>0){
-        g<-att.mapv(g=g,dat=object@annotation,refcol=1)
+      if(.hasSlot(object, "rowAnnotation") && nrow(object@rowAnnotation)>0){
+        g<-att.mapv(g=g,dat=object@rowAnnotation,refcol=1)
       } else {
         V(g)$SYMBOL<-V(g)$name
       }

@@ -52,7 +52,7 @@ a single logical value specifying to display detailed messages (when verbose=TRU
 data(dt4rtn)
 
 tfs4test<-c("PTTG1","E2F2","FOXM1","E2F3","RUNX2")
-rtni <- new("TNI", gexp=dt4rtn$gexp, transcriptionFactors=dt4rtn$tfs[tfs4test])
+rtni <- new("TNI", gexp=dt4rtn$gexp, regulatoryElements=dt4rtn$tfs[tfs4test])
 
 \dontrun{
 

@@ -1,7 +1,8 @@
 ##generic functions
 ##-------------------------------------------------------------------------
 setGeneric("tni.preprocess",
-           function(object, gexpIDs=NULL, cvfilter=TRUE, verbose=TRUE)
+           function(object, rowAnnotation=NULL, colAnnotation=NULL, cvfilter=TRUE, 
+                    verbose=TRUE, gexpIDs)
              standardGeneric("tni.preprocess"), package="RTN")
 setGeneric("tni.permutation",
            function(object, pValueCutoff=0.01, pAdjustMethod="BH", globalAdjustment=TRUE, 
@@ -18,24 +19,24 @@ setGeneric("tni.dpi.filter",
 setGeneric("tni.get",
            function(object, what="summary", order=TRUE, ntop=NULL, reportNames=TRUE, idkey=NULL) 
              standardGeneric("tni.get"), package="RTN")
-setGeneric("tni.graph",
-           function(object, tnet="dpi", gtype="rmap", minRegulonSize=15, tfs=NULL, amapFilter="quantile", amapCutoff=NULL, ntop=NULL, ...)
-             standardGeneric("tni.graph"), package="RTN")
 setGeneric("tni.conditional",
            function(object, modulators=NULL, tfs=NULL, sampling=35, pValueCutoff=0.01, 
                     pAdjustMethod="bonferroni", minRegulonSize=15, minIntersectSize=5, 
                     miThreshold="md", prob=0.99, pwtransform=FALSE, medianEffect=FALSE, 
                     iConstraint=TRUE, verbose=TRUE, ...)
              standardGeneric("tni.conditional"), package="RTN")
-setGeneric("tni2tna.preprocess",
-           function(object, phenotype=NULL, hits=NULL, phenoIDs=NULL, duplicateRemoverMethod="max", 
-                    verbose=TRUE) 
-             standardGeneric("tni2tna.preprocess"), package="RTN")
 setGeneric("tni.gsea2",
            function(object, minRegulonSize=15, doSizeFilter=FALSE, exponent=1, tnet="dpi",
                     tfs=NULL, samples=NULL, features=NULL, refsamp=NULL, log=FALSE,
                     verbose=TRUE) 
              standardGeneric("tni.gsea2"), package="RTN")
+setGeneric("tni.graph",
+           function(object, tnet="dpi", gtype="rmap", minRegulonSize=15, tfs=NULL, amapFilter="quantile", amapCutoff=NULL, ntop=NULL, ...)
+             standardGeneric("tni.graph"), package="RTN")
+setGeneric("tni2tna.preprocess",
+           function(object, phenotype=NULL, hits=NULL, phenoIDs=NULL, duplicateRemoverMethod="max", 
+                    verbose=TRUE) 
+             standardGeneric("tni2tna.preprocess"), package="RTN")
 ##-------------------------------------------------------------------------
 setGeneric("tna.graph",
            function(object, tnet="dpi", gtype="rmap", minRegulonSize=15, tfs=NULL, amapFilter="quantile", amapCutoff=NULL, ...)

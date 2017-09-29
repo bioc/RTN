@@ -20,7 +20,7 @@ an object of class 'TNA' \code{\link[RTN:TNA-class]{TNA-class}}.
 }
 \item{what}{
 a single character value specifying which information should be retrieved from the slots. 
-Options: 'tnet', 'refnet', 'tfs', 'pheno', 'regulons','refregulons', 'para', 'mra', 'gsea1', 
+Options: 'tnet', 'refnet', 'regulatoryElements', 'pheno', 'regulons','refregulons', 'para', 'mra', 'gsea1', 
 'gsea2','overlap', 'synergy', 'shadow', 'summary', 'annotation' and 'status'. Regulons can also be retrieved 
 mapped to the available phenotype vector ('regulons.and.pheno' or 'refregulons.and.pheno') or
 mapped to the assiged mode of action ('regulons.and.mode' or 'refregulons.and.mode').
@@ -52,12 +52,14 @@ Mauro Castro
 \examples{
 
 data(dt4rtn)
-tfs4test<-c("PTTG1","E2F2","FOXM1","E2F3","RUNX2")
-rtni <- new("TNI", gexp=dt4rtn$gexp, transcriptionFactors=dt4rtn$tfs[tfs4test])
+
+# select 5 regulatoryElements for a quick demonstration!
+tfs4test <- dt4rtn$tfs[c("PTTG1","E2F2","FOXM1","E2F3","RUNX2")]
 
 \dontrun{
 
-rtni <- tni.preprocess(rtni,gexpIDs=dt4rtn$gexpIDs)
+rtni <- tni.constructor(expData=dt4rtn$gexp, regulatoryElements=tfs4test, 
+        rowAnnotation=dt4rtn$gexpIDs)
 rtni<-tni.permutation(rtni)
 rtni<-tni.bootstrap(rtni)
 rtni<-tni.dpi.filter(rtni)

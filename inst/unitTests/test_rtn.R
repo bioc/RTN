@@ -2,8 +2,8 @@
 test_tni <- function(){
   data(dt4rtn)
   tfs4test<-dt4rtn$tfs[c("PTTG1","FOXM1")]
-  rtni <- new("TNI", gexp=dt4rtn$gexp, transcriptionFactors=tfs4test)
-  rtni<-tni.preprocess(rtni,gexpIDs=dt4rtn$gexpIDs)
+  rtni <- tni.constructor(expData=dt4rtn$gexp, regulatoryElements=tfs4test, 
+                          rowAnnotation=dt4rtn$gexpIDs)
   #tni.permutation
   rtni<-tni.permutation(rtni,nPermutations=10)
   res<-tni.get(rtni,what="refnet")
@@ -17,7 +17,7 @@ test_tni <- function(){
   res<-tni.get(rtni,what="tnet")
   checkTrue(is.matrix(res) && ncol(res)==2)
   #tni.conditional
-  annot <- res<-tni.get(rtni,what="annotation")
+  annot <- res<-tni.get(rtni,what="rowAnnotation")
   idx <- annot$SYMBOL%in%c("FGF2","ERBB2")
   mod4test<-annot$PROBEID[idx]
   rtni<-tni.conditional(rtni, modulators=mod4test, minRegulonSize=1)
@@ -31,8 +31,8 @@ test_tni <- function(){
 test_tna <- function(){
   data(dt4rtn)
   tfs4test<-dt4rtn$tfs[c("PTTG1","E2F2","FOXM1","E2F3","RUNX2")]
-  rtni <- new("TNI", gexp=dt4rtn$gexp, transcriptionFactors=tfs4test)
-  rtni<-tni.preprocess(rtni,gexpIDs=dt4rtn$gexpIDs)
+  rtni <- tni.constructor(expData=dt4rtn$gexp, regulatoryElements=tfs4test, 
+                          rowAnnotation=dt4rtn$gexpIDs)
   rtni<-tni.permutation(rtni,nPermutations=10)
   rtni<-tni.bootstrap(rtni,nBootstraps=10)
   rtni<-tni.dpi.filter(rtni)

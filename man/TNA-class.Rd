@@ -20,7 +20,7 @@ analyses in transcriptional networks.
 
 \section{Objects from the Class}{
 Objects can be created by calls of the form 
-\code{new("TNA", referenceNetwork, transcriptionalNetwork, transcriptionFactors, phenotype, hits)}.
+\code{new("TNA", referenceNetwork, transcriptionalNetwork, regulatoryElements, phenotype, hits)}.
 }
 
 \section{Slots}{
@@ -31,8 +31,8 @@ Objects can be created by calls of the form
     \item{\code{transcriptionalNetwork}:}{Object of class \code{"matrix"}, 
     a partial co-expression matrix.
     }
-    \item{\code{transcriptionFactors}:}{Object of class \code{"char_Or_NULL"}, 
-    a vector of transcription factors.
+    \item{\code{regulatoryElements}:}{Object of class \code{"char_Or_NULL"}, 
+    a vector of regulatory elements (e.g. transcription factors).
     }
     \item{\code{phenotype}:}{Object of class \code{"num_Or_int"}, a numeric or integer 
     vector of phenotypes named by gene identifiers. 
@@ -40,8 +40,14 @@ Objects can be created by calls of the form
     \item{\code{hits}:}{Object of class \code{"character"}, a character vector of 
     gene identifiers for those considered as hits. 
     }
-    \item{\code{annotation}:}{Object of class \code{"data.frame"},
-    a data frame with transcriptional network annotation.
+    \item{\code{gexp}:}{Object of class \code{"matrix"},
+    a gene expression matrix.
+    }    
+    \item{\code{rowAnnotation}:}{Object of class \code{"data.frame"},
+    a data frame with row annotation (e.g. probe-to-gene information).
+    }
+    \item{\code{colAnnotation}:}{Object of class \code{"data.frame"},
+    a data frame with column annotation (e.g. sample information).
     }
     \item{\code{listOfReferenceRegulons}:}{Object of class \code{"list"}, a list of regulons 
     derived from the referenceNetwork.
@@ -67,7 +73,7 @@ Objects can be created by calls of the form
     }
     \item{\code{summary}:}{Object of class \code{"list"},
   	a list of summary information for \code{transcriptionalNetwork}, 
-    \code{transcriptionFactors}, \code{phenotype},\code{listOfRegulons},
+    \code{regulatoryElements}, \code{phenotype},\code{listOfRegulons},
     \code{para}, and \code{results}.    
     }
     \item{\code{status}:}{Object of class \code{"character"},
@@ -79,14 +85,22 @@ Objects can be created by calls of the form
 
 \section{Methods}{
   \describe{
-    \item{tna.mra}{\code{signature(object = "TNA")}: see \code{\link[RTN:tna.mra]{tna.mra}} }    
-    \item{tna.overlap}{\code{signature(object = "TNA")}: see \code{\link[RTN:tna.overlap]{tna.overlap}} }
-    \item{tna.gsea1}{\code{signature(object = "TNA")}: see \code{\link[RTN:tna.gsea1]{tna.gsea1}} }
-    \item{tna.gsea2}{\code{signature(object = "TNA")}: see \code{\link[RTN:tna.gsea2]{tna.gsea2}} }
-    \item{tna.synergy}{\code{signature(object = "TNA")}: see \code{\link[RTN:tna.synergy]{tna.synergy}} }    
-    \item{tna.shadow}{\code{signature(object = "TNA")}: see \code{\link[RTN:tna.shadow]{tna.shadow}} }    
-    \item{tna.get}{\code{signature(object = "TNA")}: see \code{\link[RTN:tna.get]{tna.get}} }
-    \item{tna.graph}{\code{signature(object = "TNA")}: see \code{\link[RTN:tna.graph]{tna.graph}} }    
+    \item{tna.mra}{\code{signature(object = "TNA")}: 
+    see \code{\link[RTN:tna.mra]{tna.mra}} }    
+    \item{tna.overlap}{\code{signature(object = "TNA")}: 
+    see \code{\link[RTN:tna.overlap]{tna.overlap}} }
+    \item{tna.gsea1}{\code{signature(object = "TNA")}: 
+    see \code{\link[RTN:tna.gsea1]{tna.gsea1}} }
+    \item{tna.gsea2}{\code{signature(object = "TNA")}: 
+    see \code{\link[RTN:tna.gsea2]{tna.gsea2}} }
+    \item{tna.synergy}{\code{signature(object = "TNA")}: 
+    see \code{\link[RTN:tna.synergy]{tna.synergy}} }    
+    \item{tna.shadow}{\code{signature(object = "TNA")}: 
+    see \code{\link[RTN:tna.shadow]{tna.shadow}} }    
+    \item{tna.get}{\code{signature(object = "TNA")}: 
+    see \code{\link[RTN:tna.get]{tna.get}} }
+    \item{tna.graph}{\code{signature(object = "TNA")}: 
+    see \code{\link[RTN:tna.graph]{tna.graph}} }    
 	 }
 }
 

@@ -3,6 +3,329 @@
 ################################################################################
 
 ##------------------------------------------------------------------------------
+## Constructor of TNI Class objects
+## Entry point for the all TNI/TNA pipelines, including pre-processing
+tni.constructor <- function(expData, regulatoryElements, rowAnnotation=NULL, 
+                            colAnnotation=NULL, cvfilter=TRUE, verbose=TRUE){
+  #---todo: option to use summarizedExperiment (with expData)
+  #
+  #---
+  object <- new("TNI", gexp=expData, regulatoryElements=regulatoryElements)
+  object <- tni.preprocess(object, rowAnnotation, colAnnotation, cvfilter,verbose)
+  return(object)
+}
+
+##------------------------------------------------------------------------------
+##initialization method
+setMethod("initialize",
+          "TNI",
+          function(.Object, gexp, regulatoryElements, transcriptionFactors) {
+            
+            #---check compatibility
+            .Object <- upgradeTNI(.Object)
+            
+            if(!missing(transcriptionFactors)){
+              warning("'transcriptionFactors' argument is deprected!
+                      please use 'regulatoryElements' instead.'")
+              regulatoryElements <- transcriptionFactors
+            }
+            
+            ##-----checks of required objects
+            if(missing(gexp))stop("NOTE: 'gexp' is missing!",call.=FALSE)    
+            if(missing(regulatoryElements))stop("NOTE: 'regulatoryElements' is missing!",call.=FALSE)            
+            tnai.checks(name="gexp",gexp)
+            tnai.checks(name="regulatoryElements",regulatoryElements)
+            ##-----initialization
+            .Object@gexp<-gexp
+            .Object@regulatoryElements<-regulatoryElements
+            .Object@modulators<-character()
+            ##-----result slot
+            .Object@results<-list()
+            ##-----status matrix
+            .Object@status <- rep("[ ]", 1, 5)
+            names(.Object@status) <- c("Preprocess", "Permutation", "Bootstrap", "DPI.filter", "Conditional")
+            ##-----summary info
+            ##-----tfs
+            sum.info.tfs<-matrix(,1,2)
+            rownames(sum.info.tfs)<-"TF"
+            colnames(sum.info.tfs)<-c("input","valid")           
+            ##-----parameters
+            sum.info.para <- list()
+            sum.info.para$perm<-matrix(,1,6)
+            colnames(sum.info.para$perm)<-c("pValueCutoff","pAdjustMethod", "globalAdjustment",
+                                       "estimator", "nPermutations","pooledNullDistribution")
+            rownames(sum.info.para$perm)<-"Parameter"
+            sum.info.para$boot<-matrix(,1,3)
+            colnames(sum.info.para$boot)<-c("estimator", "nBootstraps", "consensus")        
+            rownames(sum.info.para$boot)<-"Parameter"
+            sum.info.para$dpi<-matrix(,1,1)
+            colnames(sum.info.para$dpi)<-c("eps")       
+            rownames(sum.info.para$dpi)<-"Parameter"
+            sum.info.para$cdt<-matrix(,1,8)
+            colnames(sum.info.para$cdt)<-c("sampling","pValueCutoff","pAdjustMethod","minRegulonSize",
+                                           "minIntersectSize","miThreshold","prob","pwtransform")
+            rownames(sum.info.para$cdt)<-"Parameter"
+            ##-----results
+            sum.info.results<-list()
+            sum.info.results$tnet<-matrix(,2,3)
+            colnames(sum.info.results$tnet)<-c("TFs","Targets","Edges")
+            rownames(sum.info.results$tnet)<-c("tnet.ref","tnet.dpi")
+            .Object@summary<-list(tfs=sum.info.tfs,para=sum.info.para,results=sum.info.results)			
+            .Object
+          }
+)
+
+##------------------------------------------------------------------------------
+## deprecated method (July 18, 2017), use tni.constructor!
+setMethod(
+  "tni.preprocess",
+  "TNI",
+  function(object, rowAnnotation=NULL, colAnnotation=NULL, cvfilter=TRUE, 
+           verbose=TRUE, gexpIDs){
+    
+    #---check compatibility
+    object <- upgradeTNI(object)
+    
+    if(!missing(gexpIDs)){
+      warning("'gexpIDs' argument is deprected!
+              please use 'rowAnnotation' instead.'")
+      rowAnnotation <- gexpIDs
+    }
+    
+    ##-----check input arguments
+    tnai.checks(name="rowAnnotation",rowAnnotation)
+    tnai.checks(name="colAnnotation",colAnnotation)
+    tnai.checks(name="cvfilter",para=cvfilter)
+    tnai.checks(name="verbose",para=verbose)
+    ##-----preprocessing
+    if(verbose)cat("-Preprocessing for input data...\n")
+    
+    #----check NAs and NaNs in gexp
+    na.check <- sum ( is.na(object@gexp) | is.nan(object@gexp) )
+    if(na.check>0){
+      stop("--NOTE: 'expression data' should be a numeric matrix without NAs or NaNs! \n")
+      #---remove NAs
+      #idx<-which(is.na(object@gexp), arr.ind = TRUE)
+      #object@gexp[idx]<-apply(object@gexp[rownames(idx),],1,mean,na.rm=TRUE)
+    }
+    
+    ##-----check rowAnnotation if available
+    if(!is.null(rowAnnotation)){
+      if(verbose)cat("--Mapping 'gexp' to 'rowAnnotation'...\n")
+      if( any(!rownames(object@gexp)%in%rownames(rowAnnotation)) ){
+        stop("NOTE: all rownames in 'expression data' should be available in col1 of 'rowAnnotation'!",call.=FALSE)
+      }
+      if(cvfilter){
+        if(verbose)cat("--Removing duplicated genes (keep max coefficient of variation!)...\n")
+        #i.e. col1=probe, col2=gene (collapse cv by col2)
+        cvres<-cv.filter(object@gexp, rowAnnotation)
+        object@gexp<-cvres$gexp
+        object@rowAnnotation<-cvres$ids
+      } else {
+        #or leave by the user!!!
+        object@rowAnnotation<-rowAnnotation[rownames(object@gexp),]
+        tp1<-paste("by setting 'cvfilter=FALSE', please note that both 'expression data' and 'rowAnnotation'\n")
+        tp2<-paste("should be provided with unique and matched probe-to-gene identifiers!", sep="")          
+        if(verbose)warning(tp1,tp2,call.=FALSE)
+      }
+      #correct 'symbol' column if a valid name 
+      #ps. rowAnnotation is already check for duplicated col names!
+      idx<-toupper(colnames(object@rowAnnotation))%in%"SYMBOL"
+      if(any(idx)){
+        idx<-which(idx)[1]
+        colnames(object@rowAnnotation)[idx]<-"SYMBOL"
+        #..remove any empty space or NA from SYMBOL!!!
+        object@rowAnnotation$SYMBOL<-as.character(object@rowAnnotation$SYMBOL)
+        idx<-is.na(object@rowAnnotation$SYMBOL)
+        object@rowAnnotation$SYMBOL[idx]<-rownames(object@rowAnnotation)[idx]
+        idx<-object@rowAnnotation$SYMBOL==""|object@rowAnnotation$SYMBOL=="NA"
+        object@rowAnnotation$SYMBOL[idx]<-rownames(object@rowAnnotation)[idx]
+      } else {
+        tp1<-paste("NOTE: to get better gene summary across the pipelines, 'rowAnnotation'\n")
+        tp2<-paste("should provide an extra column named SYMBOL!", sep="")       
+        if(verbose)warning(tp1,tp2,call.=FALSE)
+      }
+    }
+    ##-----check colAnnotation if available
+    if(!is.null(colAnnotation)){
+      if(verbose)cat("--Mapping 'gexp' to 'colAnnotation'...\n")
+      if( any(!colnames(object@gexp)%in%rownames(colAnnotation)) ){
+        stop("NOTE: all colnames in 'expression data' should be available in col1 of 'colAnnotation'!",call.=FALSE)
+      }
+      object@colAnnotation<-colAnnotation[colnames(object@gexp),]
+    }
+    #----check sd in gexp
+    sd.check <- apply(object@gexp,1,sd)
+    if(any(is.na(sd.check))){
+      stop("NOTE: unpredicted exception found in the input data matrix! 
+           (a possible cause is the presence of 'Inf' values). ")
+    }
+    sd.check <- sd.check==0
+    if(any(sd.check)){
+      if(verbose)cat("--Removing inconsistent data: standard deviation is zero for", sum(sd.check),"gene(s)! \n")
+      rmv<-rownames(object@rowAnnotation)[sd.check]
+      object@gexp<-object@gexp[!sd.check,]
+      object@rowAnnotation<-object@rowAnnotation[!sd.check,]
+      idx<-object@regulatoryElements%in%rmv
+      if(any(idx)){
+        object@regulatoryElements<-object@regulatoryElements[!idx]
+      }
+      idx<-object@modulators%in%rmv
+      if(any(idx)){
+        object@modulators<-object@modulators[!idx]
+      }
+    }
+    #-----check TFs in gexp
+    object@summary$tfs[,"input"]<-length(object@regulatoryElements)
+    if(verbose) cat("--Checking TFs in the dataset...\n")
+    idxtfs<-object@regulatoryElements%in%rownames(object@gexp)
+    object@regulatoryElements<-object@regulatoryElements[idxtfs]
+    object@summary$tfs[,"valid"]<-length(object@regulatoryElements)
+    if(length(object@regulatoryElements)==0)stop("NOTE: input 'regulatoryElements' contains no useful data!\n",call.=FALSE)
+    ##-----make sure 'regulatoryElements' is a named character vector
+    if(!is.character(object@regulatoryElements)){
+      nm<-names(object@regulatoryElements)
+      object@regulatoryElements<-as.character(object@regulatoryElements)
+      names(object@regulatoryElements)<-nm
+    }
+    if(is.null(names(object@regulatoryElements))){
+      #..if null names, add available ones
+      if(!is.null(object@rowAnnotation$SYMBOL)){
+        names(object@regulatoryElements)<-object@rowAnnotation[object@regulatoryElements,"SYMBOL"]
+      } else {
+        names(object@regulatoryElements)<-object@regulatoryElements
+      }
+    } else {
+      #..else remove any empty space or NA from TF names!!!
+      tfnames<-names(object@regulatoryElements)
+      idx<-tfnames==""|tfnames=="NA"
+      names(object@regulatoryElements)[idx]<-object@regulatoryElements[idx]
+      #..and check possible incositency between 'rowAnnotation' and 'regulatoryElements' names
+      if(!is.null(object@rowAnnotation$SYMBOL)){
+        tp<-object@rowAnnotation[object@regulatoryElements,"SYMBOL"]
+        if(any(tp!=names(object@regulatoryElements))){
+          tp1<-"NOTE: inconsistent symbol(s) found in the named vector 'regulatoryElements'!\n"
+          tp2<-"Please, use symbols consistent with col <SYMBOL> in 'rowAnnotation'!"
+          warning(tp1,tp2)
+        }
+      }
+    }
+    ##-----updade status and return
+    object@status["Preprocess"] <- "[x]"
+    object@status["Permutation"] <- "[ ]"
+    object@status["Bootstrap"] <- "[ ]"
+    object@status["DPI.filter"] <- "[ ]"
+    if(verbose)cat("-Preprocessing complete!\n\n")
+    return(object)
+  }
+)
+##------------------------------------------------------------------------------
+##infer MI network
+setMethod(
+  "tni.permutation",
+  "TNI",
+  function(object, pValueCutoff=0.01, pAdjustMethod="BH", globalAdjustment=TRUE, estimator="pearson",
+           nPermutations=1000, pooledNullDistribution=TRUE, parChunks=50, verbose=TRUE){
+    if(object@status["Preprocess"]!="[x]")stop("NOTE: input 'object' needs preprocessing!")
+    
+    #---check compatibility
+    object <- upgradeTNI(object)
+    
+    ##-----check and assign parameters
+    tnai.checks(name="pValueCutoff",para=pValueCutoff)
+    tnai.checks(name="pAdjustMethod",para=pAdjustMethod)
+    tnai.checks(name="globalAdjustment",para=globalAdjustment)
+    tnai.checks(name="estimator",para=estimator)  
+    tnai.checks(name="nPermutations",para=nPermutations)
+    tnai.checks(name="pooledNullDistribution",para=pooledNullDistribution)
+    tnai.checks(name="parChunks",para=parChunks)
+    tnai.checks(name="verbose",para=verbose)
+    object@para$perm<-list(pValueCutoff=pValueCutoff,pAdjustMethod=pAdjustMethod,globalAdjustment=globalAdjustment,
+                      estimator=estimator,nPermutations=nPermutations,pooledNullDistribution=pooledNullDistribution)
+    object@summary$para$perm[1,]<-unlist(object@para$perm)
+    ###compute reference network###
+    ##---permutation analysis
+    if(object@para$perm$pooledNullDistribution){
+      res<-tni.perm.pooled(object, parChunks, verbose)
+    } else {
+      res<-tni.perm.separate(object,verbose)
+    }
+    object@results$adjpv <- res$adjpv
+    object@results$tn.ref <- res$tn.ref * tni.cor(object@gexp, res$tn.ref, estimator=object@para$perm$estimator)
+    object@status["Permutation"] <- "[x]"
+    if(verbose)cat("-Permutation analysis complete! \n\n")
+    ##update summary and return results
+    bin<-object@results$tn.ref
+    bin[bin!=0]<-1
+    object@summary$results$tnet[1,]<-c(ncol(bin),sum(rowSums(bin)>0),sum(bin))
+    return(object)
+  }
+)
+
+##------------------------------------------------------------------------------
+##infer MI network
+setMethod(
+  "tni.bootstrap",
+  "TNI",
+  function(object, estimator="pearson", nBootstraps=100, consensus=95, 
+           parChunks=10, verbose=TRUE){
+    if(object@status["Preprocess"]!="[x]")stop("NOTE: input 'object' needs preprocessing and permutation analysis!")
+    if(object@status["Permutation"]!="[x]")stop("NOTE: input 'object' needs permutation analysis!")
+    
+    #---check compatibility
+    object <- upgradeTNI(object)
+    
+    ##-----check and assign parameters
+    tnai.checks(name="estimator",para=estimator)  
+    tnai.checks(name="nBootstraps",para=nBootstraps)    
+    tnai.checks(name="consensus",para=consensus)
+    tnai.checks(name="parChunks",para=parChunks)
+    tnai.checks(name="verbose",para=verbose)
+    object@para$boot<-list(estimator=estimator,nBootstraps=nBootstraps,consensus=consensus)
+    object@summary$para$boot[1,]<-unlist(object@para$boot)
+    ##---bootstrap analysis
+    object@results$tn.ref<-tni.boot(object,parChunks,verbose)
+    object@status["Bootstrap"] <- "[x]"
+    if(verbose)cat("-Bootstrap analysis complete! \n\n")
+    ##update summary and return results
+    bin<-object@results$tn.ref
+    bin[bin!=0]<-1
+    object@summary$results$tnet[1,]<-c(ncol(bin),sum(rowSums(bin)>0),sum(bin))
+    return(object)
+  }
+)
+
+##------------------------------------------------------------------------------
+##infer MI network
+setMethod(
+  "tni.dpi.filter",
+  "TNI",
+  function(object, eps=0, verbose=TRUE){
+    if(object@status["Permutation"]!="[x]")stop("NOTE: input 'object' needs permutation/bootstrep analysis!")
+    
+    #---check compatibility
+    object <- upgradeTNI(object)
+    
+    ##-----check and assign parameters
+    tnai.checks(name="eps",para=eps)
+    tnai.checks(name="verbose",para=verbose)
+    object@para$dpi<-list(eps=eps)
+    object@summary$para$dpi[1,]<-unlist(object@para$dpi)
+    ##---apply dpi filter
+    if(verbose)cat("-Applying dpi filter...\n")
+    object@results$tn.dpi<-tni.dpi(abs(object@results$tn.ref), eps=object@para$dpi$eps)
+    object@results$tn.dpi<-object@results$tn.dpi * tni.cor(object@gexp,object@results$tn.dpi,estimator=object@para$perm$estimator)
+    if(verbose)cat("-DPI filter complete! \n\n")
+    object@status["DPI.filter"] <- "[x]"
+    ##update summary and return results
+    bin<-object@results$tn.dpi
+    bin[bin!=0]<-1
+    object@summary$results$tnet[2,]<-c(ncol(bin),sum(rowSums(bin)>0),sum(bin))
+    return(object)
+  }
+)
+
+##------------------------------------------------------------------------------
 ##GSEA2 for TNI
 setMethod(
   "tni.gsea2",
@@ -12,6 +335,10 @@ setMethod(
     if(object@status["Preprocess"]!="[x]")stop("NOTE: TNI object is not compleate: requires preprocessing!")
     if(object@status["Permutation"]!="[x]")stop("NOTE: TNI object is not compleate: requires permutation/bootstrap and DPI filter!")  
     if(object@status["DPI.filter"]!="[x]")stop("NOTE: TNI object is not compleate: requires DPI filter!")
+    
+    #---check compatibility
+    object <- upgradeTNI(object)
+    
     ##-----check and assign parameters
     tnai.checks(name="minRegulonSize",para=minRegulonSize)
     #doSizeFilter
@@ -43,11 +370,11 @@ setMethod(
     }
     ##----- set features
     if(!is.null(features)){
-      col1<-sapply(1:ncol(object@annotation),function(i){
-        sum(features%in%object@annotation[,i],na.rm=TRUE)
+      col1<-sapply(1:ncol(object@rowAnnotation),function(i){
+        sum(features%in%object@rowAnnotation[,i],na.rm=TRUE)
       })
       col1<-which(col1==max(col1))[1]
-      idx<-object@annotation[[col1]]%in%features
+      idx<-object@rowAnnotation[[col1]]%in%features
       object@results$tn.ref[!idx,]<-0
       object@results$tn.dpi[!idx,]<-0
     }
@@ -75,14 +402,14 @@ setMethod(
     
     ##-----set regs
     if(!is.null(tfs)){
-      if(sum(tfs%in%object@transcriptionFactors) > sum(tfs%in%names(object@transcriptionFactors) ) ){
-        tfs<-object@transcriptionFactors[object@transcriptionFactors%in%tfs]
+      if(sum(tfs%in%object@regulatoryElements) > sum(tfs%in%names(object@regulatoryElements) ) ){
+        tfs<-object@regulatoryElements[object@regulatoryElements%in%tfs]
       } else {
-        tfs<-object@transcriptionFactors[names(object@transcriptionFactors)%in%tfs]
+        tfs<-object@regulatoryElements[names(object@regulatoryElements)%in%tfs]
       }
       if(length(tfs)==0)stop("NOTE: 'tfs' argument has no valid names!")
     } else {
-      tfs<-object@transcriptionFactors
+      tfs<-object@regulatoryElements
     }
     listOfRegulonsAndMode<-listOfRegulonsAndMode[tfs]
     
@@ -169,275 +496,8 @@ setMethod(
 )
 
 ##------------------------------------------------------------------------------
-##initialization method
-setMethod("initialize",
-          "TNI",
-          function(.Object, gexp, transcriptionFactors) {
-            ##-----check arguments
-            if(missing(gexp))stop("NOTE: 'gexp' is missing!",call.=FALSE)    
-            if(missing(transcriptionFactors))stop("NOTE: 'transcriptionFactors' is missing!",call.=FALSE)            
-            tnai.checks(name="gexp",gexp)
-            tnai.checks(name="transcriptionFactors",transcriptionFactors)
-            ##-----initialization
-            .Object@gexp<-gexp
-            .Object@transcriptionFactors<-transcriptionFactors
-            .Object@modulators<-character()
-            ##-----result slot
-            .Object@results<-list()
-            ##-----status matrix
-            .Object@status <- rep("[ ]", 1, 5)
-            names(.Object@status) <- c("Preprocess", "Permutation", "Bootstrap", "DPI.filter", "Conditional")
-            ##-----summary info
-            ##-----tfs
-            sum.info.tfs<-matrix(,1,2)
-            rownames(sum.info.tfs)<-"TF"
-            colnames(sum.info.tfs)<-c("input","valid")           
-            ##-----parameters
-            sum.info.para <- list()
-            sum.info.para$perm<-matrix(,1,6)
-            colnames(sum.info.para$perm)<-c("pValueCutoff","pAdjustMethod", "globalAdjustment",
-                                       "estimator", "nPermutations","pooledNullDistribution")
-            rownames(sum.info.para$perm)<-"Parameter"
-            sum.info.para$boot<-matrix(,1,3)
-            colnames(sum.info.para$boot)<-c("estimator", "nBootstraps", "consensus")        
-            rownames(sum.info.para$boot)<-"Parameter"
-            sum.info.para$dpi<-matrix(,1,1)
-            colnames(sum.info.para$dpi)<-c("eps")       
-            rownames(sum.info.para$dpi)<-"Parameter"
-            sum.info.para$cdt<-matrix(,1,8)
-            colnames(sum.info.para$cdt)<-c("sampling","pValueCutoff","pAdjustMethod","minRegulonSize",
-                                           "minIntersectSize","miThreshold","prob","pwtransform")
-            rownames(sum.info.para$cdt)<-"Parameter"
-            ##-----results
-            sum.info.results<-list()
-            sum.info.results$tnet<-matrix(,2,3)
-            colnames(sum.info.results$tnet)<-c("TFs","Targets","Edges")
-            rownames(sum.info.results$tnet)<-c("tnet.ref","tnet.dpi")
-            .Object@summary<-list(tfs=sum.info.tfs,para=sum.info.para,results=sum.info.results)			
-            .Object
-          }
-)
-##------------------------------------------------------------------------------
-##pre-processing
-setMethod(
-  "tni.preprocess",
-  "TNI",
-  function(object, gexpIDs=NULL, cvfilter=TRUE, verbose=TRUE){
-    ##-----check input arguments
-    gexpIDs=tnai.checks(name="gexpIDs",para=gexpIDs)
-    tnai.checks(name="cvfilter",para=cvfilter)
-    tnai.checks(name="verbose",para=verbose)
-    ##-----preprocessing
-    if(verbose)cat("-Preprocessing for input data...\n")
-    
-    #----check NAs and NaNs in gexp
-    na.check <- sum ( is.na(object@gexp) | is.nan(object@gexp) )
-    if(na.check>0){
-      stop("--NOTE: 'gexp' should be a numeric matrix without NAs or NaNs! \n")
-      #---remove NAs
-      #idx<-which(is.na(object@gexp), arr.ind = TRUE)
-      #object@gexp[idx]<-apply(object@gexp[rownames(idx),],1,mean,na.rm=TRUE)
-    }
-    
-    ##-----check gexpIDs if available
-    if(!is.null(gexpIDs)){
-      if(verbose)cat("--Mapping 'gexp' to 'gexpIDs'...\n")
-      if( any(!rownames(object@gexp)%in%rownames(gexpIDs)) ){
-        stop("NOTE: all rownames in 'gexp' should be available in col1 of 'gexpIDs'!",call.=FALSE)
-      }
-      if(cvfilter){
-        if(verbose)cat("--Removing duplicated genes (keep max coefficient of variation!)...\n")
-        #i.e. col1=probe, col2=gene (collapse cv by col2)
-        cvres<-cv.filter(object@gexp, gexpIDs)
-        object@gexp<-cvres$gexp
-        object@annotation<-cvres$ids
-      } else {
-        #or leave by the user!!!
-        object@annotation<-gexpIDs[rownames(object@gexp),]
-        tp1<-paste("by setting 'cvfilter=FALSE', please note that both 'gexp' and 'gexpIDs'\n")
-        tp2<-paste("should be provided with unique and matched probe-to-gene identifiers!", sep="")          
-        if(verbose)warning(tp1,tp2,call.=FALSE)
-      }
-      #correct 'symbol' column if a valid name 
-      #ps. annotation is already check for duplicated col names!
-      idx<-toupper(colnames(object@annotation))%in%"SYMBOL"
-      if(any(idx)){
-        idx<-which(idx)[1]
-        colnames(object@annotation)[idx]<-"SYMBOL"
-        #..remove any empty space or NA from SYMBOL!!!
-        object@annotation$SYMBOL<-as.character(object@annotation$SYMBOL)
-        idx<-is.na(object@annotation$SYMBOL)
-        object@annotation$SYMBOL[idx]<-rownames(object@annotation)[idx]
-        idx<-object@annotation$SYMBOL==""|object@annotation$SYMBOL=="NA"
-        object@annotation$SYMBOL[idx]<-rownames(object@annotation)[idx]
-      } else {
-        tp1<-paste("NOTE: to get better gene summary across the pipelines, 'gexpIDs' annotation\n")
-        tp2<-paste("should provide an extra column named SYMBOL!", sep="")       
-        if(verbose)warning(tp1,tp2,call.=FALSE)
-      }
-    }
-    #----check sd in gexp
-    sd.check <- apply(object@gexp,1,sd)
-    if(any(is.na(sd.check))){
-      stop("NOTE: unpredicted exception found in the input data matrix! 
-           (a possible cause is the presence of 'Inf' values). ")
-    }
-    sd.check <- sd.check==0
-    if(any(sd.check)){
-      if(verbose)cat("--Removing inconsistent data: standard deviation is zero for", sum(sd.check),"gene(s)! \n")
-      rmv<-rownames(object@annotation)[sd.check]
-      object@gexp<-object@gexp[!sd.check,]
-      object@annotation<-object@annotation[!sd.check,]
-      idx<-object@transcriptionFactors%in%rmv
-      if(any(idx)){
-        object@transcriptionFactors<-object@transcriptionFactors[!idx]
-      }
-      idx<-object@modulators%in%rmv
-      if(any(idx)){
-        object@modulators<-object@modulators[!idx]
-      }
-    }
-    #-----check TFs in gexp
-    object@summary$tfs[,"input"]<-length(object@transcriptionFactors)
-    if(verbose) cat("--Checking TFs in the dataset...\n")
-    idxtfs<-object@transcriptionFactors%in%rownames(object@gexp)
-    object@transcriptionFactors<-object@transcriptionFactors[idxtfs]
-    object@summary$tfs[,"valid"]<-length(object@transcriptionFactors)
-    if(length(object@transcriptionFactors)==0)stop("NOTE: input 'transcriptionFactors' contains no useful data!\n",call.=FALSE)
-    ##-----make sure 'transcriptionFactors' is a named character vector
-    if(!is.character(object@transcriptionFactors)){
-      nm<-names(object@transcriptionFactors)
-      object@transcriptionFactors<-as.character(object@transcriptionFactors)
-      names(object@transcriptionFactors)<-nm
-    }
-    if(is.null(names(object@transcriptionFactors))){
-      #..if null names, add available ones
-      if(!is.null(object@annotation$SYMBOL)){
-        names(object@transcriptionFactors)<-object@annotation[object@transcriptionFactors,"SYMBOL"]
-      } else {
-        names(object@transcriptionFactors)<-object@transcriptionFactors
-      }
-    } else {
-      #..else remove any empty space or NA from TF names!!!
-      tfnames<-names(object@transcriptionFactors)
-      idx<-tfnames==""|tfnames=="NA"
-      names(object@transcriptionFactors)[idx]<-object@transcriptionFactors[idx]
-      #..and check possible incositency between 'gexpIDs' and 'transcriptionFactors' names
-      if(!is.null(object@annotation$SYMBOL)){
-        tp<-object@annotation[object@transcriptionFactors,"SYMBOL"]
-        if(any(tp!=names(object@transcriptionFactors))){
-          tp1<-"NOTE: inconsistent symbol(s) found in the named vector 'transcriptionFactors'!\n"
-          tp2<-"Please, use symbols consistent with col <SYMBOL> in 'gexpIDs'!"
-          warning(tp1,tp2)
-        }
-      }
-    }
-    ##-----updade status and return
-    object@status["Preprocess"] <- "[x]"
-    object@status["Permutation"] <- "[ ]"
-    object@status["Bootstrap"] <- "[ ]"
-    object@status["DPI.filter"] <- "[ ]"
-    if(verbose)cat("-Preprocessing complete!\n\n")
-    return(object)
-  }
-)
-##------------------------------------------------------------------------------
-##infer MI network
-setMethod(
-  "tni.permutation",
-  "TNI",
-  function(object, pValueCutoff=0.01, pAdjustMethod="BH", globalAdjustment=TRUE, estimator="pearson",
-           nPermutations=1000, pooledNullDistribution=TRUE, parChunks=50, verbose=TRUE){
-    if(object@status["Preprocess"]!="[x]")stop("NOTE: input 'object' needs preprocessing!")
-    ##-----check and assign parameters
-    tnai.checks(name="pValueCutoff",para=pValueCutoff)
-    tnai.checks(name="pAdjustMethod",para=pAdjustMethod)
-    tnai.checks(name="globalAdjustment",para=globalAdjustment)
-    tnai.checks(name="estimator",para=estimator)  
-    tnai.checks(name="nPermutations",para=nPermutations)
-    tnai.checks(name="pooledNullDistribution",para=pooledNullDistribution)
-    tnai.checks(name="parChunks",para=parChunks)
-    tnai.checks(name="verbose",para=verbose)
-    object@para$perm<-list(pValueCutoff=pValueCutoff,pAdjustMethod=pAdjustMethod,globalAdjustment=globalAdjustment,
-                      estimator=estimator,nPermutations=nPermutations,pooledNullDistribution=pooledNullDistribution)
-    object@summary$para$perm[1,]<-unlist(object@para$perm)
-    ###compute reference network###
-    ##---permutation analysis
-    if(object@para$perm$pooledNullDistribution){
-      res<-tni.perm.pooled(object, parChunks, verbose)
-    } else {
-      res<-tni.perm.separate(object,verbose)
-    }
-    object@results$adjpv <- res$adjpv
-    object@results$tn.ref <- res$tn.ref * tni.cor(object@gexp, res$tn.ref, estimator=object@para$perm$estimator)
-    object@status["Permutation"] <- "[x]"
-    if(verbose)cat("-Permutation analysis complete! \n\n")
-    ##update summary and return results
-    bin<-object@results$tn.ref
-    bin[bin!=0]<-1
-    object@summary$results$tnet[1,]<-c(ncol(bin),sum(rowSums(bin)>0),sum(bin))
-    return(object)
-  }
-)
-
-##------------------------------------------------------------------------------
-##infer MI network
-setMethod(
-  "tni.bootstrap",
-  "TNI",
-  function(object, estimator="pearson", nBootstraps=100, consensus=95, 
-           parChunks=10, verbose=TRUE){
-    if(object@status["Preprocess"]!="[x]")stop("NOTE: input 'object' needs preprocessing and permutation analysis!")
-    if(object@status["Permutation"]!="[x]")stop("NOTE: input 'object' needs permutation analysis!")
-    ##-----check and assign parameters
-    tnai.checks(name="estimator",para=estimator)  
-    tnai.checks(name="nBootstraps",para=nBootstraps)    
-    tnai.checks(name="consensus",para=consensus)
-    tnai.checks(name="parChunks",para=parChunks)
-    tnai.checks(name="verbose",para=verbose)
-    object@para$boot<-list(estimator=estimator,nBootstraps=nBootstraps,consensus=consensus)
-    object@summary$para$boot[1,]<-unlist(object@para$boot)
-    ##---bootstrap analysis
-    object@results$tn.ref<-tni.boot(object,parChunks,verbose)
-    object@status["Bootstrap"] <- "[x]"
-    if(verbose)cat("-Bootstrap analysis complete! \n\n")
-    ##update summary and return results
-    bin<-object@results$tn.ref
-    bin[bin!=0]<-1
-    object@summary$results$tnet[1,]<-c(ncol(bin),sum(rowSums(bin)>0),sum(bin))
-    return(object)
-  }
-)
-
-##------------------------------------------------------------------------------
-##infer MI network
-setMethod(
-  "tni.dpi.filter",
-  "TNI",
-  function(object, eps=0, verbose=TRUE){
-    if(object@status["Permutation"]!="[x]")stop("NOTE: input 'object' needs permutation/bootstrep analysis!")
-    ##-----check and assign parameters
-    tnai.checks(name="eps",para=eps)
-    tnai.checks(name="verbose",para=verbose)
-    object@para$dpi<-list(eps=eps)
-    object@summary$para$dpi[1,]<-unlist(object@para$dpi)
-    ##---apply dpi filter
-    if(verbose)cat("-Applying dpi filter...\n")
-    object@results$tn.dpi<-tni.dpi(abs(object@results$tn.ref), eps=object@para$dpi$eps)
-    object@results$tn.dpi<-object@results$tn.dpi * tni.cor(object@gexp,object@results$tn.dpi,estimator=object@para$perm$estimator)
-    if(verbose)cat("-DPI filter complete! \n\n")
-    object@status["DPI.filter"] <- "[x]"
-    ##update summary and return results
-    bin<-object@results$tn.dpi
-    bin[bin!=0]<-1
-    object@summary$results$tnet[2,]<-c(ncol(bin),sum(rowSums(bin)>0),sum(bin))
-    return(object)
-  }
-)
-
-
-##------------------------------------------------------------------------------
-##pre-processing
+## Constructor of TNA Class objects
+## Entry point for the TNA pipeline, including pre-processing
 setMethod(
   "tni2tna.preprocess",
   "TNI",
@@ -445,6 +505,10 @@ setMethod(
     if(object@status["Preprocess"]!="[x]")stop("NOTE: TNI object is not compleate: requires preprocessing!")
     if(object@status["Permutation"]!="[x]")stop("NOTE: TNI object is not compleate: requires permutation/bootstrap and DPI filter!")  
     if(object@status["DPI.filter"]!="[x]")stop("NOTE: TNI object is not compleate: requires DPI filter!")
+    
+    #---check compatibility
+    object <- upgradeTNI(object)
+    
     ##-----check input arguments
     tnai.checks(name="TNI",para=object)
     tnai.checks(name="phenotype",para=phenotype)
@@ -456,10 +520,10 @@ setMethod(
     .object <- new("TNA",
                    referenceNetwork=object@results$tn.ref,
                    transcriptionalNetwork=object@results$tn.dpi, 
-                   transcriptionFactors=object@transcriptionFactors, 
+                   regulatoryElements=object@regulatoryElements, 
                    phenotype=phenotype,
                    hits=hits)
-    if(nrow(object@annotation)>0).object@annotation<-object@annotation
+    if(nrow(object@rowAnnotation)>0).object@rowAnnotation<-object@rowAnnotation
     if(!is.null(object@results$conditional) && length(object@results$conditional)>0){
       cdt<-tni.get(object,what="cdt")
       lmod<-lapply(cdt,function(reg){
@@ -479,12 +543,17 @@ setMethod(
     return(.object)
   }
 )
+
 ##------------------------------------------------------------------------------
 ##get slots from TNI 
 setMethod(
   "tni.get",
   "TNI",
   function(object, what="summary", order=TRUE, ntop=NULL, reportNames=TRUE, idkey=NULL) {
+    
+    #---check compatibility
+    object <- upgradeTNI(object)
+    
     ##-----reset compatibility with old args
     if(what=="tn.dpi")what="tnet"
     if(what=="tn.ref")what="refnet"
@@ -499,8 +568,8 @@ setMethod(
       query<-object@gexp
       if(!is.null(idkey))
         query<-translateQuery(query,idkey,object,"matrixAndNames",reportNames)
-    } else if(what=="tfs"){
-      query<-object@transcriptionFactors
+    } else if(what=="regulatoryElements"){
+      query<-object@regulatoryElements
       if(!is.null(idkey))query<-translateQuery(query,idkey,object,"vecAndContent",reportNames)
     } else if(what=="para"){
       query<-object@para
@@ -514,7 +583,7 @@ setMethod(
       if(!is.null(idkey))query<-translateQuery(query,idkey,object,"matrixAndNames",reportNames)
     } else if(what=="refregulons" || what=="refregulons.and.mode"){
       query<-list()
-      for(i in object@transcriptionFactors){
+      for(i in object@regulatoryElements){
         idx<-object@results$tn.ref[,i]!=0
         query[[i]]<-rownames(object@results$tn.ref)[idx]
       }
@@ -530,7 +599,7 @@ setMethod(
       }
     } else if(what=="regulons" || what=="regulons.and.mode"){
       query<-list()
-      for(i in object@transcriptionFactors){
+      for(i in object@regulatoryElements){
         idx<-object@results$tn.dpi[,i]!=0
         query[[i]]<-rownames(object@results$tn.dpi)[idx]
       }
@@ -587,8 +656,8 @@ setMethod(
           if(nrow(query[[nm]])>0){
             idx<-match(query[[nm]][,"Modulator"],object@modulators)
             query[[nm]][,"Modulator"]<-names(object@modulators)[idx]
-            idx<-match(query[[nm]][,"TF"],object@transcriptionFactors)
-            query[[nm]][,"TF"]<-names(object@transcriptionFactors)[idx]
+            idx<-match(query[[nm]][,"TF"],object@regulatoryElements)
+            query[[nm]][,"TF"]<-names(object@regulatoryElements)[idx]
           }
         }
       }
@@ -597,8 +666,10 @@ setMethod(
       if(!is.null(idkey))warning("'idkey' argument has no effect on consolidated tables!")
     } else if(what=="summary"){
       query<-object@summary
-    } else if(what=="annotation"){
-      query<-object@annotation
+    } else if(what=="rowAnnotation"){
+      query<-object@rowAnnotation
+    } else if(what=="colAnnotation"){
+      query<-object@colAnnotation      
     } else if(what=="status"){
       query<-object@status
     } else if(what=="gsea2"){
@@ -617,8 +688,8 @@ setMethod(
             if(nrow(query)>1) query<-query[order(query[,"Observed.Score"]),,drop=FALSE]
           }
           if(reportNames){
-            idx<-match(query[,1],object@transcriptionFactors)
-            query[,1]<-names(object@transcriptionFactors)[idx]
+            idx<-match(query[,1],object@regulatoryElements)
+            query[,1]<-names(object@regulatoryElements)[idx]
           }
         }
         query
@@ -645,272 +716,6 @@ setMethod(
 )
 
 ##------------------------------------------------------------------------------
-##get graph from TNI
-## experimental args:
-## mask: a logical value specifying to apply a mask on the 'amapFilter', keeping at least the 
-## ......best weighted edge (when verbose=TRUE) or not (when verbose=FALSE).
-## hcl: an hclust object with TF's IDs
-## overlap: overlapping nodes used for the Jaccard (options: 'all', 'pos', 'neg')
-## TODO: revise 'tnai.checks' for new args!
-setMethod(
-  "tni.graph",
-  "TNI",
-  function(object, tnet="dpi", gtype="rmap", minRegulonSize=15, tfs=NULL,
-           amapFilter="quantile", amapCutoff=NULL, ntop=NULL, mask=FALSE, 
-           hcl=NULL, overlap="all", xlim=c(30,80,5), nquant=5, breaks=NULL, 
-           mds=NULL, nbottom=NULL){
-    # chech igraph compatibility
-    b1<-"package:igraph0" %in% search()
-    b2<- "igraph0" %in%  loadedNamespaces()
-    if( b1 || b2) {
-      stop("\n\n ...conflict with 'igraph0': please use the new 'igraph' package!")
-    }
-    ##-----check input arguments
-    if(object@status["Preprocess"]!="[x]")stop("NOTE: input 'object' needs preprocessing!")
-    if(object@status["DPI.filter"]!="[x]")stop("NOTE: input 'object' needs dpi analysis!")
-    tnai.checks(name="tnet",para=tnet)
-    tnai.checks(name="tni.gtype",para=gtype)
-    tnai.checks(name="minRegulonSize",para=minRegulonSize)
-    tnai.checks(name="tfs",para=tfs)
-    tnai.checks(name="ntop",para=ntop)
-    tnai.checks(name="mds",para=mds)
-    tnai.checks(name="amapFilter",para=amapFilter)
-    tnai.checks(name="amapCutoff",para=amapCutoff)
-    tnai.checks(name="mask",para=mask)
-    #---
-    if(gtype=="mmap" || gtype=="mmapDetailed")tnet="dpi"
-    if(tnet=="ref"){
-      tnet<-object@results$tn.ref
-    } else {
-      tnet<-object@results$tn.dpi
-    }
-    #---
-    if(!is.null(hcl)){
-      gtype="amapDend"
-      tfs<-object@transcriptionFactors
-      if(!all(hcl$labels%in%tfs | hcl$labels%in%names(tfs)))
-        stop("all labels in the 'hclust' object should be listed as 'transcriptionFactors'!")
-      idx1<-match(hcl$labels,tfs)
-      idx2<-match(hcl$labels,names(tfs))
-      check<-which(is.na(idx1))
-      idx1[check]<-idx2[check]
-      tfs<-tfs[idx1]
-      hcl$labels<-tfs
-    } else if(is.null(tfs)){
-      tfs<-object@transcriptionFactors
-      minsz<-colnames(tnet)[colSums(tnet!=0)>=minRegulonSize]
-      tfs<-tfs[tfs%in%minsz]
-    } else {
-      tfs<-as.character(tfs)
-      idx<-which(names(object@transcriptionFactors)%in%tfs | object@transcriptionFactors%in%tfs)
-      if(length(idx)==0)stop("NOTE: input 'tfs' contains no useful data!\n")
-      tfs<-object@transcriptionFactors[idx]
-    }
-    
-    #-----------------------------------------
-    #-----------------------------------------
-    
-    if(gtype=="mmap" || gtype=="mmapDetailed"){ #get modulatory maps
-      
-      ##-----check input arguments
-      if(object@status["Conditional"]!="[x]")stop("NOTE: input needs conditional analysis!")
-      #get tfs and modulators
-      cdt<-tni.get(object,what="cdt")
-      if(length(cdt)==0)stop("NOTE: input conditional analysis is empty")
-      #cdt<-tni.get(object,what="cdt",ntop=5)
-      testedtfs<-names(cdt)
-      testedtfs<-object@transcriptionFactors[object@transcriptionFactors%in%testedtfs]
-      testedtfs<-testedtfs[testedtfs%in%tfs]
-      if(length(testedtfs)==0)stop("NOTE: input 'tfs' contains no useful data!\n")
-      modulators<-sapply(testedtfs,function(tf){
-        rownames(cdt[[tf]])
-      })
-      modulators<-unlist(modulators)
-      modulators<-object@modulators[object@modulators%in%modulators]
-      othertfs<-object@transcriptionFactors
-      othertfs<-othertfs[!othertfs%in%testedtfs]
-      othertfs<-othertfs[othertfs%in%modulators]
-      #get adjmt
-      tnet<-tnet[unique(c(testedtfs,setdiff(modulators,testedtfs))),testedtfs,drop=FALSE]
-      mnet<-tnet;mnet[,]=0
-      junk<-sapply(colnames(mnet),function(i){
-        tp<-cdt[[i]]
-        mnet[rownames(tp),i]<<-tp$Mode
-        NULL
-      })
-      pvnet<-tnet;pvnet[,]=1
-      junk<-sapply(colnames(mnet),function(i){
-        tp<-cdt[[i]]
-        pvnet[rownames(tp),i]<<-tp$PvKS
-        NULL
-      })
-      #---
-      if(gtype=="mmapDetailed"){
-        #---experimental!!!
-        #return a lista with:
-        #1st level: a TF
-        #2nd level: all MDs of a TF
-        #3rd level: a graph
-        if(is.null(mds)){
-          mds <- modulators
-        } else {
-          idx1<-mds%in%modulators
-          idx2<-mds%in%names(modulators)
-          if(!all(idx1) & !all(idx2)){
-            stop("NOTE: one or more input modutors in 'mds' not listed in the TNI object!")
-          } else {
-            if(sum(idx1)>sum(idx2)){
-              mds<-modulators[modulators%in%mds]
-            } else {
-              mds<-modulators[names(modulators)%in%mds]
-            }
-          }
-        }
-        g<-tni.mmap.detailed(object,mnet,testedtfs, mds, ntop=ntop, nbottom=nbottom)
-      } else {
-        #get mmap
-        #tnet[,]<-0
-        g<-tni.mmap(object,mnet,tnet,pvnet,othertfs,testedtfs,modulators)
-      }
-      return(g)
-      
-    } else if(gtype=="rmap"){
-      
-      tnet<-tnet[,tfs,drop=FALSE]
-      g<-tni.rmap(tnet)
-      #add annotation
-      if(nrow(object@annotation)>0)g<-att.mapv(g=g,dat=object@annotation,refcol=1)
-      #set target names if available
-      if(!is.null(V(g)$SYMBOL)){
-        g<-att.setv(g=g, from="SYMBOL", to='nodeAlias')
-      } else {
-        V(g)$nodeAlias<-V(g)$name
-      }
-      #set TF names
-      V(g)$tfs<-as.numeric(V(g)$name%in%tfs)
-      idx<-match(tfs,V(g)$name)
-      V(g)$nodeAlias[idx]<-names(tfs)
-      V(g)$nodeColor<-"black"
-      V(g)$nodeLineColor<-"black"
-      g<-att.setv(g=g, from="tfs", to='nodeShape',title="")
-      g$legNodeShape$legend<-c("nTF","TF")
-      g<-att.setv(g=g, from="tfs", to='nodeSize', xlim=c(20,50,1))
-      g<-att.setv(g=g, from="tfs", to='nodeFontSize',xlim=c(10,32,1))
-      #remove non-usefull legends
-      g<-remove.graph.attribute(g,"legNodeSize")
-      g<-remove.graph.attribute(g,"legNodeFontSize")
-      if(ecount(g)>0){
-        #set edge attr
-        g<-att.sete(g=g, from="modeOfAction", to='edgeColor',cols=c("#96D1FF","grey80","#FF8E91"), 
-                    title="ModeOfAction",categvec=-1:1)
-        g$legEdgeColor$legend<-c("Down","NA","Up")
-        E(g)$edgeWidth<-1.5
-        #map modeOfAction to node attribute (compute the average of the interactions)
-        el<-data.frame(get.edgelist(g),E(g)$modeOfAction,stringsAsFactors=FALSE)
-        nid<-V(g)$name
-        mdmode<-sapply(nid,function(id){
-          idx<-el[,2]==id
-          median(el[idx,3])
-        })
-        mdmode[V(g)$tfs==1]=NA
-        V(g)$medianModeOfAction<-as.integer(mdmode)
-        #assign mode to targets
-        g<-att.setv(g=g, from="medianModeOfAction", to='nodeColor',cols=c("#96D1FF","grey80","#FF8E91"), 
-                    title="ModeOfAction",categvec=-1:1,pal=1,na.col="grey80")
-        V(g)$nodeLineColor<-V(g)$nodeColor
-        g<-remove.graph.attribute(g,"legNodeColor")
-      }
-      return(g)
-      
-    } else if(gtype=="amap"){
-      
-      tnet<-tnet[,tfs,drop=FALSE]
-      adjmt<-tni.amap(tnet,overlap)
-      #-------------------filter J.C.
-      if(mask){
-        #set a mask to keep at least the best weighted edge
-        mask<-sapply(1:ncol(adjmt),function(i){
-          tp<-adjmt[,i]
-          tp==max(tp)
-        })
-        nc<-ncol(mask);nr<-nrow(mask)
-        mask<-mask+mask[rev(nr:1),rev(nc:1)]>0
-      } else {
-        mask<-array(0,dim=dim(adjmt))
-      }
-      if(amapFilter=="phyper"){
-        #filter based phyper distribution (remove non-significant overlaps)
-        if(is.null(amapCutoff))amapCutoff=0.01
-        pvalue<-amapCutoff
-        pmat<-tni.phyper(tnet)
-        adjmt[pmat>pvalue & mask==0]=0
-      } else if(amapFilter=="quantile"){
-        #filter based on quantile distribution
-        if(is.null(amapCutoff))amapCutoff=0.75
-        jc<-as.integer(amapCutoff*100)+1
-        tp<-as.numeric(adjmt)
-        jc<-quantile(tp[tp>0],probs = seq(0, 1, 0.01), na.rm=TRUE)[jc]
-        adjmt[adjmt<jc & mask==0]=0
-      } else {
-        #custom filter
-        if(is.null(amapCutoff))amapCutoff=0
-        adjmt[adjmt<amapCutoff & mask==0]=0
-      }
-      #-------------------
-      g<-igraph::graph.adjacency(adjmt, diag=FALSE, mode="undirected", weighted=TRUE)
-      if(nrow(object@annotation)>0)g<-att.mapv(g=g,dat=object@annotation,refcol=1)
-      sz<-apply(tnet!=0, 2, sum)
-      idx<-match(V(g)$name,tfs)
-      V(g)$nodeAlias<-names(tfs)[idx]
-      V(g)$degree<-sz[idx]
-      #---set main attribs
-      if(ecount(g)>0)g<-att.sete(g=g, from="weight", to='edgeWidth', nquant=nquant, xlim=c(1,15,1),roundleg=2)
-      g<-att.setv(g=g, from="degree", to='nodeSize', xlim=xlim, nquant=nquant, breaks=breaks, roundleg=1,title="Regulon size")
-      V(g)$nodeFontSize<-20
-      return(g)
-      
-    } else if(gtype=="amapDend"){
-      
-      if(!is.null(hcl)){
-        gg<-hclust2igraph(hcl)
-      } else {
-        x<-tni.amap(tnet[,tfs], overlap)
-        diag(x)=1
-        hcl <- hclust(as.dist(1-cor(x)), method='complete')
-        gg<-hclust2igraph(hcl)
-      }
-      gg$hcl<-hcl
-      #---set alias
-      idx<-match(V(gg$g)$name,tfs)
-      V(gg$g)$nodeAlias<-names(tfs)[idx]
-      V(gg$g)$nodeAlias[is.na(idx)]<-"$hcnode"
-      #---set node degree
-      V(gg$g)$degree<-2
-      sz<-apply(tnet!=0, 2, sum)
-      idx<-match(V(gg$g)$name,names(sz))
-      V(gg$g)$degree<-sz[idx]
-      #---set nest size
-      V(gg$g)$nestSize<-V(gg$g)$degree
-      nestsz<-sapply(names(gg$nest),function(nest){
-        #length(gg$nest[[nest]]) #..count only TFs
-        sum(rowSums(tnet[,gg$nest[[nest]]]!=0)>=1)
-      })
-      idx<-match(names(nestsz),V(gg$g)$name)
-      V(gg$g)$nestSize[idx]<-nestsz
-      #---set main attribs
-      gg$g<-att.setv(g=gg$g, from="degree", to='nodeSize', xlim=xlim, breaks=breaks, 
-                     nquant=nquant, roundleg=0, title="Regulon size")
-      V(gg$g)$nodeFontSize<-20
-      V(gg$g)$nodeFontSize[V(gg$g)$nodeAlias=="$hcnode"]<-1
-      V(gg$g)$nodeColor<-"black"
-      V(gg$g)$nodeLineColor<-"black"
-      E(gg$g)$edgeColor<-"black"
-      return(gg)
-      
-    }
-  }
-)
-##------------------------------------------------------------------------------
 ##run conditional mutual information analysis
 setMethod(
   "tni.conditional",
@@ -919,6 +724,10 @@ setMethod(
            pAdjustMethod="bonferroni", minRegulonSize=15, minIntersectSize=5, 
            miThreshold="md", prob=0.99, pwtransform=FALSE, medianEffect=FALSE, 
            iConstraint=TRUE, verbose=TRUE, mdStability=FALSE){
+    
+    #---check compatibility
+    object <- upgradeTNI(object)
+    
     ##-----check input arguments
     if(object@status["DPI.filter"]!="[x]")stop("NOTE: input 'object' needs dpi analysis!")
     tnai.checks(name="modulators",para=modulators)
@@ -955,23 +764,23 @@ setMethod(
     if(verbose)cat("-Preprocessing for input data...\n")
     ##-----make sure all 'tfs' are valid
     if(is.null(tfs)){
-      tfs<-object@transcriptionFactors
+      tfs<-object@regulatoryElements
     } else {
       if(verbose)cat("--Checking TFs in the dataset...\n")
       tfs<-as.character(tfs)
-      idx<-which(!tfs%in%object@transcriptionFactors & !tfs%in%names(object@transcriptionFactors))
+      idx<-which(!tfs%in%object@regulatoryElements & !tfs%in%names(object@regulatoryElements))
       if(length(idx)>0){
         message(paste("Note: input 'tfs' contains", length(idx)," element(s) not listed in the network!\n"))
       }
-      idx<-which(object@transcriptionFactors%in%tfs | names(object@transcriptionFactors)%in%tfs)
+      idx<-which(object@regulatoryElements%in%tfs | names(object@regulatoryElements)%in%tfs)
       if(length(idx)<1){
         stop(paste("NOTE: input 'tfs' contains no useful data!\n"))
       }      
-      tfs<-object@transcriptionFactors[idx]
+      tfs<-object@regulatoryElements[idx]
     }
     ##-----make sure 'modulators' are set to character
     if(is.null(modulators)){
-      modulators<-object@transcriptionFactors
+      modulators<-object@regulatoryElements
     } else {
       if(verbose)cat("--Checking modulators in the dataset...\n")
       if(!is.character(modulators)){
@@ -991,17 +800,17 @@ setMethod(
       modulators<-modulators[idx]
       ##-----make sure 'modulators' is a named vector
       if(is.null(names(modulators))){
-        if(!is.null(object@annotation$SYMBOL)){
-          names(modulators)<-object@annotation[modulators,"SYMBOL"]
+        if(!is.null(object@rowAnnotation$SYMBOL)){
+          names(modulators)<-object@rowAnnotation[modulators,"SYMBOL"]
         } else {
           names(modulators)<-modulators
         }
       } else {
-        #check possible inconsitency between 'annotation' and 'modulators' 
-        if(!is.null(object@annotation$SYMBOL)){
-          tp<-object@annotation[modulators,"SYMBOL"]
+        #check possible inconsitency between 'rowAnnotation' and 'modulators' 
+        if(!is.null(object@rowAnnotation$SYMBOL)){
+          tp<-object@rowAnnotation[modulators,"SYMBOL"]
           if(any(tp!=names(modulators))){
-            warning("one or more symbols in the named vector 'modulators' seem to differ from 'annotation' slot!")
+            warning("one or more symbols in the named vector 'modulators' seem to differ from 'rowAnnotation' slot!")
           }
         }
       }
@@ -1358,9 +1167,289 @@ setMethod(
   function(object) {
     cat("A TNI (Transcriptional Network Inference) object:\n")
     message("--status:")
+    
+    #---check compatibility
+    object <- upgradeTNI(object)
+    
     print(tni.get(object, what=c("status")), quote=FALSE)
   }
 )
+
+
+##------------------------------------------------------------------------------
+##get graph from TNI
+## experimental args:
+## mask: a logical value specifying to apply a mask on the 'amapFilter', keeping at least the 
+## ......best weighted edge (when verbose=TRUE) or not (when verbose=FALSE).
+## hcl: an hclust object with TF's IDs
+## overlap: overlapping nodes used for the Jaccard (options: 'all', 'pos', 'neg')
+## TODO: revise 'tnai.checks' for new args!
+setMethod(
+  "tni.graph",
+  "TNI",
+  function(object, tnet="dpi", gtype="rmap", minRegulonSize=15, tfs=NULL,
+           amapFilter="quantile", amapCutoff=NULL, ntop=NULL, mask=FALSE, 
+           hcl=NULL, overlap="all", xlim=c(30,80,5), nquant=5, breaks=NULL, 
+           mds=NULL, nbottom=NULL){
+    # chech igraph compatibility
+    b1<-"package:igraph0" %in% search()
+    b2<- "igraph0" %in%  loadedNamespaces()
+    if( b1 || b2) {
+      stop("\n\n ...conflict with 'igraph0': please use the new 'igraph' package!")
+    }
+    #---check compatibility
+    object <- upgradeTNI(object)
+    
+    ##-----check input arguments
+    if(object@status["Preprocess"]!="[x]")stop("NOTE: input 'object' needs preprocessing!")
+    if(object@status["DPI.filter"]!="[x]")stop("NOTE: input 'object' needs dpi analysis!")
+    tnai.checks(name="tnet",para=tnet)
+    tnai.checks(name="tni.gtype",para=gtype)
+    tnai.checks(name="minRegulonSize",para=minRegulonSize)
+    tnai.checks(name="tfs",para=tfs)
+    tnai.checks(name="ntop",para=ntop)
+    tnai.checks(name="mds",para=mds)
+    tnai.checks(name="amapFilter",para=amapFilter)
+    tnai.checks(name="amapCutoff",para=amapCutoff)
+    tnai.checks(name="mask",para=mask)
+    #---
+    if(gtype=="mmap" || gtype=="mmapDetailed")tnet="dpi"
+    if(tnet=="ref"){
+      tnet<-object@results$tn.ref
+    } else {
+      tnet<-object@results$tn.dpi
+    }
+    #---
+    if(!is.null(hcl)){
+      gtype="amapDend"
+      tfs<-object@regulatoryElements
+      if(!all(hcl$labels%in%tfs | hcl$labels%in%names(tfs)))
+        stop("all labels in the 'hclust' object should be listed as 'regulatoryElements'!")
+      idx1<-match(hcl$labels,tfs)
+      idx2<-match(hcl$labels,names(tfs))
+      check<-which(is.na(idx1))
+      idx1[check]<-idx2[check]
+      tfs<-tfs[idx1]
+      hcl$labels<-tfs
+    } else if(is.null(tfs)){
+      tfs<-object@regulatoryElements
+      minsz<-colnames(tnet)[colSums(tnet!=0)>=minRegulonSize]
+      tfs<-tfs[tfs%in%minsz]
+    } else {
+      tfs<-as.character(tfs)
+      idx<-which(names(object@regulatoryElements)%in%tfs | object@regulatoryElements%in%tfs)
+      if(length(idx)==0)stop("NOTE: input 'tfs' contains no useful data!\n")
+      tfs<-object@regulatoryElements[idx]
+    }
+    
+    #-----------------------------------------
+    #-----------------------------------------
+    
+    if(gtype=="mmap" || gtype=="mmapDetailed"){ #get modulatory maps
+      
+      ##-----check input arguments
+      if(object@status["Conditional"]!="[x]")stop("NOTE: input needs conditional analysis!")
+      #get tfs and modulators
+      cdt<-tni.get(object,what="cdt")
+      if(length(cdt)==0)stop("NOTE: input conditional analysis is empty")
+      #cdt<-tni.get(object,what="cdt",ntop=5)
+      testedtfs<-names(cdt)
+      testedtfs<-object@regulatoryElements[object@regulatoryElements%in%testedtfs]
+      testedtfs<-testedtfs[testedtfs%in%tfs]
+      if(length(testedtfs)==0)stop("NOTE: input 'tfs' contains no useful data!\n")
+      modulators<-sapply(testedtfs,function(tf){
+        rownames(cdt[[tf]])
+      })
+      modulators<-unlist(modulators)
+      modulators<-object@modulators[object@modulators%in%modulators]
+      othertfs<-object@regulatoryElements
+      othertfs<-othertfs[!othertfs%in%testedtfs]
+      othertfs<-othertfs[othertfs%in%modulators]
+      #get adjmt
+      tnet<-tnet[unique(c(testedtfs,setdiff(modulators,testedtfs))),testedtfs,drop=FALSE]
+      mnet<-tnet;mnet[,]=0
+      junk<-sapply(colnames(mnet),function(i){
+        tp<-cdt[[i]]
+        mnet[rownames(tp),i]<<-tp$Mode
+        NULL
+      })
+      pvnet<-tnet;pvnet[,]=1
+      junk<-sapply(colnames(mnet),function(i){
+        tp<-cdt[[i]]
+        pvnet[rownames(tp),i]<<-tp$PvKS
+        NULL
+      })
+      #---
+      if(gtype=="mmapDetailed"){
+        #---experimental!!!
+        #return a lista with:
+        #1st level: a TF
+        #2nd level: all MDs of a TF
+        #3rd level: a graph
+        if(is.null(mds)){
+          mds <- modulators
+        } else {
+          idx1<-mds%in%modulators
+          idx2<-mds%in%names(modulators)
+          if(!all(idx1) & !all(idx2)){
+            stop("NOTE: one or more input modutors in 'mds' not listed in the TNI object!")
+          } else {
+            if(sum(idx1)>sum(idx2)){
+              mds<-modulators[modulators%in%mds]
+            } else {
+              mds<-modulators[names(modulators)%in%mds]
+            }
+          }
+        }
+        g<-tni.mmap.detailed(object,mnet,testedtfs, mds, ntop=ntop, nbottom=nbottom)
+      } else {
+        #get mmap
+        #tnet[,]<-0
+        g<-tni.mmap(object,mnet,tnet,pvnet,othertfs,testedtfs,modulators)
+      }
+      return(g)
+      
+    } else if(gtype=="rmap"){
+      
+      tnet<-tnet[,tfs,drop=FALSE]
+      g<-tni.rmap(tnet)
+      #add rowAnnotation
+      if(nrow(object@rowAnnotation)>0)g<-att.mapv(g=g,dat=object@rowAnnotation,refcol=1)
+      #set target names if available
+      if(!is.null(V(g)$SYMBOL)){
+        g<-att.setv(g=g, from="SYMBOL", to='nodeAlias')
+      } else {
+        V(g)$nodeAlias<-V(g)$name
+      }
+      #set TF names
+      V(g)$tfs<-as.numeric(V(g)$name%in%tfs)
+      idx<-match(tfs,V(g)$name)
+      V(g)$nodeAlias[idx]<-names(tfs)
+      V(g)$nodeColor<-"black"
+      V(g)$nodeLineColor<-"black"
+      g<-att.setv(g=g, from="tfs", to='nodeShape',title="")
+      g$legNodeShape$legend<-c("nTF","TF")
+      g<-att.setv(g=g, from="tfs", to='nodeSize', xlim=c(20,50,1))
+      g<-att.setv(g=g, from="tfs", to='nodeFontSize',xlim=c(10,32,1))
+      #remove non-usefull legends
+      g<-remove.graph.attribute(g,"legNodeSize")
+      g<-remove.graph.attribute(g,"legNodeFontSize")
+      if(ecount(g)>0){
+        #set edge attr
+        g<-att.sete(g=g, from="modeOfAction", to='edgeColor',cols=c("#96D1FF","grey80","#FF8E91"), 
+                    title="ModeOfAction",categvec=-1:1)
+        g$legEdgeColor$legend<-c("Down","NA","Up")
+        E(g)$edgeWidth<-1.5
+        #map modeOfAction to node attribute (compute the average of the interactions)
+        el<-data.frame(get.edgelist(g),E(g)$modeOfAction,stringsAsFactors=FALSE)
+        nid<-V(g)$name
+        mdmode<-sapply(nid,function(id){
+          idx<-el[,2]==id
+          median(el[idx,3])
+        })
+        mdmode[V(g)$tfs==1]=NA
+        V(g)$medianModeOfAction<-as.integer(mdmode)
+        #assign mode to targets
+        g<-att.setv(g=g, from="medianModeOfAction", to='nodeColor',cols=c("#96D1FF","grey80","#FF8E91"), 
+                    title="ModeOfAction",categvec=-1:1,pal=1,na.col="grey80")
+        V(g)$nodeLineColor<-V(g)$nodeColor
+        g<-remove.graph.attribute(g,"legNodeColor")
+      }
+      return(g)
+      
+    } else if(gtype=="amap"){
+      
+      tnet<-tnet[,tfs,drop=FALSE]
+      adjmt<-tni.amap(tnet,overlap)
+      #-------------------filter J.C.
+      if(mask){
+        #set a mask to keep at least the best weighted edge
+        mask<-sapply(1:ncol(adjmt),function(i){
+          tp<-adjmt[,i]
+          tp==max(tp)
+        })
+        nc<-ncol(mask);nr<-nrow(mask)
+        mask<-mask+mask[rev(nr:1),rev(nc:1)]>0
+      } else {
+        mask<-array(0,dim=dim(adjmt))
+      }
+      if(amapFilter=="phyper"){
+        #filter based phyper distribution (remove non-significant overlaps)
+        if(is.null(amapCutoff))amapCutoff=0.01
+        pvalue<-amapCutoff
+        pmat<-tni.phyper(tnet)
+        adjmt[pmat>pvalue & mask==0]=0
+      } else if(amapFilter=="quantile"){
+        #filter based on quantile distribution
+        if(is.null(amapCutoff))amapCutoff=0.75
+        jc<-as.integer(amapCutoff*100)+1
+        tp<-as.numeric(adjmt)
+        jc<-quantile(tp[tp>0],probs = seq(0, 1, 0.01), na.rm=TRUE)[jc]
+        adjmt[adjmt<jc & mask==0]=0
+      } else {
+        #custom filter
+        if(is.null(amapCutoff))amapCutoff=0
+        adjmt[adjmt<amapCutoff & mask==0]=0
+      }
+      #-------------------
+      g<-igraph::graph.adjacency(adjmt, diag=FALSE, mode="undirected", weighted=TRUE)
+      if(nrow(object@rowAnnotation)>0)g<-att.mapv(g=g,dat=object@rowAnnotation,refcol=1)
+      sz<-apply(tnet!=0, 2, sum)
+      idx<-match(V(g)$name,tfs)
+      V(g)$nodeAlias<-names(tfs)[idx]
+      V(g)$degree<-sz[idx]
+      #---set main attribs
+      if(ecount(g)>0)g<-att.sete(g=g, from="weight", to='edgeWidth', nquant=nquant, xlim=c(1,15,1),roundleg=2)
+      g<-att.setv(g=g, from="degree", to='nodeSize', xlim=xlim, nquant=nquant, breaks=breaks, roundleg=1,title="Regulon size")
+      V(g)$nodeFontSize<-20
+      return(g)
+      
+    } else if(gtype=="amapDend"){
+      
+      if(!is.null(hcl)){
+        gg<-hclust2igraph(hcl)
+      } else {
+        x<-tni.amap(tnet[,tfs], overlap)
+        diag(x)=1
+        hcl <- hclust(as.dist(1-cor(x)), method='complete')
+        gg<-hclust2igraph(hcl)
+      }
+      gg$hcl<-hcl
+      #---set alias
+      idx<-match(V(gg$g)$name,tfs)
+      V(gg$g)$nodeAlias<-names(tfs)[idx]
+      V(gg$g)$nodeAlias[is.na(idx)]<-"$hcnode"
+      #---set node degree
+      V(gg$g)$degree<-2
+      sz<-apply(tnet!=0, 2, sum)
+      idx<-match(V(gg$g)$name,names(sz))
+      V(gg$g)$degree<-sz[idx]
+      #---set nest size
+      V(gg$g)$nestSize<-V(gg$g)$degree
+      nestsz<-sapply(names(gg$nest),function(nest){
+        #length(gg$nest[[nest]]) #..count only TFs
+        sum(rowSums(tnet[,gg$nest[[nest]]]!=0)>=1)
+      })
+      idx<-match(names(nestsz),V(gg$g)$name)
+      V(gg$g)$nestSize[idx]<-nestsz
+      #---set main attribs
+      gg$g<-att.setv(g=gg$g, from="degree", to='nodeSize', xlim=xlim, breaks=breaks, 
+                     nquant=nquant, roundleg=0, title="Regulon size")
+      V(gg$g)$internalNode <- FALSE
+      V(gg$g)$internalNode[is.na(V(gg$g)$degree)] <- TRUE
+      V(gg$g)$nodeSize[V(gg$g)$internalNode] <- 10
+      E(gg$g)$edgeWidth <- 10
+      V(gg$g)$nodeFontSize<-20
+      V(gg$g)$nodeFontSize[V(gg$g)$nodeAlias=="$hcnode"]<-1
+      V(gg$g)$nodeColor<-"black"
+      V(gg$g)$nodeLineColor<-"black"
+      E(gg$g)$edgeColor<-"black"
+      return(gg)
+      
+    }
+  }
+)
+
 
 ##------------------------------------------------------------------------------
 ##------------------------------------------------------------------------------
@@ -1368,34 +1457,47 @@ setMethod(
 ##------------------------------------------------------------------------------
 ##------------------------------------------------------------------------------
 
+
+##------------------------------------------------------------------------------
+#---check compatibility and upgrade tni objects
+upgradeTNI <- function(object){
+  if(class(object)[1]=="TNI"){
+    if(.hasSlot(object, "transcriptionFactors") && !.hasSlot(object, "regulatoryElements")){
+      object@regulatoryElements <- object@transcriptionFactors
+      object@rowAnnotation <- object@annotation
+    }
+  }
+  return(object)
+}
+
 ##------------------------------------------------------------------------------
 ##This function returns alternative annotations for get.tni/get.tna methods
 translateQuery<-function(query,idkey,object,annottype,reportNames){
-  annotation<-object@annotation
+  rowAnnotation<-object@rowAnnotation
   if(is.null(query))return(query)
-  cnames<-colnames(annotation)
+  cnames<-colnames(rowAnnotation)
   if(!idkey%in%cnames){
     tp1<-"'NOTE: <idkey> not available! please use one of: "
     tp2<-paste(cnames,collapse=", ")
     stop(tp1,tp2,call.=FALSE)
   }
   # get TF's lab
-  tfs<-object@transcriptionFactors
+  tfs<-object@regulatoryElements
   if(!reportNames){
-    idx<-tfs%in%rownames(annotation)
-    names(tfs)[idx]<-annotation[tfs[idx],idkey]
+    idx<-tfs%in%rownames(rowAnnotation)
+    names(tfs)[idx]<-rowAnnotation[tfs[idx],idkey]
   }
   if(annottype=="matrixAndNames"){
     idx<-colnames(query)%in%tfs
     colnames(query)[idx]<-names(tfs)[idx]
-    idx<-rownames(query)%in%rownames(annotation)
-    rownames(query)[idx]<-annotation[rownames(query)[idx],idkey]
+    idx<-rownames(query)%in%rownames(rowAnnotation)
+    rownames(query)[idx]<-rowAnnotation[rownames(query)[idx],idkey]
   } else if(annottype=="listAndNames"){
     idx<-names(query)%in%tfs
     names(query)[idx]<-names(tfs)[idx]
     query<-lapply(query,function(qry){
-      idx<-names(qry)%in%rownames(annotation)
-      names(qry)[idx]<-annotation[names(qry)[idx],idkey]
+      idx<-names(qry)%in%rownames(rowAnnotation)
+      names(qry)[idx]<-rowAnnotation[names(qry)[idx],idkey]
       qry
     })
   } else if(annottype=="listAndContent"){
@@ -1403,21 +1505,21 @@ translateQuery<-function(query,idkey,object,annottype,reportNames){
     names(query)[idx]<-names(tfs)[idx]
     query<-lapply(query,function(qry){
       nms<-names(qry)
-      idx<-qry%in%rownames(annotation)
-      qry[idx]<-annotation[qry[idx],idkey]
+      idx<-qry%in%rownames(rowAnnotation)
+      qry[idx]<-rowAnnotation[qry[idx],idkey]
       names(qry)<-nms
       qry<-qry[!is.na(qry)]
       unique(qry)
     })
   } else if(annottype=="vecAndContent"){
     nms<-names(query)
-    idx<-query%in%rownames(annotation)
-    query[idx]<-annotation[query[idx],idkey]
+    idx<-query%in%rownames(rowAnnotation)
+    query[idx]<-rowAnnotation[query[idx],idkey]
     names(query)<-nms
     query<-unique(query[!is.na(query)])
   } else if(annottype=="vecAndNames"){
-    idx<-names(query)%in%rownames(annotation)
-    names(query)[idx]<-annotation[names(query)[idx],idkey]
+    idx<-names(query)%in%rownames(rowAnnotation)
+    names(query)[idx]<-rowAnnotation[names(query)[idx],idkey]
   }
   return(query)
 }

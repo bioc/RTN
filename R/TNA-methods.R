@@ -7,14 +7,18 @@
 setMethod("initialize",
 		"TNA",
 		function(.Object, transcriptionalNetwork, referenceNetwork, 
-             transcriptionFactors, phenotype=NULL, hits=NULL) {
+             regulatoryElements, phenotype=NULL, hits=NULL) {
+		  
+		  #---check compatibility
+		  .Object <- upgradeTNA(.Object)
+		  
 			##-----check arguments
 			if(missing(transcriptionalNetwork))stop("NOTE: 'transcriptionalNetwork' is missing!",call.=FALSE)
 			if(missing(referenceNetwork))referenceNetwork=transcriptionalNetwork
-			if(missing(transcriptionFactors))stop("NOTE: 'transcriptionFactors' is missing!",call.=FALSE)
+			if(missing(regulatoryElements))stop("NOTE: 'regulatoryElements' is missing!",call.=FALSE)
 			tnai.checks(name="transcriptionalNetwork",transcriptionalNetwork)
 			tnai.checks(name="referenceNetwork",referenceNetwork)
-			tnai.checks(name="transcriptionFactors",transcriptionFactors)      
+			tnai.checks(name="regulatoryElements",regulatoryElements)      
 			tnai.checks(name="phenotype",phenotype)
 			tnai.checks(name="hits",hits)
       if(is.null(phenotype) && is.null(hits)){
@@ -23,16 +27,16 @@ setMethod("initialize",
       b1<-sum(!colnames(referenceNetwork)==colnames(transcriptionalNetwork)) > 0
 			b2<-sum(!rownames(referenceNetwork)==rownames(transcriptionalNetwork)) > 0
 			if(b1 || b2) stop("NOTE: col and row names in 'referenceNetwork' should match 'transcriptionalNetwork'!",call.=FALSE)
-			if(sum(!transcriptionFactors%in%colnames(transcriptionalNetwork))>0)
-			  stop("NOTE: one or more 'transcriptionFactors' missing in the 'transcriptionalNetwork'!",call.=FALSE)
-      if(is.null(names(transcriptionFactors)))names(transcriptionFactors)<-transcriptionFactors      
+			if(sum(!regulatoryElements%in%colnames(transcriptionalNetwork))>0)
+			  stop("NOTE: one or more 'regulatoryElements' missing in the 'transcriptionalNetwork'!",call.=FALSE)
+      if(is.null(names(regulatoryElements)))names(regulatoryElements)<-regulatoryElements      
 			##-----initialization
 			.Object@transcriptionalNetwork<-transcriptionalNetwork
 			.Object@referenceNetwork<-referenceNetwork
-			.Object@transcriptionFactors<-transcriptionFactors
+			.Object@regulatoryElements<-regulatoryElements
 			.Object@phenotype<-phenotype
 			.Object@hits<-hits
-			.Object@annotation<-data.frame()
+			.Object@rowAnnotation<-data.frame()
 			.Object@listOfRegulons<-list()
 			.Object@listOfReferenceRegulons<-list()
 			.Object@listOfModulators<-list()
@@ -99,12 +103,17 @@ setMethod("initialize",
 			.Object
 		}
 )
+
 ##------------------------------------------------------------------------------
 ##get slots from TNA
 setMethod(
   "tna.get",
   "TNA",
   function(object, what="summary", order=TRUE, ntop=NULL, reportNames=TRUE, idkey=NULL) {
+    
+    #---check compatibility
+    object <- upgradeTNA(object)
+    
     ##-----check input arguments
     tnai.checks(name="tna.what",para=what)
     tnai.checks(name="order",para=order)
@@ -119,8 +128,8 @@ setMethod(
     } else if(what=="refnet"){
       query<-object@referenceNetwork
       if(!is.null(idkey))query<-translateQuery(query,idkey,object,"matrixAndNames")
-    } else if(what=="tfs"){
-      query<-object@transcriptionFactors
+    } else if(what=="regulatoryElements"){
+      query<-object@regulatoryElements
       if(!is.null(idkey))query<-translateQuery(query,idkey,object,"vecAndContent")
     } else if(what=="pheno"){
       query<-object@phenotype
@@ -171,8 +180,8 @@ setMethod(
           }
         }
         if(reportNames){
-          idx<-match(query[,1],object@transcriptionFactors)
-          query[,1]<-names(object@transcriptionFactors)[idx]
+          idx<-match(query[,1],object@regulatoryElements)
+          query[,1]<-names(object@regulatoryElements)[idx]
         }
       }
     }
@@ -190,8 +199,8 @@ setMethod(
           }
         }
         if(reportNames){
-          idx<-match(query[,1],object@transcriptionFactors)
-          query[,1]<-names(object@transcriptionFactors)[idx]
+          idx<-match(query[,1],object@regulatoryElements)
+          query[,1]<-names(object@regulatoryElements)[idx]
         }
       }
       if(!is.null(idkey))warning("'idkey' argument has no effect on consolidated tables!")
@@ -209,8 +218,8 @@ setMethod(
             }
           }
           if(reportNames){
-            idx<-match(query[,1],object@transcriptionFactors)
-            query[,1]<-names(object@transcriptionFactors)[idx]
+            idx<-match(query[,1],object@regulatoryElements)
+            query[,1]<-names(object@regulatoryElements)[idx]
           }
         }
         query
@@ -245,10 +254,10 @@ setMethod(
           }
         }
         if(reportNames){
-          idx<-match(query[,1],object@transcriptionFactors)
-          query[,1]<-names(object@transcriptionFactors)[idx]
-          idx<-match(query[,2],object@transcriptionFactors)
-          query[,2]<-names(object@transcriptionFactors)[idx]        
+          idx<-match(query[,1],object@regulatoryElements)
+          query[,1]<-names(object@regulatoryElements)[idx]
+          idx<-match(query[,2],object@regulatoryElements)
+          query[,2]<-names(object@regulatoryElements)[idx]        
         }
       }
       if(!is.null(idkey))warning("'idkey' argument has no effect on consolidated tables!")
@@ -268,10 +277,10 @@ setMethod(
           }
         }
         if(reportNames){
-          idx<-match(query[,1],object@transcriptionFactors)
-          query[,1]<-names(object@transcriptionFactors)[idx]
-          idx<-match(query[,2],object@transcriptionFactors)
-          query[,2]<-names(object@transcriptionFactors)[idx]        
+          idx<-match(query[,1],object@regulatoryElements)
+          query[,1]<-names(object@regulatoryElements)[idx]
+          idx<-match(query[,2],object@regulatoryElements)
+          query[,2]<-names(object@regulatoryElements)[idx]        
         }
       }
       if(!is.null(idkey))warning("'idkey' argument has no effect on consolidated tables!")
@@ -291,10 +300,10 @@ setMethod(
           }
         }
         if(reportNames){
-          idx<-match(query[,1],object@transcriptionFactors)
-          query[,1]<-names(object@transcriptionFactors)[idx]
-          idx<-match(query[,2],object@transcriptionFactors)
-          query[,2]<-names(object@transcriptionFactors)[idx]        
+          idx<-match(query[,1],object@regulatoryElements)
+          query[,1]<-names(object@regulatoryElements)[idx]
+          idx<-match(query[,2],object@regulatoryElements)
+          query[,2]<-names(object@regulatoryElements)[idx]        
         }
       }
       if(!is.null(idkey))warning("'idkey' argument has no effect on consolidated tables!")
@@ -332,8 +341,10 @@ setMethod(
       if(!is.null(idkey))query<-translateQuery(query,idkey,object,"listAndNames",reportNames)
     } else if(what=="summary"){
       query<-object@summary
-    } else if(what=="annotation"){
-      query<-object@annotation
+    } else if(what=="rowAnnotation"){
+      query<-object@rowAnnotation
+    } else if(what=="colAnnotation"){
+      query<-object@colAnnotation      
     } else if(what=="status"){
       query<-object@status
     }
@@ -346,6 +357,10 @@ setMethod(
   "show",
   "TNA",
   function(object) {
+    
+    #---check compatibility
+    object <- upgradeTNA(object)
+    
     status<-tna.get(object, what=c("status"))
     cat("A TNA (transcriptional network analysis) object:\n")
     message("--preprocessing status:")
@@ -362,6 +377,10 @@ setMethod(
   "TNA",
   function(object, pValueCutoff=0.05, pAdjustMethod="BH", minRegulonSize=15,
            tnet="dpi", verbose=TRUE) {
+    
+    #---check compatibility
+    object <- upgradeTNA(object)
+    
     if(object@status$preprocess["integration"]!="[x]")stop("NOTE: input 'object' needs preprocessing!")
     if(object@status$preprocess["hits"]!="[x]")stop("NOTE: input 'hits' is empty and/or needs preprocessing!")
     ##-----check and assign parameters
@@ -420,6 +439,10 @@ setMethod(
   function(object, pValueCutoff=0.05, pAdjustMethod="BH",  minRegulonSize=15, 
            nPermutations=1000, exponent=1, tnet="dpi", orderAbsValue=TRUE, stepFilter=TRUE, 
            tfs=NULL, verbose=TRUE) {
+    
+    #---check compatibility
+    object <- upgradeTNA(object)
+    
     if(object@status$preprocess["integration"]!="[x]")stop("NOTE: input 'object' needs preprocessing!")
     if(object@status$preprocess["phenotype"]!="[x]")stop("NOTE: input 'phenotype' is empty and/or needs preprocessing!")
     ##-----check and assign parameters
@@ -456,10 +479,10 @@ setMethod(
     
     ##-----stepFilter: use significant regulons inferred from MRA analysis
     if(!is.null(tfs)){
-      if(sum(tfs%in%object@transcriptionFactors) > sum(tfs%in%names(object@transcriptionFactors) ) ){
-        tfs<-object@transcriptionFactors[object@transcriptionFactors%in%tfs]
+      if(sum(tfs%in%object@regulatoryElements) > sum(tfs%in%names(object@regulatoryElements) ) ){
+        tfs<-object@regulatoryElements[object@regulatoryElements%in%tfs]
       } else {
-        tfs<-object@transcriptionFactors[names(object@transcriptionFactors)%in%tfs]
+        tfs<-object@regulatoryElements[names(object@regulatoryElements)%in%tfs]
       }
       if(length(tfs)==0)stop("NOTE: 'tfs' argument has no valid name!")
       rgcs<-rgcs[tfs]
@@ -524,7 +547,12 @@ setMethod(
   "tna.gsea2",
   "TNA",
   function(object, pValueCutoff=0.05, pAdjustMethod="BH",  minRegulonSize=15, 
-           nPermutations=1000, exponent=1, tnet="dpi", stepFilter=TRUE, tfs=NULL, verbose=TRUE) {
+           nPermutations=1000, exponent=1, tnet="dpi", stepFilter=TRUE, 
+           tfs=NULL, verbose=TRUE) {
+    
+    #---check compatibility
+    object <- upgradeTNA(object)
+    
     if(object@status$preprocess["integration"]!="[x]")stop("NOTE: input 'object' needs preprocessing!")
     if(object@status$preprocess["phenotype"]!="[x]")stop("NOTE: input 'phenotype' is empty and/or needs preprocessing!")
     ##-----check and assign parameters
@@ -562,16 +590,16 @@ setMethod(
     }
     ##-----Either tfs or stepFilter: use a sublist or significant regulons inferred from MRA analysis
     if(!is.null(tfs)){
-      if(sum(tfs%in%object@transcriptionFactors) > sum(tfs%in%names(object@transcriptionFactors) ) ){
-        tfs<-object@transcriptionFactors[object@transcriptionFactors%in%tfs]
+      if(sum(tfs%in%object@regulatoryElements) > sum(tfs%in%names(object@regulatoryElements) ) ){
+        tfs<-object@regulatoryElements[object@regulatoryElements%in%tfs]
       } else {
-        tfs<-object@transcriptionFactors[names(object@transcriptionFactors)%in%tfs]
+        tfs<-object@regulatoryElements[names(object@regulatoryElements)%in%tfs]
       }
       if(length(tfs)==0)stop("NOTE: 'tfs' argument has no valid names!")
     } else if(stepFilter){
       if(object@status$analysis["MRA"]=="[x]" && object@summary$results["MRA",]>0){
         tfs<-rownames(tna.get(object,what="mra", reportNames=FALSE))
-        tfs<-object@transcriptionFactors[object@transcriptionFactors%in%tfs]
+        tfs<-object@regulatoryElements[object@regulatoryElements%in%tfs]
       } else {
         cat("obs: input using 'stepFilter'!! \n")
         if(object@status$analysis["MRA"]=="[x]"){
@@ -583,7 +611,7 @@ setMethod(
         stop("NOTE: GSEA2 analysis can not be executed!")
       }
     } else {
-      tfs<-object@transcriptionFactors
+      tfs<-object@regulatoryElements
     }
     listOfRegulonsAndMode<-listOfRegulonsAndMode[tfs]
     
@@ -675,6 +703,7 @@ setMethod(
     return(object)
   }
 )
+
 ##------------------------------------------------------------------------------
 ##overlap
 setMethod(
@@ -682,6 +711,10 @@ setMethod(
   "TNA",
   function(object, pValueCutoff=0.05, pAdjustMethod="BH", minRegulonSize=15, 
            tnet="ref", tfs=NULL, verbose=TRUE) {  
+    
+    #---check compatibility
+    object <- upgradeTNA(object)
+    
     if(object@status$preprocess["integration"]!="[x]")stop("NOTE: input 'object' needs preprocessing!")
     ##-----check and assign parameters
     tnai.checks(name="pValueCutoff",para=pValueCutoff)
@@ -701,10 +734,10 @@ setMethod(
       tnet<-object@referenceNetwork
     }
     if(!is.null(tfs)){
-      if(sum(tfs%in%object@transcriptionFactors) > sum(tfs%in%names(object@transcriptionFactors) ) ){
-        tfs<-object@transcriptionFactors[object@transcriptionFactors%in%tfs]
+      if(sum(tfs%in%object@regulatoryElements) > sum(tfs%in%names(object@regulatoryElements) ) ){
+        tfs<-object@regulatoryElements[object@regulatoryElements%in%tfs]
       } else {
-        tfs<-object@transcriptionFactors[names(object@transcriptionFactors)%in%tfs]
+        tfs<-object@regulatoryElements[names(object@regulatoryElements)%in%tfs]
       }
       if(length(tfs)==0)stop("NOTE: 'tfs' argument has no valid names!")
       rgcs<-rgcs[tfs]
@@ -716,7 +749,7 @@ setMethod(
     object@summary$rgc[,"above.min.size"]<-sum(gs.size>minRegulonSize)
     if(object@summary$rgc[,"above.min.size"]<2){
       cat("Overlap analysis can not be executed!\n")
-      if(length(object@transcriptionFactors)<2){
+      if(length(object@regulatoryElements)<2){
         cat("-obs: transcription factor slot with only one element!\n")
       }
       if(ncol(object@referenceNetwork)<2){
@@ -749,10 +782,17 @@ setMethod(
 setMethod(
   "tna.synergy",
   "TNA",
-  function(object, pValueCutoff=0.05, pAdjustMethod="BH", minRegulonSize=15, minIntersectSize=1,
-           nPermutations=1000, exponent=1, tnet="ref", orderAbsValue=TRUE, stepFilter=TRUE, tfs=NULL, verbose=TRUE) {
-    if(object@status$preprocess["integration"]!="[x]")stop("NOTE: input 'object' needs preprocessing!")
-    if(object@status$preprocess["phenotype"]!="[x]")stop("NOTE: input 'phenotype' is empty and/or needs preprocessing!")
+  function(object, pValueCutoff=0.05, pAdjustMethod="BH", minRegulonSize=15, 
+           minIntersectSize=1, nPermutations=1000, exponent=1, tnet="ref", 
+           orderAbsValue=TRUE, stepFilter=TRUE, tfs=NULL, verbose=TRUE) {
+    
+    #---check compatibility
+    object <- upgradeTNA(object)
+    
+    if(object@status$preprocess["integration"]!="[x]")
+      stop("NOTE: input 'object' needs preprocessing!")
+    if(object@status$preprocess["phenotype"]!="[x]")
+      stop("NOTE: input 'phenotype' is empty and/or needs preprocessing!")
     ##-----check and assign parameters
     tnai.checks(name="pValueCutoff",para=pValueCutoff)
     tnai.checks(name="pAdjustMethod",para=pAdjustMethod)
@@ -791,10 +831,10 @@ setMethod(
     rgcs <- rgcs[which(gs.size >= minRegulonSize)]
     
     if(!is.null(tfs)){
-      if(sum(tfs%in%object@transcriptionFactors) > sum(tfs%in%names(object@transcriptionFactors) ) ){
-        tfs<-object@transcriptionFactors[object@transcriptionFactors%in%tfs]
+      if(sum(tfs%in%object@regulatoryElements) > sum(tfs%in%names(object@regulatoryElements) ) ){
+        tfs<-object@regulatoryElements[object@regulatoryElements%in%tfs]
       } else {
-        tfs<-object@transcriptionFactors[names(object@transcriptionFactors)%in%tfs]
+        tfs<-object@regulatoryElements[names(object@regulatoryElements)%in%tfs]
       }
       if(length(tfs)==0)stop("NOTE: 'tfs' argument has no valid name!")
       rgcs<-rgcs[tfs]
@@ -871,8 +911,13 @@ setMethod(
 setMethod(
   "tna.shadow",
   "TNA",
-  function(object, pValueCutoff=0.05, pAdjustMethod="BH", minRegulonSize=15, minIntersectSize=1,
-           nPermutations=1000, exponent=1, tnet="ref", orderAbsValue=TRUE, stepFilter=TRUE, tfs=NULL, verbose=TRUE) {
+  function(object, pValueCutoff=0.05, pAdjustMethod="BH", minRegulonSize=15, 
+           minIntersectSize=1, nPermutations=1000, exponent=1, tnet="ref", 
+           orderAbsValue=TRUE, stepFilter=TRUE, tfs=NULL, verbose=TRUE) {
+    
+    #---check compatibility
+    object <- upgradeTNA(object)
+    
     if(object@status$preprocess["integration"]!="[x]")stop("NOTE: input 'object' needs preprocessing!")
     if(object@status$preprocess["phenotype"]!="[x]")stop("NOTE: input 'phenotype' is empty and/or needs preprocessing!")
     if(object@status$analysis["Overlap"]!="[x]"){
@@ -925,10 +970,10 @@ setMethod(
     regpairs<-regpairs[idx==2,,drop=FALSE]
     
     if(!is.null(tfs)){
-      if(sum(tfs%in%object@transcriptionFactors) > sum(tfs%in%names(object@transcriptionFactors) ) ){
-        tfs<-object@transcriptionFactors[object@transcriptionFactors%in%tfs]
+      if(sum(tfs%in%object@regulatoryElements) > sum(tfs%in%names(object@regulatoryElements) ) ){
+        tfs<-object@regulatoryElements[object@regulatoryElements%in%tfs]
       } else {
-        tfs<-object@transcriptionFactors[names(object@transcriptionFactors)%in%tfs]
+        tfs<-object@regulatoryElements[names(object@regulatoryElements)%in%tfs]
       }
       if(length(tfs)==0)stop("NOTE: 'tfs' argument has no valid name!")
       idx<-regpairs[,1]%in%tfs+regpairs[,2]%in%tfs
@@ -1001,8 +1046,13 @@ setMethod(
 setMethod(
   "tna.graph",
   "TNA",
-  function(object, tnet="dpi", gtype="rmap", minRegulonSize=15, tfs=NULL, amapFilter="quantile", amapCutoff=NULL, 
+  function(object, tnet="dpi", gtype="rmap", minRegulonSize=15, tfs=NULL, 
+           amapFilter="quantile", amapCutoff=NULL, 
            mask=FALSE){
+    
+    #---check compatibility
+    object <- upgradeTNA(object)
+    
     # chech igraph compatibility
     b1<-"package:igraph0" %in% search()
     b2<- "igraph0" %in%  loadedNamespaces()
@@ -1025,23 +1075,23 @@ setMethod(
       tnet<-object@transcriptionalNetwork
     }
     if(is.null(tfs)){
-      tfs<-object@transcriptionFactors
+      tfs<-object@regulatoryElements
       minsz<-colnames(tnet)[colSums(tnet!=0)>=minRegulonSize]
       tfs<-tfs[tfs%in%minsz]
     } else {
       tfs<-as.character(tfs)
-      idx<-which(names(object@transcriptionFactors)%in%tfs | object@transcriptionFactors%in%tfs)
+      idx<-which(names(object@regulatoryElements)%in%tfs | object@regulatoryElements%in%tfs)
       if(length(idx)==0){
         stop("NOTE: input 'tfs' contains no useful data!\n")
       }
-      tfs<-object@transcriptionFactors[idx]
+      tfs<-object@regulatoryElements[idx]
     }
     tnet<-tnet[,tfs]
     if(gtype=="rmap"){ #get regulatory maps
       g<-tni.rmap(tnet)
-      #add annotation
-      if(.hasSlot(object, "annotation")){
-        if(nrow(object@annotation)>0)g<-att.mapv(g=g,dat=object@annotation,refcol=1)
+      #add rowAnnotation
+      if(.hasSlot(object, "rowAnnotation")){
+        if(nrow(object@rowAnnotation)>0)g<-att.mapv(g=g,dat=object@rowAnnotation,refcol=1)
       }
       #set target names if available
       if(!is.null(V(g)$SYMBOL)){
@@ -1090,8 +1140,8 @@ setMethod(
       }
       #-------------------
       g<-igraph::graph.adjacency(adjmt, diag=FALSE, mode="undirected", weighted=TRUE)
-      if(.hasSlot(object, "annotation")){
-        if(nrow(object@annotation)>0)g<-att.mapv(g=g,dat=object@annotation,refcol=1)
+      if(.hasSlot(object, "rowAnnotation")){
+        if(nrow(object@rowAnnotation)>0)g<-att.mapv(g=g,dat=object@rowAnnotation,refcol=1)
       }
       sz<-apply(tnet!=0, 2, sum)
       idx<-match(V(g)$name,tfs)
@@ -1105,6 +1155,7 @@ setMethod(
     return(g)
   }
 )
+
 ##------------------------------------------------------------------------------
 ##------------------------------------------------------------------------------
 ##-------------------------TNA INTERNAL FUNCTIONS-------------------------------
@@ -1112,8 +1163,21 @@ setMethod(
 ##------------------------------------------------------------------------------
 
 ##------------------------------------------------------------------------------
+#---check compatibility and upgrade tna objects
+upgradeTNA <- function(object){
+  if(class(object)[1]=="TNA"){
+    if(.hasSlot(object, "transcriptionFactors")){
+      object@regulatoryElements <- object@transcriptionFactors
+      object@rowAnnotation <- object@annotation
+    }
+  }
+  return(object)
+}
+
+##------------------------------------------------------------------------------
 ##internal pre-processing (input via tni2tna.preprocess)
-tna.preprocess<-function(object, phenoIDs=NULL, duplicateRemoverMethod="max", verbose=TRUE) {
+tna.preprocess<-function(object, phenoIDs=NULL, duplicateRemoverMethod="max", 
+                         verbose=TRUE) {
   ##-----data preprocessing
   if(verbose)cat("-Preprocessing for input data...\n")
   ##-----data preprocessing: phenotype
@@ -1216,12 +1280,12 @@ data.integration<-function(object, verbose){
   
   ##-----input summary
   object@summary$tar[,"input"]<-nrow(object@transcriptionalNetwork)
-  object@summary$rgc[,"input"]<-length(object@transcriptionFactors)
+  object@summary$rgc[,"input"]<-length(object@regulatoryElements)
   
-  ##-----check annotation if available  
-  if(nrow(object@annotation)>0){
+  ##-----check rowAnnotation if available  
+  if(nrow(object@rowAnnotation)>0){
     if(verbose)cat("--Mapping 'transcriptionalNetwork' annotation to 'phenotype'...\n")
-    annot<-object@annotation
+    annot<-object@rowAnnotation
     #col with possible current refids
     col0<-sapply(1:ncol(annot),function(i){
       sum(rownames(annot)%in%annot[,i],na.rm=TRUE)
@@ -1247,41 +1311,41 @@ data.integration<-function(object, verbose){
     othercols<-1:ncol(annot)
     othercols<-othercols[!othercols%in%c(col0,col1,col2)]
     if(col0!=col1){
-      #set annotation to correct order
-      object@annotation<-annot[,c(col1,col2,col0,othercols),drop=FALSE]
+      #set rowAnnotation to correct order
+      object@rowAnnotation<-annot[,c(col1,col2,col0,othercols),drop=FALSE]
       #update rownames (na anotacao somente mais adiante por nao aceitar nomes duplicados)
-      ids<-object@annotation[,1]
-      names(ids)<-rownames(object@annotation)
+      ids<-object@rowAnnotation[,1]
+      names(ids)<-rownames(object@rowAnnotation)
       rownames(object@referenceNetwork)<-ids[rownames(object@referenceNetwork)]
       rownames(object@transcriptionalNetwork)<-ids[rownames(object@transcriptionalNetwork)]
       #update TFs and colnames
-      tfs<-object@transcriptionFactors
-      coltf<-sapply(1:ncol(object@annotation),function(i){
-        sum(tfs%in%object@annotation[,i],na.rm=TRUE)
+      tfs<-object@regulatoryElements
+      coltf<-sapply(1:ncol(object@rowAnnotation),function(i){
+        sum(tfs%in%object@rowAnnotation[,i],na.rm=TRUE)
       })
       coltf<-which(coltf==max(coltf))[1]
-      idx<-match(tfs,object@annotation[,coltf])
-      tnames<-object@annotation[idx,1]
+      idx<-match(tfs,object@rowAnnotation[,coltf])
+      tnames<-object@rowAnnotation[idx,1]
       names(tnames)<-names(tfs)
-      object@transcriptionFactors<-tnames
+      object@regulatoryElements<-tnames
       #update transcriptionalNetwork colnames
       tfs<-colnames(object@transcriptionalNetwork)
-      coltf<-sapply(1:ncol(object@annotation),function(i){
-        sum(tfs%in%object@annotation[,i],na.rm=TRUE)
+      coltf<-sapply(1:ncol(object@rowAnnotation),function(i){
+        sum(tfs%in%object@rowAnnotation[,i],na.rm=TRUE)
       })
       coltf<-which(coltf==max(coltf))[1]
-      idx<-match(tfs,object@annotation[,coltf])
-      tnames<-object@annotation[idx,1]
+      idx<-match(tfs,object@rowAnnotation[,coltf])
+      tnames<-object@rowAnnotation[idx,1]
       names(tnames)<-names(tfs)  
       colnames(object@transcriptionalNetwork)<-tnames
       #update referenceNetwork colnames
       tfs<-colnames(object@referenceNetwork)
-      coltf<-sapply(1:ncol(object@annotation),function(i){
-        sum(tfs%in%object@annotation[,i],na.rm=TRUE)
+      coltf<-sapply(1:ncol(object@rowAnnotation),function(i){
+        sum(tfs%in%object@rowAnnotation[,i],na.rm=TRUE)
       })
       coltf<-which(coltf==max(coltf))[1]      
-      idx<-match(tfs,object@annotation[,coltf])
-      tnames<-object@annotation[idx,1]
+      idx<-match(tfs,object@rowAnnotation[,coltf])
+      tnames<-object@rowAnnotation[idx,1]
       names(tnames)<-names(tfs)  
       colnames(object@referenceNetwork)<-tnames
       ##-----remove unnamed nodes in the tnets
@@ -1293,10 +1357,10 @@ data.integration<-function(object, verbose){
       tnames<-rownames(object@referenceNetwork)
       tnames<-!is.na(tnames) & tnames!=""
       object@referenceNetwork<-object@referenceNetwork[tnames,,drop=FALSE]
-      ##annotation
-      tnames<-object@annotation[,1]
+      ##rowAnnotation
+      tnames<-object@rowAnnotation[,1]
       tnames<-!is.na(tnames) & tnames!=""
-      object@annotation<-object@annotation[tnames,,drop=FALSE]
+      object@rowAnnotation<-object@rowAnnotation[tnames,,drop=FALSE]
       ##-----remove duplicate nodes in tnet
       uninames<-unique(rownames(object@transcriptionalNetwork))
       if(length(rownames(object@transcriptionalNetwork))>length(uninames)){
@@ -1314,8 +1378,8 @@ data.integration<-function(object, verbose){
         rownames(tnetdp)<-tnetdp[,1]
         tnetdp<-as.matrix(tnetdp[,-1,drop=FALSE])
         #---
-        tnetdp<-tnetdp[,object@transcriptionFactors,drop=FALSE]
-        tnet<-tnet[,object@transcriptionFactors,drop=FALSE]
+        tnetdp<-tnetdp[,object@regulatoryElements,drop=FALSE]
+        tnet<-tnet[,object@regulatoryElements,drop=FALSE]
         tnet<-rbind(tnet,tnetdp)
         #---
         object@transcriptionalNetwork<-tnet    
@@ -1338,8 +1402,8 @@ data.integration<-function(object, verbose){
         rownames(tnetdp)<-tnetdp[,1]
         tnetdp<-as.matrix(tnetdp[,-1,drop=FALSE])
         #---        
-        tnetdp<-tnetdp[,object@transcriptionFactors,drop=FALSE]
-        tnet<-tnet[,object@transcriptionFactors,drop=FALSE]
+        tnetdp<-tnetdp[,object@regulatoryElements,drop=FALSE]
+        tnet<-tnet[,object@regulatoryElements,drop=FALSE]
         tnet<-rbind(tnet,tnetdp)
         #---
         object@referenceNetwork<-tnet    
@@ -1347,17 +1411,17 @@ data.integration<-function(object, verbose){
       ##-----update modulator list if available
       if(length(object@listOfModulators)>0){
         tfs<-names(object@listOfModulators)
-        coltf<-sapply(1:ncol(object@annotation),function(i){
-          sum(tfs%in%object@annotation[,i],na.rm=TRUE)
+        coltf<-sapply(1:ncol(object@rowAnnotation),function(i){
+          sum(tfs%in%object@rowAnnotation[,i],na.rm=TRUE)
         })
         coltf<-which(coltf==max(coltf))[1]    
-        idx<-match(tfs,object@annotation[,coltf])
-        tnames<-object@annotation[idx,1] 
+        idx<-match(tfs,object@rowAnnotation[,coltf])
+        tnames<-object@rowAnnotation[idx,1] 
         names(object@listOfModulators)<-tnames
         lmod<-sapply(object@listOfModulators,function(reg){
           if(length(reg)>0){
-            idx<-match(names(reg),object@annotation[,coltf])
-            mnames<-object@annotation[idx,1]
+            idx<-match(names(reg),object@rowAnnotation[,coltf])
+            mnames<-object@rowAnnotation[idx,1]
             mnames<-aggregate(reg,by=list(mnames),max, simplify=TRUE)
             reg<-mnames[,2]
             names(reg)<-mnames[,1]
@@ -1366,32 +1430,32 @@ data.integration<-function(object, verbose){
         })
         object@listOfModulators<-lmod
       }
-      ##-----duplicate remover in annotation
+      ##-----duplicate remover in rowAnnotation
       #..get current refids col
-      col0<-sapply(1:ncol(object@annotation),function(i){
-        sum(rownames(object@annotation)%in%object@annotation[,i],na.rm=TRUE)
+      col0<-sapply(1:ncol(object@rowAnnotation),function(i){
+        sum(rownames(object@rowAnnotation)%in%object@rowAnnotation[,i],na.rm=TRUE)
       })
-      if(max(col0)==nrow(object@annotation)){
+      if(max(col0)==nrow(object@rowAnnotation)){
         col0 <- which(col0==max(col0))[1]
       } else {
         col0<-0
       }
-      uninames<-unique(object@annotation[,1])
-      idx<-match(uninames,object@annotation[,1])
-      object@annotation<-object@annotation[idx,]
-      rownames(object@annotation)<-object@annotation[,1]
-      object@annotation<-object@annotation[,-col0,drop=FALSE] #agora da pra tirar!
+      uninames<-unique(object@rowAnnotation[,1])
+      idx<-match(uninames,object@rowAnnotation[,1])
+      object@rowAnnotation<-object@rowAnnotation[idx,]
+      rownames(object@rowAnnotation)<-object@rowAnnotation[,1]
+      object@rowAnnotation<-object@rowAnnotation[,-col0,drop=FALSE] #agora da pra tirar!
       ##-----check ordering
-      tp1<-rownames(object@annotation)
+      tp1<-rownames(object@rowAnnotation)
       tp2<-rownames(object@transcriptionalNetwork)
       tp3<-rownames(object@referenceNetwork)
       b1<-all(tp1%in%tp2) & all(tp1%in%tp3)
       b2<-length(tp1)==length(tp2) && length(tp1)==length(tp3)
       if(b1 && b2){
-        object@transcriptionalNetwork<-object@transcriptionalNetwork[rownames(object@annotation),]
-        object@referenceNetwork<-object@referenceNetwork[rownames(object@annotation),]
+        object@transcriptionalNetwork<-object@transcriptionalNetwork[rownames(object@rowAnnotation),]
+        object@referenceNetwork<-object@referenceNetwork[rownames(object@rowAnnotation),]
       } else {
-        warning("NOTE: possible mismatched names between 'transcriptionalNetwork' and 'annotation'!",call.=FALSE)
+        warning("NOTE: possible mismatched names between 'transcriptionalNetwork' and 'rowAnnotation'!",call.=FALSE)
       }
     }
   }
@@ -1432,7 +1496,7 @@ data.integration<-function(object, verbose){
   if(verbose) cat("--Extracting regulons...\n")
   #Regulons from tnet
   listOfRegulons<-list()
-  for(i in object@transcriptionFactors){
+  for(i in object@regulatoryElements){
     idx<-object@transcriptionalNetwork[,i]!=0
     listOfRegulons[[i]]<-rownames(object@transcriptionalNetwork)[idx]
   }
@@ -1453,7 +1517,7 @@ data.integration<-function(object, verbose){
   
   #Regulons refnet
   listOfReferenceRegulons<-list()
-  for(i in object@transcriptionFactors){
+  for(i in object@regulatoryElements){
     idx<-object@referenceNetwork[,i]!=0
     listOfReferenceRegulons[[i]]<-rownames(object@referenceNetwork)[idx]
   }
@@ -1649,9 +1713,9 @@ run.gsea2 <- function(listOfRegulonsAndMode, phenotype, pAdjustMethod="BH",
 ##------------------------------------------------------------------------------
 ##This function takes a list of regulons, a named phenotype vector,
 ##and returns results from synergy analysis
-run.synergy <- function(collectionsOfPairsR1R2, labpair, phenotype, pAdjustMethod="BH", 
-                       pValueCutoff=0.05, minIntersectSize=1, nPermutations=1000, exponent=1, 
-                       verbose=TRUE) {
+run.synergy <- function(collectionsOfPairsR1R2, labpair, phenotype, 
+                        pAdjustMethod="BH", pValueCutoff=0.05, minIntersectSize=1, 
+                        nPermutations=1000, exponent=1, verbose=TRUE) {
   ##calculate enrichment scores
   regize<-sapply(1:length(collectionsOfPairsR1R2),function(i){
     unlist(lapply(collectionsOfPairsR1R2[[i]],length))

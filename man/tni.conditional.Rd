@@ -98,16 +98,14 @@ Castro, M.A.A. et al. \emph{RTN: Reconstruction and Analysis of Transcriptional 
 
 data(dt4rtn)
 
-# a few TFs for quick demonstration!
-tfs4test<-dt4rtn$tfs[c("PTTG1","E2F2","FOXM1","E2F3","RUNX2")]
-
-# create a new TNI object
-rtni <- new("TNI", gexp=dt4rtn$gexp, transcriptionFactors=tfs4test)
+# select 5 regulatoryElements for a quick demonstration!
+tfs4test <- dt4rtn$tfs[c("PTTG1","E2F2","FOXM1","E2F3","RUNX2")]
 
 \dontrun{
 
 # preprocessing
-rtni <- tni.preprocess(rtni,gexpIDs=dt4rtn$gexpIDs)
+rtni <- tni.constructor(expData=dt4rtn$gexp, regulatoryElements=tfs4test, 
+        rowAnnotation=dt4rtn$gexpIDs)
 
 # permutation analysis (infers the reference/relevance network)
 rtni<-tni.permutation(rtni)

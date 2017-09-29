@@ -9,16 +9,16 @@ tnai.checks <- function(name, para) {
       stop("'maxgap' should be an integer value >=0!\n",call.=FALSE)
   }
   else if(name=="tna.what"){
-    opts<-c("tnet","tfs","pheno","regulons","refregulons","para","mra","gsea1",
+    opts<-c("tnet","regulatoryElements","pheno","regulons","refregulons","para","mra","gsea1",
             "gsea2","overlap","synergy","shadow","summary","status",
             "regulons.and.pheno","refregulons.and.pheno","regulons.and.mode",
-            "refregulons.and.mode","nondpiregulons.and.mode","annotation")
+            "refregulons.and.mode","nondpiregulons.and.mode","rowAnnotation", "colAnnotation")
     if(!is.character(para) || length(para)!=1 || !(para %in% opts))
       stop(paste("'what' should be any one of the options: \n", paste(opts,collapse = ", ") ),call.=FALSE )
   }
   else if(name=="tni.what"){
-    opts<-c("gexp","tfs","para","refnet","tnet","refregulons","regulons","cdt","cdtrev", "summary","status",
-            "regulons.and.mode","refregulons.and.mode","annotation")
+    opts<-c("gexp","regulatoryElements","para","refnet","tnet","refregulons","regulons","cdt","cdtrev", "summary","status",
+            "regulons.and.mode","refregulons.and.mode","rowAnnotation","colAnnotation")
     if(!is.character(para) || length(para)!=1 || !(para %in% opts))
       stop(paste("'what' should be any one of the options: \n", paste(opts,collapse = ", ") ) ,call.=FALSE )
   }
@@ -116,9 +116,9 @@ tnai.checks <- function(name, para) {
       stop("'object' should be an object of class 'TNI'!",call.=FALSE)
     if( sum(names(para@results)%in%c("tn.ref", "tn.dpi") )<2 )
       stop("'object' should contain results in the slot 'result'!",call.=FALSE)
-    if(!is.character(para@transcriptionFactors) || 
-      any(is.na(para@transcriptionFactors)) || any(para@transcriptionFactors==""))
-      stop("'object' should contain TF names in the slot 'transcriptionFactors'!",call.=FALSE)
+    if(!is.character(para@regulatoryElements) || 
+      any(is.na(para@regulatoryElements)) || any(para@regulatoryElements==""))
+      stop("'object' should contain names of regulatory elements in the slot 'regulatoryElements'!",call.=FALSE)
   }
   else if(name=="transcriptionalNetwork") {
     if( !is.matrix(para) )
@@ -156,11 +156,11 @@ tnai.checks <- function(name, para) {
            length(unique(colnames(para))) < length(colnames(para)))
       stop("the 'gxdata' matrix should be named on rows and cols (unique names)!",call.=FALSE)
   }
-  else if(name=="transcriptionFactors") {
+  else if(name=="regulatoryElements") {
     if( !(is.character(para) || is.numeric(para)) || any(is.na(para)) || any(para==""))
-      stop("'transcriptionFactors' should be a character vector, without 'NA' or empty names!",call.=FALSE)
+      stop("'regulatoryElements' should be a character vector, without 'NA' or empty names!",call.=FALSE)
     if(length(unique(para)) < length(para))
-      stop("'transcriptionFactors' should have unique identifiers!",call.=FALSE)
+      stop("'regulatoryElements' should have unique identifiers!",call.=FALSE)
   }
   else if(name=="tfs") {
     if(!is.null(para)){
@@ -525,33 +525,65 @@ tnai.checks <- function(name, para) {
     rownames(para)<-para$ID
     return(para)
   }
-  else if(name=="gexpIDs"){
+  else if(name=="rowAnnotation"){
     if(is.null(para)){
       return(para)
     } else {
       if( (!is.matrix(para) && !is.data.frame(para) ) || ncol(para)<2){
-        stop("'gexpIDs' should be a data frame (or a matrix of characters) with ncol >=2 !",call.=FALSE)
+        stop("'rowAnnotation' should be a data frame (or a matrix of characters) with ncol >=2 !",call.=FALSE)
       }
+      if(is.matrix(para))para<-data.frame(para,stringsAsFactors=FALSE, check.names=FALSE)
       junk<-sapply(1:ncol(para),function(i){
         tp<-para[,i]
         if(is.list(tp))tp<-unlist(tp)
         tp<-as.character(tp)
         para[,i]<<-tp
       })
+      #check Col 1 (rownames)
       if( (any(is.na(para[,1])) || any(para[,1]=="") ) ){
-        stop("Col 1 in 'gexpIDs' should have no NA or empty value!",call.=FALSE)      
+        stop("Col 1 in 'rowAnnotation' should have no NA or empty value!",call.=FALSE)
       }
       if( length(unique(para[,1])) < length(para[,1]) )
-        stop("Col 1 in 'gexpIDs' matrix should have unique ids!",call.=FALSE)
+        stop("Col 1 in 'rowAnnotation' should have unique ids!",call.=FALSE)
       rownames(para)<-para[,1]
-      para<-data.frame(para,stringsAsFactors=FALSE)
       #check colnames
       if(is.null(colnames(para))){
         colnames(para)<-paste("C",1:ncol(para),sep="")
       }
       colnames(para)<-toupper(colnames(para))
       if(any(duplicated(colnames(para)))){
-        stop("'gexpIDs' matrix should have unique col names (not case sensitive)!")
+        stop("'rowAnnotation' should have unique col names (not case sensitive)!")
+      }
+      return(para)
+    }
+  }
+  else if(name=="colAnnotation"){
+    if(is.null(para)){
+      return(para)
+    } else {
+      if( (!is.matrix(para) && !is.data.frame(para) ) || ncol(para)<2){
+        stop("'colAnnotation' should be a data frame (or a matrix of characters) with ncol >=2 !",call.=FALSE)
+      }
+      if(is.matrix(para))para<-data.frame(para,stringsAsFactors=FALSE, check.names=FALSE)
+      junk<-sapply(1:ncol(para),function(i){
+        tp<-para[,i]
+        if(is.list(tp))tp<-unlist(tp)
+        tp<-as.character(tp)
+        para[,i]<<-tp
+      })
+      #check Col 1 (rownames)
+      if( (any(is.na(para[,1])) || any(para[,1]=="") ) ){
+        stop("Col 1 in 'colAnnotation' should have no NA or empty value!",call.=FALSE)
+      }
+      if( length(unique(para[,1])) < length(para[,1]) )
+        stop("Col 1 in 'colAnnotation' should have unique ids!",call.=FALSE)
+      rownames(para)<-para[,1]
+      #check colnames
+      if(is.null(colnames(para))){
+        stop("'colAnnotation' must have colnames!")
+      }
+      if(any(duplicated(colnames(para)))){
+        stop("'colAnnotation' should have unique col names!")
       }
       return(para)
     }

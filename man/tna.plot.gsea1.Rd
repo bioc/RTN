@@ -89,12 +89,13 @@ Mauro Castro
 
 data(dt4rtn)
 
-tfs4test<-c("PTTG1","E2F2","FOXM1","E2F3","RUNX2")
-rtni <- new("TNI", gexp=dt4rtn$gexp, transcriptionFactors=dt4rtn$tfs[tfs4test])
+# select 5 regulatoryElements for a quick demonstration!
+tfs4test <- dt4rtn$tfs[c("PTTG1","E2F2","FOXM1","E2F3","RUNX2")]
 
 \dontrun{
 
-rtni <- tni.preprocess(rtni,gexpIDs=dt4rtn$gexpIDs)
+rtni <- tni.constructor(expData=dt4rtn$gexp, regulatoryElements=tfs4test, 
+        rowAnnotation=dt4rtn$gexpIDs)
 rtni<-tni.permutation(rtni)
 rtni<-tni.bootstrap(rtni)
 rtni<-tni.dpi.filter(rtni)

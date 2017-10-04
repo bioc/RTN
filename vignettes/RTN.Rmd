@@ -9,6 +9,7 @@ vignette: >
   %\VignetteIndexEntry{"RTN: reconstruction of transcriptional networks and analysis of master regulators."}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
+  %\SweaveUTF8
 ---
 
 # Overview

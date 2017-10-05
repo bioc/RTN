@@ -1,15 +1,16 @@
 ---
 title: "RTN: reconstruction of transcriptional networks and analysis of master regulators."
 author: "Mauro AA Castro, Xin Wang, Michael NC Fletcher, Florian Markowetz and Kerstin B Meyer."
-date: "`r Sys.Date()`"
-bibliography: bib.bib
-output: BiocStyle::html_document
+date: "`r doc_date()`"
+package: "`r pkg_ver('RTN')`"
+bibliography: bibliography.bib
 abstract: This package provides classes and methods for transcriptional network inference and analysis. Modulators of transcription factor activity are assessed by conditional mutual information, and master regulators are mapped to phenotypes using different strategies, e.g., gene set enrichment, shadow and synergy analyses. Additionally, new frameworks are provided at the derivative packages [RTNduals](http://bioconductor.org/packages/RTNduals/) and [RTNsurvival](http://bioconductor.org/packages/RTNsurvival/).
+output: 
+  BiocStyle::html_document
 vignette: >
-  %\VignetteIndexEntry{"RTN: reconstruction of transcriptional networks and analysis of master regulators."}
+  %\VignetteIndexEntry{RTN: reconstruction of transcriptional networks and analysis of master regulators.}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
-  %\SweaveUTF8
 ---
 
 # Overview
@@ -49,7 +50,6 @@ In an additional step, unstable interactions can be removed by bootstrap analysi
 rtni <- tni.bootstrap(rtni) 
 ``` 
 
-
 In the TN each target can be linked to multiple TFs and regulation can occur as a result of both direct (TF-target) and indirect interactions (TF-TF-target). The Data Processing Inequality (DPI) algorithm [@Meyer2008] is used to remove the weakest interaction in any triangle of two TFs and a common target gene, thus preserving the dominant TF-target pairs, resulting in the filtered transcriptional network (referred here as `tnet`). The filtered TN has less complexity and highlights the most significant interactions.
 
 ```{r label='Run DPI filter', eval=TRUE, results='hide'}
@@ -87,13 +87,11 @@ rtna <- tni2tna.preprocess(object=rtni,
                          )
 ``` 
 
-
 The `tna.mra` function takes the **TNA** object and returns the results of the Master Regulator Analysis (RMA) [@Carro2010] over a list of regulons from a transcriptional network (with multiple hypothesis testing corrections). The MRA computes the overlap between the transcriptional regulatory unities (regulons) and the input signature genes using the hypergeometric distribution (with multiple hypothesis testing corrections).
 
 ```{r label='Run MRA analysis pipeline', eval=TRUE, results='hide'}
 rtna <- tna.mra(rtna)
 ``` 
-
 
 A simple overlap among all regulons can also be tested using the `tna.overlap` function:
 
@@ -107,14 +105,12 @@ rtna <- tna.gsea1(rtna, stepFilter=FALSE, nPermutations=100)
 # ps. default 'nPermutations' is 1000.
 ``` 
 
-
 The two-tailed GSEA tests whether positive or negative targets for a TF are enriched at each extreme of a particular response (e.g., differentially expressed genes). The pipeline splits the regulon into a group of activated and a group of repressed genes, based on the Pearson's correlation, and then asks how the two sets are distributed in the ranked list of genes (please refer to @Campbell2016 and @Castro2016 for more details).
 
 ```{r label='Run GSEA analysis pipeline pt. 2', eval=TRUE, results='hide'}
 rtna <- tna.gsea2(rtna, tfs="PTTG1", nPermutations=100)
 # ps. default 'nPermutations' is 1000.
 ``` 
-
 
 All results available in the **TNA** object can be retrieved using the `tna.get` function:
 
@@ -125,7 +121,6 @@ tna.get(rtna, what="overlap")
 tna.get(rtna, what="gsea1")
 tna.get(rtna, what="gsea2")
 ``` 
-
 
 To visualize the GSEA distributions, the user can apply the `tna.plot.gsea1` and `tna.plot.gsea2` functions that plot the one-tailed and two-tailed GSEA results, respectively:
 
@@ -140,8 +135,6 @@ tna.plot.gsea2(rtna, file="tna_gsea2", labPheno="log2 diff. expression")
 
 ![title](fig2.png)
 <b>Figure 2.</b>  Two-tailed GSEA analysis showing positive or negative targets for a TF (as hits) ranked by their differential expression (as phenotype). This toy example illustrates the output from the **TNA** pipeline evaluated by the `tna.gsea2` method (for detailed interpretation of results from this method, please refer to @Campbell2016 and @Castro2016).
-
-
 
 
 # Session information

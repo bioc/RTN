@@ -1169,6 +1169,7 @@ upgradeTNA <- function(object){
     if(.hasSlot(object, "transcriptionFactors")){
       object@regulatoryElements <- object@transcriptionFactors
       object@rowAnnotation <- object@annotation
+      object@colAnnotation <- data.frame()
     }
   }
   return(object)

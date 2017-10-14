@@ -137,12 +137,13 @@ tna.plot.gsea2(rtna, file="tna_gsea2", labPheno="log2 diff. expression")
 ![title](fig2.png)
 <b>Figure 2.</b>  Two-tailed GSEA analysis showing positive or negative targets for a TF (as hits) ranked by their differential expression (as phenotype). This toy example illustrates the output from the **TNA** pipeline evaluated by the `tna.gsea2` method (for detailed interpretation of results from this method, please refer to @Campbell2016 and @Castro2016).
 
-
 # Session information
 
 ```{r label='Session information', eval=TRUE, echo=FALSE}
-print(sessionInfo(), locale=FALSE)
+sessionInfo()
 ```
+
+# References
 
 
 

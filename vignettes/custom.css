@@ -27,3 +27,6 @@ span.header-section-number {
   width: 35px;
 }
 
+div#TOC > ul, ul {
+  padding: 0 15px 0 35px;
+}

@@ -1465,6 +1465,7 @@ upgradeTNI <- function(object){
     if(.hasSlot(object, "transcriptionFactors") && !.hasSlot(object, "regulatoryElements")){
       object@regulatoryElements <- object@transcriptionFactors
       object@rowAnnotation <- object@annotation
+      object@colAnnotation <- data.frame()
     }
   }
   return(object)

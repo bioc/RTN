@@ -93,8 +93,8 @@ setMethod(
     }
     
     ##-----check input arguments
-    tnai.checks(name="rowAnnotation",rowAnnotation)
-    tnai.checks(name="colAnnotation",colAnnotation)
+    rowAnnotation <- tnai.checks(name="rowAnnotation",rowAnnotation)
+    colAnnotation <- tnai.checks(name="colAnnotation",colAnnotation)
     tnai.checks(name="cvfilter",para=cvfilter)
     tnai.checks(name="verbose",para=verbose)
     ##-----preprocessing
@@ -103,10 +103,7 @@ setMethod(
     #----check NAs and NaNs in gexp
     na.check <- sum ( is.na(object@gexp) | is.nan(object@gexp) )
     if(na.check>0){
-      stop("--NOTE: 'expression data' should be a numeric matrix without NAs or NaNs! \n")
-      #---remove NAs
-      #idx<-which(is.na(object@gexp), arr.ind = TRUE)
-      #object@gexp[idx]<-apply(object@gexp[rownames(idx),],1,mean,na.rm=TRUE)
+      stop("--NOTE: 'expression data' should be a positive numeric matrix, without NAs or NaNs! \n")
     }
     
     ##-----check rowAnnotation if available

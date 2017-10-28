@@ -111,21 +111,22 @@ setMethod(
       if(verbose)cat("-Running VSE analysis...\n")
       getTree=TRUE
     }
-    junk<-sapply(names(glist),function(lab){
+    for(lab in names(glist)){
       if(verbose)cat("--For ",lab,"...\n",sep="")
       annot<-getAnnotRanges(annotation[glist[[lab]],],maxgap=maxgap,getTree=getTree,getReduced=TRUE)
       vse<-vsea(vSet,rSet,annot=annot) 
-      object@results$vse[[lab]]<<-vse
-      return(NULL)
-    })
+      object@results$vse[[lab]]<-vse
+    }
     
-    #---map avs to annotation REVISAR esse chunk! (vide abaixo)
-    annot<-getAnnotRanges(annotation,maxgap=maxgap,getTree=FALSE,getReduced=FALSE)
-    annotdist<-getAnnotOverlap(vSet,annot)
-    annotation$OverlapAVS<-FALSE
-    idx<-match(names(annotdist),annotation$ID)
-    annotation$OverlapAVS[idx]<-annotdist
-    object@results$annotation$vse<-annotation
+    #---map avs to annotation
+    annot <- getAnnotRanges(annotation,maxgap=maxgap,getTree=FALSE,getReduced=FALSE)
+    annotdist <- getAnnotOverlap1(vSet,annot)
+    annotation$OverlapAVS <- FALSE
+    annotation[names(annotdist),"OverlapAVS"] <- annotdist
+    annotdist <- getAnnotOverlap2(vSet,annot)
+    annotation$OverlapMarker <- NA
+    annotation[names(annotdist),"OverlapMarker"] <- annotdist
+    object@results$annotation$vse <- annotation
     
     #---compute enrichment stats
     object@results$stats$vse<-vseformat(object@results$vse,pValueCutoff=pValueCutoff,boxcox=boxcox)
@@ -343,11 +344,13 @@ setMethod(
     
     #---map avs to annotation
     annot<-getAnnotRanges(annotation,maxgap=maxgap, getTree=FALSE, getReduced=FALSE)
-    annotdist<-getAnnotOverlap(vSet,annot)
-    annotation$OverlapAVS<-FALSE
-    idx<-match(names(annotdist),annotation$ID)
-    annotation$OverlapAVS[idx]<-annotdist
-    object@results$annotation$evse<-annotation
+    annotdist<-getAnnotOverlap1(vSet,annot)
+    annotation$OverlapAVS <- FALSE
+    annotation[names(annotdist),"OverlapAVS"] <- annotdist
+    annotdist <- getAnnotOverlap2(vSet,annot)
+    annotation$OverlapMarker <- NA
+    annotation[names(annotdist),"OverlapMarker"] <- annotdist
+    object@results$annotation$evse <- annotation
     
     #---compute enrichment stats
     object@results$stats$evse<-vseformat(object@results$evse,pValueCutoff=pValueCutoff,boxcox=boxcox)
@@ -405,6 +408,10 @@ setMethod(
       query<-object@summary
     } else if(what=="status"){
       query<-object@status
+    } else if(what=="annotation.vse"){
+      query<-object@results$annotation$vse
+    } else if(what=="annotation.evse"){
+      query<-object@results$annotation$evse
     }
     return(query)
   }

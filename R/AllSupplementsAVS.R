@@ -252,7 +252,7 @@ get.avsdist<-function(vSet,annot){
 ##-------------------------------------------------------------------------
 ##get annotation overlap
 ##annot should be named!
-getAnnotOverlap<-function(vSet,annot){
+getAnnotOverlap1<-function(vSet,annot){
   annotMapping<-lapply(1:length(annot),function(i){
     chr<-names(annot[i])
     query<-annot[[i]]
@@ -266,6 +266,33 @@ getAnnotOverlap<-function(vSet,annot){
     res
   })
   annotMapping<-unlist(annotMapping)
+  return(annotMapping)
+}
+getAnnotOverlap2<-function(vSet,annot){
+  annotMapping <- NULL
+  for(i in 1:length(annot)){
+    chr<-names(annot[i])
+    query<-annot[[i]]
+    subject<-vSet[[chr]] 
+    if(!is.null(subject)){
+      tp <- findOverlaps(query,subject)
+      sb <- subject@metadata$index[to(tp)]
+      sb <- subject@metadata$markers[sb]
+      qr <- names(query)[from(tp)]
+      idx <- !duplicated(paste(qr,sb))
+      res <- cbind(qr[idx],sb[idx])
+      annotMapping <- rbind(annotMapping,res)
+    }
+  }
+  if(!is.null(annotMapping) && nrow(annotMapping)>0){
+    ids <- unique(annotMapping[,1])
+    annotMapping <- sapply(ids,function(id){
+      idx <- annotMapping[,1]==id
+      paste(annotMapping[idx,2], collapse = ", ")
+    })
+  } else {
+    annotMapping <- NULL
+  }
   return(annotMapping)
 }
 

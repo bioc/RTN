@@ -105,7 +105,7 @@ tni.perm.separate<-function(object,verbose=TRUE){
     mipval<-parSapply(cl, object@regulatoryElements, function(tf) {
       pi<-which(tf==rownames(object@gexp))
       midist <- .perm.pmin.separate(object@gexp, pi, object@para$perm$estimator, object@para$perm$nPermutations)
-      midist<-sort(midist)
+      midist<-sort(midist, na.last = NA)
       np<-length(midist)
       midist<-np-findInterval(pmim[,tf],midist)
       ##pseudocounts are added to avoid P-values of zero
@@ -124,7 +124,7 @@ tni.perm.separate<-function(object,verbose=TRUE){
       tf<-object@regulatoryElements[i]
       pi<-which(tf==rownames(object@gexp))
       midist <- .perm.pmin.separate(object@gexp, pi, object@para$perm$estimator, object@para$perm$nPermutations)
-      midist<-sort(midist)
+      midist<-sort(midist, na.last = NA)
       np<-length(midist)
       midist<-np-findInterval(pmim[,tf],midist)
       ##pseudocounts are added to avoid P-values of zero
@@ -173,15 +173,14 @@ tni.perm.pooled<-function(object, parChunks=10, verbose=TRUE){
     nperChunks<-unlist(lapply(nperChunks,length))
     if(verbose)pb<-txtProgressBar(style=3)
     for(i in 1:parChunks){
-      permdist<-parLapply(cl,1:nperChunks[i],function(j){
+      permdist <- parLapply(cl,1:nperChunks[i],function(j){
         permt <- .perm.pmin.pooled(object@gexp,length(object@regulatoryElements),object@para$perm$estimator)
-        permt<-sort(permt)
+        permt <- sort(permt, na.last = NA)
         length(permt)-findInterval(uniqueVec,permt)
       })
-      sapply(1:length(permdist),function(j){
-        ctsum<<-ctsum+permdist[[j]]
-        NULL
-      })
+      for(j in 1:length(permdist) ){
+        ctsum <- ctsum + permdist[[j]]
+      }
       rm(permdist);gc()
       if(verbose)setTxtProgressBar(pb, i/parChunks)
     }
@@ -189,14 +188,13 @@ tni.perm.pooled<-function(object, parChunks=10, verbose=TRUE){
     if(verbose)cat("-Performing permutation analysis...\n")
     if(verbose)cat("--For", length(object@regulatoryElements), "regulons...\n")
     if(verbose)pb<-txtProgressBar(style=3)
-    sapply(1:object@para$perm$nPermutations, function(i){
+    for(i in 1:object@para$perm$nPermutations){
       permt <- .perm.pmin.pooled(object@gexp,length(object@regulatoryElements),object@para$perm$estimator)
-      permt<-sort(permt)
-      permt<-length(permt)-findInterval(uniqueVec,permt)
-      ctsum<<-ctsum+permt
+      permt <- sort(permt, na.last = NA)
+      permt <- length(permt)-findInterval(uniqueVec,permt)
+      ctsum <- ctsum + permt
       if(verbose)setTxtProgressBar(pb, i/object@para$perm$nPermutations)
-      NULL
-    })
+    }
   }
   if(verbose)close(pb)
   ##compute pvals

@@ -24,7 +24,7 @@ tnai.checks <- function(name, para) {
   }
   else if(name=="avs.what"){
     opts<-c("markers","validatedMarkers","variantSet","randomSet","summary",
-            "status","linkedMarkers","randomMarkers","vse","evse")
+            "status","linkedMarkers","randomMarkers","vse","evse","annotation.vse","annotation.evse")
     if(!is.character(para) || length(para)!=1 || !(para %in% opts))
       stop(paste("'what' should be any one of the options: \n", paste(opts,collapse = ", ") ),call.=FALSE )
   }
@@ -436,7 +436,7 @@ tnai.checks <- function(name, para) {
     if(is.numeric(para$CHROM) || is.integer(para$CHROM)){
       para$CHROM <- paste("chr",para$CHROM,sep="")
     }
-    chrs<-c(paste("chr",1:22,sep=""),"chrX","chrY")
+    chrs<-c(paste("chr",1:22,sep=""),"chrX")
     chrChecks<-!para$CHROM%in%chrs
     if( any(chrChecks) ){
       n<-sum(chrChecks)/length(chrChecks)
@@ -499,7 +499,7 @@ tnai.checks <- function(name, para) {
     if(is.numeric(para$CHROM) || is.integer(para$CHROM)){
       para$CHROM <- paste("chr",para$CHROM,sep="")
     }
-    chrs<-c(paste("chr",1:22,sep=""),"chrX","chrY")
+    chrs<-c(paste("chr",1:22,sep=""),"chrX")
     chrChecks<-!para$CHROM%in%chrs
     if( any(chrChecks) ){
       n<-sum(chrChecks)/length(chrChecks)

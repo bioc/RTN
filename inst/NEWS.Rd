@@ -2,7 +2,7 @@
 \title{RTN News}
 \encoding{UTF-8}
 
-\section{Version 1.16.0}{
+\section{Version 2.2.0}{
   \itemize{
     \item Improved annotation slots for TNA/TNI classes.
   }

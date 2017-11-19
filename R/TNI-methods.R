@@ -87,8 +87,7 @@ setMethod(
     object <- upgradeTNI(object)
     
     if(!missing(gexpIDs)){
-      warning("'gexpIDs' argument is deprected!
-              please use 'rowAnnotation' instead.'")
+      warning("'gexpIDs' argument is deprected! please use 'rowAnnotation' instead.'")
       rowAnnotation <- gexpIDs
     }
     
@@ -432,8 +431,7 @@ setMethod(
     #object@summary$rgc[,"above.min.size"]<-sum(gs.size.max>=minRegulonSize)
     ##-----stop when no subset passes the size requirement
     if(all(gs.size.max<minRegulonSize)){
-      tp<-" overlapped genes with the universe!\n The largest number of overlapping genes is: "
-      stop(paste("NOTE: no partial regulon has minimum >= ", minRegulonSize, tp, max(gs.size.max), sep=""))
+      stop(paste("NOTE: no partial regulon has minimum >= ", minRegulonSize, sep=""))
     }
     ##-----get filtered list
     if(doSizeFilter){

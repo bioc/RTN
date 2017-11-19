@@ -233,7 +233,7 @@ tni.boot<-function(object, parChunks=10, verbose=TRUE){
   ##run bootstrap
   ##check if package snow has been loaded and 
   ##a cluster object has been created  
-  if(isParallel() && length(object@regulatoryElements)>1) {
+  if(isParallel() && length(object@regulatoryElements)>1){
     cl<-getOption("cluster")
     snow::clusterExport(cl, list("tni.pmin"),envir=environment())
     if(verbose)cat("-Performing bootstrap analysis (parallel version)...\n")
@@ -247,29 +247,41 @@ tni.boot<-function(object, parChunks=10, verbose=TRUE){
     if(verbose)pb<-txtProgressBar(style=3)
     for(i in 1:parChunks){
       bootdist<-parLapply(cl,1:nbootChunks[i],function(j){
-        boott<-tni.pmin(object@gexp[,sample(ncol(object@gexp),replace=TRUE)], estimator=object@para$boot$estimator,
-                        object@regulatoryElements, simplified=TRUE)
+        #--- get bootstrap sample
+        x <- object@gexp[,sample(ncol(object@gexp),replace=TRUE)]
+        #--- add a null dist to deal with eventual sd==0
+        idx <- which(apply(x,1,sd)==0)
+        if(length(idx)>0) x[idx,] <- sample(x,length(idx)*ncol(x))
+        #--- compute bootdist
+        boott<-tni.pmin(x, tfs=object@regulatoryElements, 
+                        estimator=object@para$boot$estimator,
+                        simplified=TRUE)
         sapply(1:ncol(boott),function(k){as.numeric(boott[,k]>mimark[k])})
       })
-      sapply(1:length(bootdist),function(j){
-        bcount<<-bcount+bootdist[[j]]
-        NULL
-      })
+      for(j in 1:length(bootdist)){
+        bcount<-bcount+bootdist[[j]]
+      }
       rm(bootdist);gc()
       if(verbose)setTxtProgressBar(pb, i/parChunks)
     }
   } else {
     if(verbose)cat("-Performing bootstrap analysis...\n")
     if(verbose)cat("--For", length(object@regulatoryElements), "regulons...\n")
-    if(verbose) pb <- txtProgressBar(style=3)    
-    sapply(1:object@para$boot$nBootstraps,function(i){
+    if(verbose) pb <- txtProgressBar(style=3)  
+    for(i in 1:object@para$boot$nBootstraps){
       if(verbose) setTxtProgressBar(pb, i/object@para$boot$nBootstraps)
-      bootdist<-tni.pmin(object@gexp[,sample(ncol(object@gexp),replace=TRUE)], estimator=object@para$boot$estimator,
-                         object@regulatoryElements, simplified=TRUE)
+      #--- get bootstrap sample
+      x <- object@gexp[,sample(ncol(object@gexp),replace=TRUE)]
+      #--- add a null dist to deal with eventual sd==0
+      idx <- which(apply(x,1,sd)==0)
+      if(length(idx)>0) x[idx,] <- sample(x,length(idx)*ncol(x))
+      #--- compute bootdist
+      bootdist<-tni.pmin(x, tfs=object@regulatoryElements,
+                         estimator=object@para$boot$estimator,
+                         simplified=TRUE)
       bootdist<-sapply(1:ncol(bootdist),function(j){as.numeric(bootdist[,j]>mimark[j])})
-      bcount <<- bcount + bootdist
-      NULL
-    })
+      bcount <- bcount + bootdist
+    }
   }
   if(verbose)close(pb)
   ##decide on the stability of the inferred associations

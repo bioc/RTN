@@ -4,6 +4,7 @@
 \alias{AVS-class}
 \alias{avs.vse,AVS-method}
 \alias{avs.evse,AVS-method}
+\alias{avs.pevse,AVS-method}
 \alias{avs.get,AVS-method}
 
 \title{Class \code{"AVS"}: an S4 class for variant set enrichment analysis.}
@@ -51,6 +52,7 @@ Objects can be created by calls of the form \code{new("AVS", markers)}.
   \describe{
     \item{avs.vse}{\code{signature(object = "AVS")}: see \code{\link[RTN:avs.vse]{avs.vse}} } 
     \item{avs.evse}{\code{signature(object = "AVS")}: see \code{\link[RTN:avs.evse]{avs.evse}} }
+    \item{avs.pevse}{\code{signature(object = "AVS")}: see \code{\link[RTN:avs.pevse]{avs.pevse}} }    
     \item{avs.get}{\code{signature(object = "AVS")}: see \code{\link[RTN:avs.get]{avs.get}} }    
 	 }
 }
@@ -60,7 +62,8 @@ Mauro Castro
 }
 
 \seealso{
-\code{\link[RTN:TNA-class]{TNA-class}}.
+\code{\link[RTN:TNA-class]{TNA-class}}
+\code{\link[RTN:avs.preprocess.LDHapMapRel27]{avs.preprocess.LDHapMapRel27}}
 }
 
 \examples{
@@ -70,6 +73,7 @@ Mauro Castro
 library(RTNdata.LDHapMapRel27)
 data(bcarisk) #mapped to the same genome build of the RTNdata!
 avs <- new("AVS", markers=bcarisk)
+# see the 'avs.preprocess.LDHapMapRel27' constructor
 }
 }
 

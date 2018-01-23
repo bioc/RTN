@@ -351,16 +351,19 @@ setMethod(
     if(is.null(refsamp)){
       gxref <- apply(object@gexp,1,mean)
     } else {
-      idx<-colnames(object@gexp)%in%refsamp
-      if(!all(sum(idx)%in%length(refsamp))){
-        stop("NOTE: 'refsamp' should list only valid sample names!")
+      idx <- refsamp %in% colnames(object@gexp)
+      if(!all(idx)){
+        stop("NOTE: 'refsamp' should list only valid names!")
       }
       gxref <- apply(object@gexp[,refsamp],1,mean)
     }
     ##----- set samples
     if(!is.null(samples)){
-      idx<-colnames(object@gexp)%in%samples
-      samples<-colnames(object@gexp)[idx]
+      idx <- samples %in% colnames(object@gexp)
+      if(!all(idx)){
+        stop("NOTE: 'samples' should list only valid names!")
+      }
+      samples<-colnames(object@gexp)[colnames(object@gexp) %in% samples]
     } else {
       samples<-colnames(object@gexp)
     }
@@ -565,7 +568,11 @@ setMethod(
         query<-translateQuery(query,idkey,object,"matrixAndNames",reportNames)
     } else if(what=="regulatoryElements"){
       query<-object@regulatoryElements
-      if(!is.null(idkey))query<-translateQuery(query,idkey,object,"vecAndContent",reportNames)
+      if(!is.null(idkey))
+        
+        query[]<-translateQuery(query,idkey,object,"vecAndContent",reportNames)
+      
+      
     } else if(what=="para"){
       query<-object@para
     } else if(what=="refnet"){
@@ -1460,7 +1467,8 @@ upgradeTNI <- function(object){
     if(.hasSlot(object, "transcriptionFactors") && !.hasSlot(object, "regulatoryElements")){
       object@regulatoryElements <- object@transcriptionFactors
       object@rowAnnotation <- object@annotation
-      object@colAnnotation <- data.frame()
+      IDs <- colnames(object@gexp)
+      object@colAnnotation <- data.frame(IDs, row.names = IDs, stringsAsFactors = FALSE)
     }
   }
   return(object)
@@ -1511,8 +1519,8 @@ translateQuery<-function(query,idkey,object,annottype,reportNames){
     nms<-names(query)
     idx<-query%in%rownames(rowAnnotation)
     query[idx]<-rowAnnotation[query[idx],idkey]
-    names(query)<-nms
-    query<-unique(query[!is.na(query)])
+    query<-query[!is.na(query)]
+    query <- query[!duplicated(query)]
   } else if(annottype=="vecAndNames"){
     idx<-names(query)%in%rownames(rowAnnotation)
     names(query)[idx]<-rowAnnotation[names(query)[idx],idkey]

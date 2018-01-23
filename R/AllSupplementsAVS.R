@@ -212,7 +212,7 @@ vsea<-function(vSet,rSet,annot,verbose=TRUE){
   #compute null
   if(isParallel()){
     cl<-getOption("cluster")
-    snow::clusterExport(cl, list("get.avsdist","IRanges","overlapsAny","ff"),
+    snow::clusterExport(cl, list("get.avsdist","IRanges","overlapsAny",".mtdata"),
                         envir=environment())
     resrset<-parSapply(cl, 1:length(rSet), function(i) {
       sum(get.avsdist(rSet[[i]],annot))
@@ -297,6 +297,74 @@ getAnnotOverlap2<-function(vSet,annot){
 }
 
 ###########################################################################
+## pre-EVSE analysis
+###########################################################################
+##-------------------------------------------------------------------------
+##run evsea for observed and random variant sets
+pre_evsea<-function(vSet, rSet, annot, eqtls, verbose=TRUE){
+  #compute evse
+  mtally<-get.pre_eqtldist(vSet, annot, eqtls)
+  #compute null
+  if(isParallel()){
+    cl<-getOption("cluster")
+    snow::clusterExport(cl, list("get.pre_eqtldist","IRanges","overlapsAny",
+                                 "findOverlaps","%chin%",".mtdata"),
+                        envir=environment())
+    resrset<-parSapply(cl, 1:length(rSet), function(i) {
+      sum(get.pre_eqtldist(rSet[[i]], annot, eqtls))
+    })
+  } else {
+    if(verbose) pb <- txtProgressBar(style=3)
+    resrset<-sapply(1:length(rSet),function(i){
+      if(verbose) setTxtProgressBar(pb, i/length(rSet))
+      sum(get.pre_eqtldist(rSet[[i]], annot, eqtls))
+    })
+    if(verbose)close(pb)
+  }
+  return(list(mtally=mtally,nulldist=resrset,nclusters=length(mtally)))
+}
+
+##-------------------------------------------------------------------------
+##get avs/eqtl dist for a variant set
+get.pre_eqtldist<-function(vSet,annot,eqtls){
+  # mapping tally
+  clusterMapping<-sapply(1:length(vSet),function(i){
+    chr<-names(vSet[i])
+    query<-vSet[[i]]
+    subject<-annot[[chr]]
+    if(!is.null(subject)){
+      overlaps<-findOverlaps(query,subject)
+      geneList<-.mtdata(subject)$mappedAnnotations
+      res<-sapply(1:length(query@metadata$markers),function(j){
+        snpList<-names(.mtdata(query)$blocks[[j]])
+        ov<-S4Vectors::from(overlaps)%in%which(query@metadata$index==j)
+        if(any(ov) && length(snpList)>0){
+          ov<-unique(S4Vectors::to(overlaps)[ov])
+          gList<-geneList[ov]
+          if(length(gList)>0){
+            sg <- paste(snpList, gList, sep="~")
+            bl <- any(sg %chin% eqtls)
+            res <- ifelse(bl,TRUE,FALSE)
+          } else {
+            res <- FALSE
+          }
+        } else {
+          res <- FALSE
+        }
+        return(res)
+      })
+    } else {
+      res<-rep(FALSE,length(query@metadata$markers))
+    }
+    names(res)<-query@metadata$markers
+    return(res)
+  })
+  clusterMapping<-unlist(clusterMapping)
+  clusterMapping
+}
+
+
+###########################################################################
 ## EVSE analysis
 ###########################################################################
 
@@ -308,7 +376,8 @@ evsea<-function(vSet, rSet, annot, gxdata, snpdata, pValueCutoff=0.01,verbose=TR
   #compute null
   if(isParallel()){
     cl<-getOption("cluster")
-    snow::clusterExport(cl, list("get.eqtldist","eqtlTest","IRanges","overlapsAny","findOverlaps","ff"),
+    snow::clusterExport(cl, list("get.eqtldist","eqtlTest","IRanges","overlapsAny",
+                                 "findOverlaps",".mtdata"),
                         envir=environment())
     resrset<-parSapply(cl, 1:length(rSet), function(i) {
       sum(get.eqtldist(rSet[[i]], annot, gxdata, snpdata, pValueCutoff))
@@ -330,7 +399,8 @@ evseaproxy<-function(rSet, annot, gxdata, snpdata, pValueCutoff=0.01,verbose=TRU
   #compute null
   if(isParallel()){
     cl<-getOption("cluster")
-    snow::clusterExport(cl, list("get.eqtldist","eqtlTest","IRanges","overlapsAny","findOverlaps","ff"),
+    snow::clusterExport(cl, list("get.eqtldist","eqtlTest","IRanges",
+                                 "overlapsAny","findOverlaps",".mtdata"),
                         envir=environment())
     nulldist<-parSapply(cl, 1:length(rSet), function(i) {
       res<-get.eqtldist(rSet[[i]], annot, gxdata, snpdata, pValueCutoff)

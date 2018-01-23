@@ -491,13 +491,13 @@ setMethod(
         MRAnames<-rownames(tna.get(object,what="mra", reportNames=FALSE))
         rgcs<-rgcs[MRAnames]
       } else {
-        cat("obs: input using 'stepFilter'!! \n")
+        message("obs: input using 'stepFilter=TRUE'!!")
         if(object@status$analysis["MRA"]=="[x]"){
-          cat("-MRA results without significant regulons! \n")
+          message("-MRA results without significant regulons!")
         } else {
-          cat("-invalid MRA status for 'stepFilter' option! \n")
+          message("-invalid MRA status for 'stepFilter' option!")
         }
-        cat("-to run GSEA1 analysis independently from previous results try setting 'stepFilter=FALSE' ! \n\n")
+        message("-to run GSEA1 analysis independently from previous results try setting 'stepFilter=FALSE'!")
         stop("NOTE: GSEA1 analysis can not be executed!")
       }
     }
@@ -601,13 +601,13 @@ setMethod(
         tfs<-rownames(tna.get(object,what="mra", reportNames=FALSE))
         tfs<-object@regulatoryElements[object@regulatoryElements%in%tfs]
       } else {
-        cat("obs: input using 'stepFilter'!! \n")
+        message("obs: input using 'stepFilter'!!")
         if(object@status$analysis["MRA"]=="[x]"){
-          cat("-MRA results without significant regulons! \n")
+          message("-MRA results without significant regulons!")
         } else {
-          cat("-invalid MRA status for 'stepFilter' option! \n")
+          message("-invalid MRA status for 'stepFilter' option!")
         }
-        cat("-to run GSEA2 analysis independently from previous results try setting 'stepFilter=FALSE' ! \n\n")
+        message("-to run GSEA2 analysis independently from previous results try setting 'stepFilter=FALSE'!")
         stop("NOTE: GSEA2 analysis can not be executed!")
       }
     } else {
@@ -748,12 +748,12 @@ setMethod(
     tnet.universe<-rownames(tnet)
     object@summary$rgc[,"above.min.size"]<-sum(gs.size>minRegulonSize)
     if(object@summary$rgc[,"above.min.size"]<2){
-      cat("Overlap analysis can not be executed!\n")
+      message("Overlap analysis can not be executed!")
       if(length(object@regulatoryElements)<2){
-        cat("-obs: transcription factor slot with only one element!\n")
+        message("-obs: transcription factor slot with only one element!")
       }
       if(ncol(object@referenceNetwork)<2){
-        cat("-obs: transcriptional network slot with only one regulon!\n")
+        message("-obs: transcriptional network slot with only one regulon!")
       }
       stop("NOTE: require at least two regulons for overlap analysis!")
     }
@@ -843,13 +843,13 @@ setMethod(
         GSEAnames<-rownames(tna.get(object,what="gsea1", reportNames=FALSE))
         rgcs <- rgcs[which(names(rgcs)%in%GSEAnames)]
       } else {
-        cat("obs: input using 'stepFilter'!! \n")
+        message("obs: input using 'stepFilter=TRUE'!")
         if(object@status$analysis["GSEA1"]=="[x]"){
-          cat("-GSEA1 results without significant regulons! \n")
+          message("-GSEA1 results without significant regulons!")
         } else {
-          cat("-invalid GSEA1 status for 'stepFilter' option! \n")
+          message("-invalid GSEA1 status for 'stepFilter' option!")
         }
-        cat("-to run synergy analysis independently from previous results try setting 'stepFilter=FALSE' ! \n\n")
+        message("-to run synergy analysis independently from previous results try setting 'stepFilter=FALSE'!")
         stop("NOTE: synergy analysis can not be executed!")
       }
     }
@@ -943,7 +943,7 @@ setMethod(
                                       nPermutations,exponent,tnet,orderAbsValue)    
     ##-----overlap information is always required for shadow!
     if(object@summary$results["Overlap",]==0){
-      cat("-Overlap results without significant regulon pairs! \n")
+      message("-Overlap results without significant regulon pairs!")
       stop("NOTE: shadow analysis can not be executed!")
     }
     ##-----get regulons
@@ -984,13 +984,13 @@ setMethod(
         idx<-regpairs[,1]%in%GSEAnames+regpairs[,2]%in%GSEAnames
         regpairs<-regpairs[idx==2,,drop=FALSE]
       } else {
-        cat("obs: input using 'stepFilter'!! \n") 
+        message("obs: input using 'stepFilter=TRUE'!!") 
         if(object@status$analysis["GSEA1"]=="[x]"){
-          cat("-GSEA1 results without significant regulons! \n")
+          message("-GSEA1 results without significant regulons!")
         } else {
-          cat("-invalid GSEA1 status for 'stepFilter' option! \n")
+          message("-invalid GSEA1 status for 'stepFilter' option!")
         }
-        cat("-to run shadow analysis independently from previous results try setting 'stepFilter=FALSE' ! \n\n")
+        message("-to run shadow analysis independently from previous results try setting 'stepFilter=FALSE'!")
         stop("NOTE: shadow analysis can not be executed!")
       }
     }
@@ -1169,7 +1169,8 @@ upgradeTNA <- function(object){
     if(.hasSlot(object, "transcriptionFactors")){
       object@regulatoryElements <- object@transcriptionFactors
       object@rowAnnotation <- object@annotation
-      object@colAnnotation <- data.frame()
+      IDs <- colnames(object@gexp)
+      object@colAnnotation <- data.frame(IDs, row.names = IDs, stringsAsFactors = FALSE)
     }
   }
   return(object)

@@ -1,8 +1,8 @@
 ---
 title: "RTN: reconstruction of transcriptional networks and analysis of master regulators."
 author: "Mauro AA Castro, Xin Wang, Michael NC Fletcher, Florian Markowetz and Kerstin B Meyer."
-date: "`r doc_date()`"
-package: "`r pkg_ver('RTN')`"
+date: "`r BiocStyle::doc_date()`"
+package: "`r BiocStyle::pkg_ver('RTN')`"
 bibliography: bibliography.bib
 abstract: <p>This package provides classes and methods for transcriptional network inference and analysis. Modulators of transcription factor activity are assessed by conditional mutual information, and master regulators are mapped to phenotypes using different strategies, e.g., gene set enrichment, shadow and synergy analyses. Additionally, new frameworks are provided at the derivative packages [RTNduals](http://bioconductor.org/packages/RTNduals/) and [RTNsurvival](http://bioconductor.org/packages/RTNsurvival/).</p>
 output: 

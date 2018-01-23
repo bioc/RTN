@@ -17,8 +17,8 @@ setMethod("initialize",
             .Object@randomSet<-list()
             .Object@results<-list()
             ##-----status matrix
-            .Object@status <- rep("[ ]", 1, 3)
-            names(.Object@status) <- c("Preprocess", "VSE", "EVSE")
+            .Object@status <- rep("[ ]", 1, 4)
+            names(.Object@status) <- c("Preprocess", "VSE", "EVSE", "PEVSE")
             ##-----summary info
             ##-----markers
             sum.info.markers<-matrix(,1,4)
@@ -34,18 +34,20 @@ setMethod("initialize",
             rownames(sum.info.para$vse)<-"Parameter"
             sum.info.para$evse<-matrix(,1,3)
             colnames(sum.info.para$evse)<-c("maxgap","pValueCutoff","pAdjustMethod")
-            rownames(sum.info.para$evse)<-"Parameter"          
+            rownames(sum.info.para$evse)<-"Parameter"      
+            sum.info.para$pevse<-matrix(,1,3)
+            colnames(sum.info.para$pevse)<-c("maxgap","pValueCutoff","pAdjustMethod")
+            rownames(sum.info.para$pevse)<-"Parameter" 
             ##-----results
-            sum.info.results<-matrix(,2,1)
+            sum.info.results<-matrix(,3,1)
             colnames(sum.info.results)<-"Annotation"
-            rownames(sum.info.results)<-c("VSE","EVSE")
+            rownames(sum.info.results)<-c("VSE","EVSE","PEVSE")
             .Object@summary<-list(markers=sum.info.markers,para=sum.info.para,results=sum.info.results)			
             .Object
           }
 )
 
 ##------------------------------------------------------------------------------
-##pre-processing
 setMethod(
   "avs.vse",
   "AVS",
@@ -72,7 +74,7 @@ setMethod(
     #---check glist agreement with annotation
     if(!is.null(glist)){
       gnames<-unique(unlist(glist))
-      if(verbose)cat("-Checking agreement between 'glist' and 'annotation' datasets... ")
+      if(verbose)cat("-Checking agreement between 'glist' and the 'annotation' dataset... ")
       agreement<-sum(gnames%in%annotation$ID)/length(gnames)*100
       if(verbose)cat(paste(round(agreement,digits=1),"% !\n",sep=""))
       if(agreement<90){
@@ -105,7 +107,7 @@ setMethod(
     
     #---start vse analysis
     if(isParallel()){
-      if(verbose)cat("-Running VSE analysis (parallel version)...\n")
+      if(verbose)cat("-Running VSE analysis (parallel version - ProgressBar disabled)...\n")
       getTree=FALSE
     } else {
       if(verbose)cat("-Running VSE analysis...\n")
@@ -124,15 +126,15 @@ setMethod(
     annotation$OverlapAVS <- FALSE
     annotation[names(annotdist),"OverlapAVS"] <- annotdist
     annotdist <- getAnnotOverlap2(vSet,annot)
-    annotation$OverlapMarker <- NA
-    annotation[names(annotdist),"OverlapMarker"] <- annotdist
+    annotation$OverlapCluster <- NA
+    annotation[names(annotdist),"OverlapCluster"] <- annotdist
     object@results$annotation$vse <- annotation
     
     #---compute enrichment stats
     object@results$stats$vse<-vseformat(object@results$vse,pValueCutoff=pValueCutoff,boxcox=boxcox)
     
     #get universe counts (marker and annotation counts)
-    # REVISAR: contagem de anotacao nao relevante p/ VSE, talvez seja desncessaria
+    # REVISAR: contagem de anotacao nao relevante p/ VSE, talvez seja desnecessaria
     # quando nao entrar com glist... revisar correspondente no EVSE!!!
     universeCounts<-getUniverseCounts1(vSet,annotation,maxgap)
     object@results$counts$vse<-universeCounts
@@ -144,7 +146,6 @@ setMethod(
 )
 
 ##------------------------------------------------------------------------------
-##pre-processing
 setMethod(
   "avs.evse",
   "AVS",
@@ -169,7 +170,7 @@ setMethod(
     maxgap <- maxgap*1000 #set to bp
     
     #---check gxdata agreement with annotation
-    if(verbose)cat("-Checking agreement between 'gxdata' and 'annotation' datasets... ")
+    if(verbose)cat("-Checking agreement between 'gxdata' and the 'annotation' dataset... ")
     agreement<-sum(rownames(gxdata)%in%annotation$ID)
     agreement<-agreement/nrow(gxdata)*100
     if(verbose)cat(paste(round(agreement,digits=1),"% !\n",sep=""))
@@ -187,7 +188,7 @@ setMethod(
     #---check glist agreement with annotation
     if(!is.null(glist)){
       gnames<-unique(unlist(glist))
-      if(verbose)cat("-Checking agreement between 'glist' and 'annotation' datasets...  ")
+      if(verbose)cat("-Checking agreement between 'glist' and the 'annotation' dataset...  ")
       agreement<-sum(gnames%in%annotation$ID)/length(gnames)*100
       if(verbose)cat(paste(round(agreement,digits=1),"% !\n",sep=""))
       if(agreement<90){
@@ -261,17 +262,16 @@ setMethod(
       tp1 <- paste("NOTE: ",idiff,"% of the SNPs in the 'AVS' are not represented in the 'snpdata'!\n",sep="")
       tp2 <- "Although the ideal case would be a perfect matching, it is common\n"
       tp3 <- "to see large GWAS studies interrogating a fraction of the annotated\n"
-      tp4 <- "variation. So, given that the 'AVS' object might represent all\n"
-      tp5 <- "annotated variation (e.g. the randon sets come from a SNP population),\n"
-      tp6 <- "it is expected a certain level of underepresation for the 'snpdata'.\n"
-      tp7 <- "Please carefully evaluate whether this number is acceptable for\n"
-      tp8 <- "your study."
-      warning(tp1,tp2,tp3,tp4,tp5,tp6,tp7,tp8,call.=FALSE)
+      tp4 <- "variation. So, given that the annotated variation in the 'AVS' object\n"
+      tp5 <- "represents the target population (universe), it is expected\n"
+      tp6 <- "a certain level of underepresation of the 'snpdata' in the 'AVS'.\n"
+      tp7 <- "Please evaluate whether this number is acceptable for your study.\n"
+      warning(tp1,tp2,tp3,tp4,tp5,tp6,tp7,call.=FALSE)
     }
     vSet<-object@variantSet
     rSet<-object@randomSet
     
-    #---set marker ids to integer in order to improve computational performance  
+    #---set marker ids to integer in order to improve computational performance 
     if(verbose)cat("-Mapping marker ids to 'snpdata'...\n")
     vSet<-mapvset(vSet,snpnames=rownames(snpdata))
     rSet<-maprset(rSet,snpnames=rownames(snpdata),verbose=verbose)
@@ -281,7 +281,7 @@ setMethod(
     if(isParallel()){
       getTree=FALSE
       if(fineMapping){
-        if(verbose)cat("-Running EVSE analysis (parallel version)...\n")
+        if(verbose)cat("-Running EVSE analysis (parallel version - ProgressBar disabled)...\n")
       } else {
         if(verbose)cat("-Running EVSE analysis - pooled null (parallel version)...\n")
       }
@@ -294,22 +294,22 @@ setMethod(
       }
     }
     if(fineMapping){
-      junk<-sapply(names(glist),function(lab){
+      for(lab in names(glist)){
         if(verbose)cat("--For ",lab,"...\n",sep="")
         #---run evsea
         annot<-getAnnotRanges(annotation[glist[[lab]],],maxgap=maxgap,getTree=getTree, getReduced=FALSE)
+        #--- default evse
         evse<-evsea(vSet,rSet,annot,gxdata,snpdata,pValueCutoff=pValueCutoff,verbose=verbose)
         #---get individual eqtls
         annot<-getAnnotRanges(annotation[glist[[lab]],],maxgap=maxgap,getTree=FALSE,getReduced=FALSE)
         eqtls<-eqtlExtract(vSet,annot,gxdata,snpdata,pValueCutoff)
-        #---check and save
+        #---check
         mtally<-names(evse$mtally[evse$mtally])
         bl<-all(unique(eqtls$RiskSNP)%in%mtally)
         if(!bl){warning("...mismatched 'mtally' counts for ", lab,call.=FALSE)}
         evse$eqtls<-eqtls
-        object@results$evse[[lab]]<<-evse
-        return(NULL)
-      })
+        object@results$evse[[lab]]<-evse
+      }
       #---
       #object@results$evsemtx$probs<-getEvseMatrix(object,"probs")
       #object@results$evsemtx$fstat<-getEvseMatrix(object,"fstat")
@@ -325,7 +325,7 @@ setMethod(
       #---run evsea
       if(verbose)cat("-- concluding batch processing...\n")
       if(verbose) pb <- txtProgressBar(style=3)
-      junk<-sapply(1:length(glist),function(i){
+      for (i in 1:length(glist)){
         if(verbose) setTxtProgressBar(pb, i/length(glist))
         lab<-names(glist)[i]
         #---run evsea
@@ -336,9 +336,8 @@ setMethod(
         evse$nulldist<-nullproxy[,nproxyids[lab]]
         evse$nclusters<-length(evse$mtally)
         #---get individual eqtls (OBS: rever, usa versao antiga do variantSet)
-        object@results$evse[[lab]]<<-evse
-        return(NULL)
-      })
+        object@results$evse[[lab]]<-evse
+      }
       if(verbose) close(pb)
     }
     
@@ -348,8 +347,8 @@ setMethod(
     annotation$OverlapAVS <- FALSE
     annotation[names(annotdist),"OverlapAVS"] <- annotdist
     annotdist <- getAnnotOverlap2(vSet,annot)
-    annotation$OverlapMarker <- NA
-    annotation[names(annotdist),"OverlapMarker"] <- annotdist
+    annotation$OverlapCluster <- NA
+    annotation[names(annotdist),"OverlapCluster"] <- annotdist
     object@results$annotation$evse <- annotation
     
     #---compute enrichment stats
@@ -364,6 +363,125 @@ setMethod(
     return(object)
   }
 )
+
+##------------------------------------------------------------------------------
+setMethod(
+  "avs.pevse",
+  "AVS",
+  function(object, annotation, eqtls, maxgap=250, pValueCutoff=0.05, 
+           boxcox=TRUE, lab="annotation", glist=NULL, minSize=100,
+           verbose=TRUE){
+    if(object@status["Preprocess"]!="[x]")stop("NOTE: input data need preprocessing!",call.=FALSE)
+    object <- .update_pEVSE(object)
+    
+    #---initial checks
+    annotation<-tnai.checks(name="annotation.evse",para=annotation)
+    eqtls<-tnai.checks(name="eqtls",para=eqtls)
+    tnai.checks(name="maxgap",para=maxgap)
+    tnai.checks(name="pValueCutoff",para=pValueCutoff)
+    tnai.checks(name="boxcox",para=boxcox)
+    tnai.checks(name="lab",para=lab)
+    glist<-tnai.checks(name="glist",para=glist)
+    minSize=tnai.checks(name="evse.minSize",para=minSize)
+    tnai.checks(name="verbose",para=verbose)
+    object@summary$para$pevse[1,]<-c(maxgap,pValueCutoff,NA)
+    object@para$pevse<-list(maxgap=maxgap,pValueCutoff=pValueCutoff,pAdjustMethod="bonferroni")
+    maxgap <- maxgap*1000 #set to bp
+    
+    #---check glist agreement with annotation
+    if(!is.null(glist)){
+      gnames<-unique(unlist(glist))
+      if(verbose)cat("-Checking agreement between 'glist' and the 'annotation' dataset...  ")
+      agreement<-sum(gnames%in%annotation$ID)/length(gnames)*100
+      if(verbose)cat(paste(round(agreement,digits=1),"% !\n",sep=""))
+      if(agreement<90){
+        idiff<-round(100-agreement,digits=1)
+        tp<-paste("NOTE: ",idiff,"% of the ids in 'glist' are not represented in the 'annotation' dataset!",sep="")
+        warning(tp,call.=FALSE)
+      } else if(agreement<50){
+        idiff<-round(100-agreement,digits=1)
+        tp<-paste("NOTE: ",idiff,"% of the ids in 'glist' are not represented in the 'annotation' dataset!",sep="")
+        stop(tp,call.=FALSE)
+      }
+      glist<-lapply(glist,intersect,y=annotation$ID)
+      gsz<-unlist(lapply(glist,length))
+      glist<-glist[gsz>minSize[1]]
+      if(length(glist)==0){
+        stop("NOTE: no gene set > 'minSize' in the 'glist'!",call.=FALSE)
+      }
+    } else {
+      glist<-list(annotation$ID)
+      names(glist)<-lab
+    }
+    
+    #---check avs agreement with eqtls
+    if(verbose)cat("-Checking agreement between 'eqtls' and the 'annotation' dataset...  ")
+    gnames <- eqtls$GENEID
+    agreement<-sum(gnames%in%annotation$ID)/length(gnames)*100
+    if(verbose)cat(paste(round(agreement,digits=1),"% !\n",sep=""))
+    if(agreement<90){
+      idiff<-round(100-agreement,digits=1)
+      tp<-paste("NOTE: ",idiff,"% of the ids in 'eqtls' are not represented in the 'annotation' dataset!",sep="")
+      warning(tp,call.=FALSE)
+    } else if(agreement<50){
+      idiff<-round(100-agreement,digits=1)
+      tp<-paste("NOTE: ",idiff,"% of the ids in 'eqtls' are not represented in the 'annotation' dataset!",sep="")
+      stop(tp,call.=FALSE)
+    }
+    eqtls <- paste(eqtls$RSID, eqtls$GENEID, sep="~")
+    eqtls <- sort(unique(eqtls))
+    vSet<-object@variantSet
+    rSet<-object@randomSet
+    
+    #--- start pevse analysis
+    if(isParallel()){
+      getTree=FALSE
+      if(verbose)cat("-Running pEVSE analysis (parallel version - ProgressBar disabled)...\n")
+    } else {
+      getTree=TRUE
+      if(verbose)cat("-Running pEVSE analysis...\n")
+    }
+    for(lab in names(glist)){
+      if(verbose)cat("--For ",lab,"...\n",sep="")
+      #---run evsea with pre-defined eQTLs
+      annot<-getAnnotRanges(annotation[glist[[lab]],],maxgap=maxgap,getTree=getTree, getReduced=FALSE)
+      pevse<-pre_evsea(vSet,rSet,annot,eqtls,verbose=verbose)
+      object@results$pevse[[lab]]<-pevse
+    }
+    
+    #---map avs to annotation
+    annot<-getAnnotRanges(annotation,maxgap=maxgap, getTree=FALSE, getReduced=FALSE)
+    annotdist<-getAnnotOverlap1(vSet,annot)
+    annotation$OverlapAVS <- FALSE
+    annotation[names(annotdist),"OverlapAVS"] <- annotdist
+    annotdist <- getAnnotOverlap2(vSet,annot)
+    annotation$OverlapCluster <- NA
+    annotation[names(annotdist),"OverlapCluster"] <- annotdist
+    object@results$annotation$pevse <- annotation
+    
+    #---compute enrichment stats
+    object@results$stats$pevse<-vseformat(object@results$pevse,pValueCutoff=pValueCutoff,boxcox=boxcox)
+    
+    #get universe counts (marker and gene counts)
+    universeCounts<-getUniverseCounts1(vSet,annotation,maxgap)
+    object@results$counts$pevse<-universeCounts
+    
+    ##-----update status and return results
+    object@status["PEVSE"] <- "[x]"
+    return(object)
+  }
+)
+.update_pEVSE <- function(object){
+  if(is.na(object@status["PEVSE"])){
+    sum.info.para <- matrix(,1,3)
+    colnames(sum.info.para)<-c("maxgap","pValueCutoff","pAdjustMethod")
+    rownames(sum.info.para)<-"Parameter"
+    object@summary$para$pevse <- sum.info.para
+    object@status[4] <- "[ ]"
+    names(object@status) <- c("Preprocess", "VSE", "EVSE", "PEVSE")
+  }
+  return(object)
+}
 
 ##------------------------------------------------------------------------------
 ##get slots from AVS 
@@ -398,6 +516,12 @@ setMethod(
         query<-vseformat(object@results$evse, pValueCutoff=pValueCutoff, boxcox=TRUE)
         if(report)query<-vsereport(query)
       }
+    } else if(what=="pevse"){
+      if(is.null(pValueCutoff))pValueCutoff<-object@para$pevse$pValueCutoff
+      if(!is.null(object@results$pevse)){
+        query<-vseformat(object@results$pevse, pValueCutoff=pValueCutoff, boxcox=TRUE)
+        if(report)query<-vsereport(query)
+      }
     } else if(what=="vse"){
       if(is.null(pValueCutoff))pValueCutoff<-object@para$vse$pValueCutoff
       if(!is.null(object@results$vse)){
@@ -412,6 +536,8 @@ setMethod(
       query<-object@results$annotation$vse
     } else if(what=="annotation.evse"){
       query<-object@results$annotation$evse
+    } else if(what=="annotation.pevse"){
+      query<-object@results$annotation$pevse
     }
     return(query)
   }

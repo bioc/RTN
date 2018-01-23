@@ -36,9 +36,8 @@ avs.plot1<-function(object, what="vse", fname=what, ylab="genomic annotation",
 avs.plot2<-function(object, what="evse", fname=what, width=14, height=2.5,
                     rmargin=1, bxseq=seq(-4,8,2), decreasing=TRUE, ylab="Annotation",
                     xlab="Clusters of risk-associated and linked SNPs", tfs=NULL){
-  if(class(object)!="AVS"){
-    stop("not an 'AVS' object!")
-  }
+  if(class(object)!="AVS")stop("not an 'AVS' object!")
+  
   tnai.checks(name="avs.plot.what",para=what)
   tnai.checks(name="tfs",para=tfs)
   tnai.checks(name="fname",para=fname)
@@ -118,6 +117,7 @@ avsplot2<-function(stats,ucounts,fname="vseplot",height=2, width=14, rmargin=1,
                    label="EVSE",decreasing=TRUE){
   #---shortcut to set left margin
   lmargin=0.3
+  if(label=="PEVSE")label <- "pEVSE"
   #---universeCounts
   clustersz<-ucounts[,"markers"]
   annotsz<-ucounts[,"annotation"]
@@ -212,7 +212,7 @@ avsplot2<-function(stats,ucounts,fname="vseplot",height=2, width=14, rmargin=1,
   #---
   sp1<-1/(length(labs)-1)
   sp2<-1/(ncol(mtally)-1)
-  image(mat.tally,axes=FALSE,col=colgrid,ylim=c(-nc,1+nc),cex=2)
+  suppressWarnings(image(mat.tally,axes=FALSE,col=colgrid,ylim=c(-nc,1+nc),cex=2))
   mtext(xlab, side=3, line=5, cex=0.8, las=1, adj=0.5)
   mtext(labs, side=3, at=seq(0,1,sp1), line=1.2, cex=0.73, las=2, adj=0)
   mtext(clustersz, side=3, at=seq(0,1,sp1), line=1, cex=0.7, las=2, adj=1)

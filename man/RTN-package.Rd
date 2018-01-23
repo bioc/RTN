@@ -52,6 +52,7 @@ LazyLoad: \tab yes\cr
 \link[RTN:avs.preprocess.LD1000gRel20130502]{avs.preprocess.LD1000gRel20130502}: \tab constructor for associated variant sets (AVS).\cr
 \link[RTN:avs.vse]{avs.vse}: \tab variant set enrichment analysis.\cr
 \link[RTN:avs.evse]{avs.evse}: \tab an eQTL/VSE pipeline for variant set enrichment analysis.\cr
+\link[RTN:avs.pevse]{avs.pevse}: \tab an EVSE pipeline using precomputed eQTLs.\cr
 \link[RTN:avs.get]{avs.get}: \tab get information from individual slots in an AVS object.\cr
 \link[RTN:avs.plot1]{avs.plot1}: \tab plot results from AVS methods, single plots.\cr
 \link[RTN:avs.plot2]{avs.plot2}: \tab plot results from AVS methods, multiple plots.\cr

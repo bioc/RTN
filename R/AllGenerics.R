@@ -81,6 +81,11 @@ setGeneric("avs.evse",
                     boxcox=TRUE, lab="annotation", glist=NULL, minSize=100, 
                     fineMapping=TRUE, verbose=TRUE)
              standardGeneric("avs.evse"), package="RTN")
+setGeneric("avs.pevse",
+           function(object, annotation, eqtls, maxgap=250, pValueCutoff=0.05, 
+                    boxcox=TRUE, lab="annotation", glist=NULL, minSize=100, 
+                    verbose=TRUE)
+             standardGeneric("avs.pevse"), package="RTN")
 setGeneric("avs.get",
            function(object, what="summary", report=FALSE, pValueCutoff=NULL) 
              standardGeneric("avs.get"), package="RTN")

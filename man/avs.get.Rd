@@ -19,7 +19,8 @@ an object of class 'AVS' \code{\link[RTN:AVS-class]{AVS-class}}.
 }
 \item{what}{
 a single character value specifying which information should be retrieved from the slots. 
-Options: 'markers', 'validatedMarkers', 'variantSet', 'randomSet', 'linkedMarkers', 'randomMarkers', 'vse', 'evse', 'annotation.vse', 'annotation.evse', 'summary' and 'status'.
+Options: 'markers', 'validatedMarkers', 'variantSet', 'randomSet', 'linkedMarkers', 'randomMarkers', 'vse', 'evse', 'pevse', 'annotation.vse', 'annotation.evse', 
+'annotation.pevse', 'summary' and 'status'.
 }
 \item{report}{
 a single logical value indicating whether to return results from 'vse', 'evse' as a consolidated table (if TRUE), or as they are (if FALSE).

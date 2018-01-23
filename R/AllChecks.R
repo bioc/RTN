@@ -24,12 +24,13 @@ tnai.checks <- function(name, para) {
   }
   else if(name=="avs.what"){
     opts<-c("markers","validatedMarkers","variantSet","randomSet","summary",
-            "status","linkedMarkers","randomMarkers","vse","evse","annotation.vse","annotation.evse")
+            "status","linkedMarkers","randomMarkers","vse","evse","pevse",
+            "annotation.vse","annotation.evse","annotation.pevse")
     if(!is.character(para) || length(para)!=1 || !(para %in% opts))
       stop(paste("'what' should be any one of the options: \n", paste(opts,collapse = ", ") ),call.=FALSE )
   }
   else if(name=="avs.plot.what"){
-    opts<-c("vse","evse")
+    opts<-c("vse","evse","pevse")
     if(!is.character(para) || length(para)!=1 || !(para %in% opts))
       stop(paste("'avs.plot.what' should be any one of the options: \n", paste(opts,collapse = ", ") ),call.=FALSE )
   }
@@ -523,6 +524,18 @@ tnai.checks <- function(name, para) {
       stop("Chromosome start/end positions in 'annotation' should be integer or numeric vectors!",call.=FALSE)
     }
     rownames(para)<-para$ID
+    return(para)
+  }
+  else if(name=="eqtls"){
+    if( !is.data.frame(para) || ncol(para)<2 ){
+      stop("'eqtls' should be a dataframe with ncol>=2 !",call.=FALSE)
+    }
+    colnames(para)<-toupper(colnames(para))
+    if(!all(c("RSID","GENEID") %in% colnames(para))){
+      stop("'eqtls' should include two columns named <RSID> and <GENEID> !",call.=FALSE)
+    }
+    para$RSID <- as.character(para$RSID)
+    para$GENEID <- as.character(para$GENEID)
     return(para)
   }
   else if(name=="rowAnnotation"){

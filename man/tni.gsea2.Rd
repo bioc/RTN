@@ -11,7 +11,8 @@ This function takes a TNI object and returns a CMAP-like analysis obtained by tw
 
 \usage{
 tni.gsea2(object, minRegulonSize=15, doSizeFilter=FALSE, exponent=1, tnet="dpi",
-  tfs=NULL, samples=NULL, features=NULL, refsamp=NULL, log=FALSE, verbose=TRUE)
+  tfs=NULL, samples=NULL, features=NULL, refsamp=NULL, log=FALSE, 
+  alternative=c("two.sided", "less", "greater"), verbose=TRUE)
 }
 
 \arguments{
@@ -49,6 +50,9 @@ an optional string vector containing the reference samples for differential expr
 \item{log}{
 a logical value. If TRUE, differential expression calculations will be computed in log
 space.
+}
+\item{alternative}{
+a character string specifying the alternative hypothesis, must be one of "two.sided" (default), "greater" or "less".
 }
 \item{verbose}{
 a single logical value specifying to display detailed messages (when verbose=TRUE) or not (when verbose=FALSE).

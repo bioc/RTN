@@ -51,7 +51,7 @@ setMethod("initialize",
 setMethod(
   "avs.vse",
   "AVS",
-  function(object, annotation, maxgap=0, pValueCutoff=0.05, boxcox=TRUE, 
+  function(object, annotation, maxgap=0, pValueCutoff=0.05, pAdjustMethod="bonferroni", boxcox=TRUE, 
            lab="annotation", glist=NULL, minSize=100, verbose=TRUE){
     if(object@status["Preprocess"]!="[x]")stop("NOTE: input data need preprocessing!",call.=FALSE)
     
@@ -61,14 +61,15 @@ setMethod(
     }
     annotation<-tnai.checks(name="annotation.vse",para=annotation)
     tnai.checks(name="maxgap",para=maxgap)
-    tnai.checks(name="pValueCutoff",para=pValueCutoff)
+    tnai.checks(name="pAdjustMethod",para=pAdjustMethod)
+    tnai.checks(name="lab",para=lab)
     tnai.checks(name="boxcox",para=boxcox)
     tnai.checks(name="lab",para=lab)
     glist<-tnai.checks(name="glist",para=glist)
     tnai.checks(name="minSize",para=minSize)
     tnai.checks(name="verbose",para=verbose)
     object@summary$para$vse[1,]<-c(maxgap,pValueCutoff,NA)
-    object@para$vse<-list(maxgap=maxgap,pValueCutoff=pValueCutoff,pAdjustMethod="bonferroni")
+    object@para$vse<-list(maxgap=maxgap,pValueCutoff=pValueCutoff,pAdjustMethod=pAdjustMethod)
     maxgap <- maxgap*1000 #set to bp
     
     #---check glist agreement with annotation
@@ -131,7 +132,8 @@ setMethod(
     object@results$annotation$vse <- annotation
     
     #---compute enrichment stats
-    object@results$stats$vse<-vseformat(object@results$vse,pValueCutoff=pValueCutoff,boxcox=boxcox)
+    object@results$stats$vse<-vseformat(object@results$vse,pValueCutoff=pValueCutoff,
+                                        pAdjustMethod=pAdjustMethod, boxcox=boxcox)
     
     #get universe counts (marker and annotation counts)
     # REVISAR: contagem de anotacao nao relevante p/ VSE, talvez seja desnecessaria
@@ -149,7 +151,7 @@ setMethod(
 setMethod(
   "avs.evse",
   "AVS",
-  function(object, annotation, gxdata, snpdata, maxgap=250, pValueCutoff=0.05, 
+  function(object, annotation, gxdata, snpdata, maxgap=250, pValueCutoff=0.05, pAdjustMethod="bonferroni",
            boxcox=TRUE, lab="annotation", glist=NULL, minSize=100, fineMapping=TRUE,
            verbose=TRUE){
     if(object@status["Preprocess"]!="[x]")stop("NOTE: input data need preprocessing!",call.=FALSE)
@@ -159,6 +161,7 @@ setMethod(
     tnai.checks(name="gxdata",para=gxdata)
     tnai.checks(name="maxgap",para=maxgap)
     tnai.checks(name="pValueCutoff",para=pValueCutoff)
+    tnai.checks(name="pAdjustMethod",para=pAdjustMethod)
     tnai.checks(name="boxcox",para=boxcox)
     tnai.checks(name="lab",para=lab)
     glist<-tnai.checks(name="glist",para=glist)
@@ -166,7 +169,7 @@ setMethod(
     tnai.checks(name="fineMapping",para=fineMapping)
     tnai.checks(name="verbose",para=verbose)
     object@summary$para$evse[1,]<-c(maxgap,pValueCutoff,NA)
-    object@para$evse<-list(maxgap=maxgap,pValueCutoff=pValueCutoff,pAdjustMethod="bonferroni")
+    object@para$evse<-list(maxgap=maxgap,pValueCutoff=pValueCutoff,pAdjustMethod=pAdjustMethod)
     maxgap <- maxgap*1000 #set to bp
     
     #---check gxdata agreement with annotation
@@ -352,7 +355,8 @@ setMethod(
     object@results$annotation$evse <- annotation
     
     #---compute enrichment stats
-    object@results$stats$evse<-vseformat(object@results$evse,pValueCutoff=pValueCutoff,boxcox=boxcox)
+    object@results$stats$evse<-vseformat(object@results$evse,pValueCutoff=pValueCutoff,
+                                         pAdjustMethod=pAdjustMethod, boxcox=boxcox)
     
     #get universe counts (marker and gene counts)
     universeCounts<-getUniverseCounts2(vSet,annotation,maxgap)
@@ -368,7 +372,7 @@ setMethod(
 setMethod(
   "avs.pevse",
   "AVS",
-  function(object, annotation, eqtls, maxgap=250, pValueCutoff=0.05, 
+  function(object, annotation, eqtls, maxgap=250, pValueCutoff=0.05, pAdjustMethod="bonferroni", 
            boxcox=TRUE, lab="annotation", glist=NULL, minSize=100,
            verbose=TRUE){
     if(object@status["Preprocess"]!="[x]")stop("NOTE: input data need preprocessing!",call.=FALSE)
@@ -379,13 +383,14 @@ setMethod(
     eqtls<-tnai.checks(name="eqtls",para=eqtls)
     tnai.checks(name="maxgap",para=maxgap)
     tnai.checks(name="pValueCutoff",para=pValueCutoff)
+    tnai.checks(name="pAdjustMethod",para=pAdjustMethod)
     tnai.checks(name="boxcox",para=boxcox)
     tnai.checks(name="lab",para=lab)
     glist<-tnai.checks(name="glist",para=glist)
     minSize=tnai.checks(name="evse.minSize",para=minSize)
     tnai.checks(name="verbose",para=verbose)
     object@summary$para$pevse[1,]<-c(maxgap,pValueCutoff,NA)
-    object@para$pevse<-list(maxgap=maxgap,pValueCutoff=pValueCutoff,pAdjustMethod="bonferroni")
+    object@para$pevse<-list(maxgap=maxgap,pValueCutoff=pValueCutoff,pAdjustMethod=pAdjustMethod)
     maxgap <- maxgap*1000 #set to bp
     
     #---check glist agreement with annotation
@@ -460,7 +465,8 @@ setMethod(
     object@results$annotation$pevse <- annotation
     
     #---compute enrichment stats
-    object@results$stats$pevse<-vseformat(object@results$pevse,pValueCutoff=pValueCutoff,boxcox=boxcox)
+    object@results$stats$pevse<-vseformat(object@results$pevse,pValueCutoff=pValueCutoff,
+                                          pAdjustMethod=pAdjustMethod, boxcox=boxcox)
     
     #get universe counts (marker and gene counts)
     universeCounts<-getUniverseCounts1(vSet,annotation,maxgap)
@@ -513,19 +519,22 @@ setMethod(
     } else if(what=="evse"){
       if(is.null(pValueCutoff))pValueCutoff<-object@para$evse$pValueCutoff
       if(!is.null(object@results$evse)){
-        query<-vseformat(object@results$evse, pValueCutoff=pValueCutoff, boxcox=TRUE)
+        query<-vseformat(object@results$evse, pValueCutoff=pValueCutoff, 
+                         pAdjustMethod=object@para$evse$pAdjustMethod, boxcox=TRUE)
         if(report)query<-vsereport(query)
       }
     } else if(what=="pevse"){
       if(is.null(pValueCutoff))pValueCutoff<-object@para$pevse$pValueCutoff
       if(!is.null(object@results$pevse)){
-        query<-vseformat(object@results$pevse, pValueCutoff=pValueCutoff, boxcox=TRUE)
+        query<-vseformat(object@results$pevse, pValueCutoff=pValueCutoff, 
+                         pAdjustMethod=object@para$pevse$pAdjustMethod, boxcox=TRUE)
         if(report)query<-vsereport(query)
       }
     } else if(what=="vse"){
       if(is.null(pValueCutoff))pValueCutoff<-object@para$vse$pValueCutoff
       if(!is.null(object@results$vse)){
-        query<-vseformat(object@results$vse, pValueCutoff=pValueCutoff, boxcox=TRUE)
+        query<-vseformat(object@results$vse, pValueCutoff=pValueCutoff, 
+                         pAdjustMethod=object@para$vse$pAdjustMethod, boxcox=TRUE)
         if(report)query<-vsereport(query)
       }
     } else if(what=="summary"){

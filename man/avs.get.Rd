@@ -44,9 +44,8 @@ Mauro Castro
 \dontrun{
 #This example requires the RTNdata package! (currently available under request)
 library(RTNdata.LDHapMapRel27)
-data(bcarisk)
-avs <- new("AVS", markers=bcarisk)
-avs <- avs.preprocess.LDHapMapRel27(avs, nrand=100)
+data(bcarisk, package="RTNdata.LDHapMapRel27")
+bcavs <- avs.preprocess.LDHapMapRel27(bcarisk, nrand=1000)
 avs.get(avs)
 }
 }

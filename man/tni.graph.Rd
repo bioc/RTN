@@ -70,25 +70,26 @@ tfs4test <- dt4rtn$tfs[c("PTTG1","E2F2","FOXM1","E2F3","RUNX2")]
 
 rtni <- tni.constructor(expData=dt4rtn$gexp, regulatoryElements=tfs4test, 
         rowAnnotation=dt4rtn$gexpIDs)
-rtni<-tni.permutation(rtni)
-rtni<-tni.bootstrap(rtni)
-rtni<-tni.dpi.filter(rtni, eps=0.05)
+rtni <- tni.permutation(rtni)
+rtni <- tni.bootstrap(rtni)
+rtni <- tni.dpi.filter(rtni, eps=0)
 
 # compute regulatory maps
-g<-tni.graph(rtni, tnet="dpi", gtype="rmap", tfs=tfs4test)
+g <- tni.graph(rtni, tnet="dpi", gtype="rmap", tfs=tfs4test)
 
 # option: plot the igraph object using RedeR
 library(RedeR)
-rdp<-RedPort()
+rdp <- RedPort()
 calld(rdp)
 addGraph(rdp,g)
 addLegend.shape(rdp,g)
 addLegend.color(rdp,g,type="edge")
-relax(rdp,p1=50,p5=20)
+relax(rdp,p1=20,p3=50,p4=50,p5=10,p8=50,ps=TRUE)
+#...it should take some time to relax!
 
 # compute association maps
 resetd(rdp)
-g<-tni.graph(rtni, tnet="ref", gtype="amap", tfs=tfs4test)
+g <- tni.graph(rtni, tnet="ref", gtype="amap", tfs=tfs4test)
 addGraph(rdp,g)
 addLegend.size(rdp,g)
 addLegend.size(rdp,g,type="edge")

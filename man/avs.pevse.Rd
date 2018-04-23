@@ -8,8 +8,8 @@ The VSE method (\code{\link[RTN:avs.vse]{avs.vse}}) provides a robust framework 
 }
 
 \usage{
-avs.pevse(object, annotation, eqtls, maxgap=250, pValueCutoff=0.05, boxcox=TRUE, 
-lab="annotation", glist=NULL, minSize=100, verbose=TRUE)
+avs.pevse(object, annotation, eqtls, maxgap=250, pValueCutoff=0.05, pAdjustMethod="bonferroni", 
+boxcox=TRUE, lab="annotation", glist=NULL, minSize=100, verbose=TRUE)
 }
 
 \arguments{
@@ -28,6 +28,9 @@ a single integer value specifying the max distant (kb) used to assign the eQTLs 
 }
 \item{pValueCutoff}{
 a single numeric value specifying the cutoff for p-values considered significant.
+}
+\item{pAdjustMethod}{
+a single character value specifying the p-value adjustment method to be used (see 'p.adjust' for details).
 }
 \item{boxcox}{
 a single logical value specifying to use Box-Cox procedure to find a transformation of the null that approaches normality (when boxcox=TRUE) or not (when boxcox=FALSE). See \code{\link[car:powerTransform]{powerTransform}} and \code{\link[car:bcPower]{bcPower}}.

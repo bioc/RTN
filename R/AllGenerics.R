@@ -28,7 +28,7 @@ setGeneric("tni.conditional",
 setGeneric("tni.gsea2",
            function(object, minRegulonSize=15, doSizeFilter=FALSE, exponent=1, tnet="dpi",
                     tfs=NULL, samples=NULL, features=NULL, refsamp=NULL, log=FALSE,
-                    verbose=TRUE) 
+                    alternative=c("two.sided", "less", "greater"),verbose=TRUE) 
              standardGeneric("tni.gsea2"), package="RTN")
 setGeneric("tni.graph",
            function(object, tnet="dpi", gtype="rmap", minRegulonSize=15, tfs=NULL, amapFilter="quantile", amapCutoff=NULL, ntop=NULL, ...)
@@ -73,18 +73,18 @@ setGeneric("tna.get",
              standardGeneric("tna.get"), package="RTN")
 ##-------------------------------------------------------------------------
 setGeneric("avs.vse",
-           function(object, annotation, maxgap=0, pValueCutoff=0.05, boxcox=TRUE, 
-                    lab="annotation", glist=NULL, minSize=100, verbose=TRUE)
+           function(object, annotation, maxgap=0, pValueCutoff=0.05, pAdjustMethod="bonferroni", 
+                    boxcox=TRUE, lab="annotation", glist=NULL, minSize=100, verbose=TRUE)
              standardGeneric("avs.vse"), package="RTN")
 setGeneric("avs.evse",
            function(object, annotation, gxdata, snpdata, maxgap=250, pValueCutoff=0.05, 
-                    boxcox=TRUE, lab="annotation", glist=NULL, minSize=100, 
-                    fineMapping=TRUE, verbose=TRUE)
+                    pAdjustMethod="bonferroni",boxcox=TRUE, lab="annotation", glist=NULL, 
+                    minSize=100, fineMapping=TRUE, verbose=TRUE)
              standardGeneric("avs.evse"), package="RTN")
 setGeneric("avs.pevse",
            function(object, annotation, eqtls, maxgap=250, pValueCutoff=0.05, 
-                    boxcox=TRUE, lab="annotation", glist=NULL, minSize=100, 
-                    verbose=TRUE)
+                    pAdjustMethod="bonferroni", boxcox=TRUE, lab="annotation", glist=NULL, 
+                    minSize=100, verbose=TRUE)
              standardGeneric("avs.pevse"), package="RTN")
 setGeneric("avs.get",
            function(object, what="summary", report=FALSE, pValueCutoff=NULL) 

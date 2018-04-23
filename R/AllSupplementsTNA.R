@@ -574,7 +574,8 @@ hyperGeoTest4RTN <- function(geneSet, universe, hits) {
 #--------------------------------------------------------------------
 ##This function computes enrichment scores for GSEA, running score and 
 ##position of hits for a gene set.
-gseaScores4RTN <- function(geneList, geneSet, exponent=1, mode="score") {
+gseaScores4RTN <- function(geneList, geneSet, exponent=1, mode="score", 
+                           alternative="two.sided") {
   ##geneSet can either be a character vector with gene ids, or a named integer
   ##vector with additional information (e.g. pos/neg targets)
   if( is.character(geneSet) || is.null(names(geneSet)) ){
@@ -626,7 +627,13 @@ gseaScores4RTN <- function(geneList, geneSet, exponent=1, mode="score") {
       ##negative) values of the ES, and choose which one is kept			
       ESmax<-max(runningES)
       ESmin<-min(runningES)
-      ES<-ifelse(abs(ESmin)>abs(ESmax), ESmin, ESmax)
+      if(alternative=="greater"){
+        ES<-ESmax
+      } else if(alternative=="less"){
+        ES<-ESmin
+      } else {
+        ES<-ifelse(abs(ESmin)>abs(ESmax), ESmin, ESmax)
+      }
     }
   }
   ##return the relevant information according to mode  	

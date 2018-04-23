@@ -8,7 +8,7 @@ The VSE method tests the enrichment of an AVS for a particular trait in a genomi
 }
 
 \usage{
-avs.vse(object, annotation, maxgap=0, pValueCutoff=0.05, boxcox=TRUE, 
+avs.vse(object, annotation, maxgap=0, pValueCutoff=0.05, pAdjustMethod="bonferroni", boxcox=TRUE, 
 lab="annotation", glist=NULL, minSize=100, verbose=TRUE)
 }
 
@@ -25,6 +25,9 @@ a single integer value specifying the max distant (kb) between the AVS and the a
 }
 \item{pValueCutoff}{
 a single numeric value specifying the cutoff for p-values considered significant.
+}
+\item{pAdjustMethod}{
+a single character value specifying the p-value adjustment method to be used (see 'p.adjust' for details).
 }
 \item{boxcox}{
 a single logical value specifying to use Box-Cox procedure to find a transformation of the null that approaches normality (when boxcox=TRUE) or not (when boxcox=FALSE). See \code{\link[car:powerTransform]{powerTransform}} and \code{\link[car:bcPower]{bcPower}}.

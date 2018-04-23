@@ -108,12 +108,7 @@ tni.perm.separate<-function(object,verbose=TRUE){
       midist<-sort(midist, na.last = NA)
       np<-length(midist)
       midist<-np-findInterval(pmim[,tf],midist)
-      ##pseudocounts are added to avoid P-values of zero
       midist <- (1 + midist)/(1 + np)
-      ##pvalue adjustment (local distributions)
-      if(!object@para$perm$globalAdjustment){
-        midist <- p.adjust(midist,method=object@para$perm$pAdjustMethod)
-      }
       midist    
     })
   } else {
@@ -127,12 +122,7 @@ tni.perm.separate<-function(object,verbose=TRUE){
       midist<-sort(midist, na.last = NA)
       np<-length(midist)
       midist<-np-findInterval(pmim[,tf],midist)
-      ##pseudocounts are added to avoid P-values of zero
       midist <- (1 + midist)/(1 + np)
-      ##pvalue adjustment (local distributions)
-      if(!object@para$perm$globalAdjustment){
-        midist <- p.adjust(midist,method=object@para$perm$pAdjustMethod)
-      }
       if(verbose) setTxtProgressBar(pb, i/length(object@regulatoryElements))      
       midist   
     })
@@ -140,13 +130,15 @@ tni.perm.separate<-function(object,verbose=TRUE){
   }
   ##if globalAdjustment...
   if(object@para$perm$globalAdjustment){
-    mipval<-p.adjust(mipval,method=object@para$perm$pAdjustMethod)
-    mipval<-matrix(mipval,nrow=nrow(pmim),ncol=ncol(pmim))    
+    miadjpv<-p.adjust(mipval,method=object@para$perm$pAdjustMethod)
+    miadjpv<-matrix(miadjpv,nrow=nrow(pmim),ncol=ncol(pmim))    
+  } else {
+    miadjpv<-apply(mipval,2,p.adjust,method=object@para$perm$pAdjustMethod)
   }
-  dimnames(mipval)<-dimnames(pmim)
+  dimnames(mipval)<-dimnames(miadjpv)<-dimnames(pmim)
   ##decide on the significance and return results
-  pmim[mipval>object@para$perm$pValueCutoff]<-0
-  return(list(tn.ref=pmim,adjpv=mipval))
+  pmim[miadjpv>object@para$perm$pValueCutoff]<-0
+  return(list(tn.ref=pmim,mipval=mipval, miadjpv=miadjpv))
 }
 
 ##------------------------------------------------------------------------
@@ -202,18 +194,18 @@ tni.perm.pooled<-function(object, parChunks=10, verbose=TRUE){
   np <- object@para$perm$nPermutations * ( prod(dim(pmim)) - length(object@regulatoryElements) )
   mipval <- (1 + ctsum)/(1 + np)
   mipval<-mipval[match(as.numeric(pmim),uniqueVec)]
+  mipval<-matrix(mipval,nrow=nrow(pmim),ncol=ncol(pmim))  
   ##adjust pvals
   if(object@para$perm$globalAdjustment){
-    mipval<-p.adjust(mipval,method=object@para$perm$pAdjustMethod)
-    mipval<-matrix(mipval,nrow=nrow(pmim),ncol=ncol(pmim))   
+    miadjpv<-p.adjust(mipval,method=object@para$perm$pAdjustMethod)
+    miadjpv<-matrix(miadjpv,nrow=nrow(pmim),ncol=ncol(pmim))  
   } else {
-    mipval<-matrix(mipval,nrow=nrow(pmim),ncol=ncol(pmim))
-    mipval<-apply(mipval,2,p.adjust,method=object@para$perm$pAdjustMethod)
+    miadjpv<-apply(mipval,2,p.adjust,method=object@para$perm$pAdjustMethod)
   }
-  dimnames(mipval)<-dimnames(pmim)
+  dimnames(mipval) <- dimnames(miadjpv) <- dimnames(pmim)
   ##decide on the significance
-  pmim[mipval>object@para$perm$pValueCutoff]=0.0
-  return(list(tn.ref=pmim,adjpv=mipval))
+  pmim[miadjpv>object@para$perm$pValueCutoff]=0.0
+  return(list(tn.ref=pmim, mipval=mipval, miadjpv=miadjpv))
 }
 
 ##------------------------------------------------------------------------
@@ -1383,8 +1375,55 @@ treemap<-function(hc){
   obj$rootid<-root
   return(obj)
 }
+# ##---------------------------------------------------------
+# .run.tni.gsea2 <- function(listOfRegulonsAndMode, phenotype, exponent=1, verbose=TRUE) {
+#   ##-----get ordered phenotype
+#   phenotype<-phenotype[order(phenotype,decreasing=TRUE)]
+#   ##-----calculate enrichment scores for all regulons
+#   listOfRegulonsUp <- lapply(listOfRegulonsAndMode, function(reg){
+#     names(reg[reg>0])
+#   })
+#   listOfRegulonsDown <- lapply(listOfRegulonsAndMode, function(reg){
+#     names(reg[reg<0])
+#   })
+#   GSEA2.results.up <- .gsea2tni(listOfRegulonsUp, phenotype=phenotype,exponent=exponent)
+#   GSEA2.results.down <- .gsea2tni(listOfRegulonsDown, phenotype=phenotype,exponent=exponent)
+#   ##-----
+#   b1<-length(GSEA2.results.up)>0 && length(GSEA2.results.down)>0
+#   b2<-length(GSEA2.results.up)==length(GSEA2.results.down)
+#   if(b1 && b2) {
+#     GSEA2.results.both <- GSEA2.results.up-GSEA2.results.down
+#   } else {
+#     GSEA2.results.up <- numeric()
+#     GSEA2.results.down <- numeric()
+#     GSEA2.results.both <- numeric()
+#   }
+#   #-----format, pack and return results
+#   GSEA2.results.up<-round(GSEA2.results.up,2)
+#   GSEA2.results.down<-round(GSEA2.results.down,2)
+#   GSEA2.results.both<-round(GSEA2.results.both,2)
+#   GSEA2.results<-list(positive=GSEA2.results.up,negative=GSEA2.results.down,differential=GSEA2.results.both)
+#   return( GSEA2.results )
+# }
+# ##---------------------------------------------------------
+# .gsea2tni <- function(listOfRegulons, phenotype, exponent) {
+#   if(length(listOfRegulons) > 0){
+#     scoresObserved<-sapply(listOfRegulons,function(reg){
+#       if(length(reg)>0){
+#         res<-gseaScores4RTN(geneList=phenotype,geneSet=reg, exponent=exponent)
+#       } else {
+#         res<-0
+#       }
+#       return(res)
+#     })
+#   } else {
+#     scoresObserved <- NULL
+#   }
+#   return(scoresObserved)
+# }
 ##---------------------------------------------------------
-.run.tni.gsea2 <- function(listOfRegulonsAndMode, phenotype, exponent=1, verbose=TRUE) {
+.run.tni.gsea2.alternative <- function(listOfRegulonsAndMode, phenotype, exponent, 
+                                       alternative, verbose=TRUE) {
   ##-----get ordered phenotype
   phenotype<-phenotype[order(phenotype,decreasing=TRUE)]
   ##-----calculate enrichment scores for all regulons
@@ -1394,8 +1433,19 @@ treemap<-function(hc){
   listOfRegulonsDown <- lapply(listOfRegulonsAndMode, function(reg){
     names(reg[reg<0])
   })
-  GSEA2.results.up <- .gsea2tni(listOfRegulonsUp, phenotype=phenotype,exponent=exponent)
-  GSEA2.results.down <- .gsea2tni(listOfRegulonsDown, phenotype=phenotype,exponent=exponent)
+  
+  ##-----set character string specifying the alternative hypothesis
+  ## ...observe that greater/less refer to regulon activity
+  if(alternative=="two.sided"){
+    alternative_up <- alternative_down <- alternative
+  } else {
+    alternative_up <- ifelse(alternative=="greater","greater", "less")
+    alternative_down <- ifelse(alternative=="greater","less", "greater")
+  }
+  GSEA2.results.up <- .gsea2tni.alternative(listOfRegulonsUp, phenotype=phenotype,exponent=exponent,
+                                            alternative=alternative_up)
+  GSEA2.results.down <- .gsea2tni.alternative(listOfRegulonsDown, phenotype=phenotype,exponent=exponent,
+                                              alternative=alternative_down)
   ##-----
   b1<-length(GSEA2.results.up)>0 && length(GSEA2.results.down)>0
   b2<-length(GSEA2.results.up)==length(GSEA2.results.down)
@@ -1414,11 +1464,11 @@ treemap<-function(hc){
   return( GSEA2.results )
 }
 ##---------------------------------------------------------
-.gsea2tni <- function(listOfRegulons, phenotype, exponent=1) {
+.gsea2tni.alternative <- function(listOfRegulons, phenotype, exponent, alternative) {
   if(length(listOfRegulons) > 0){
     scoresObserved<-sapply(listOfRegulons,function(reg){
       if(length(reg)>0){
-        res<-gseaScores4RTN(geneList=phenotype,geneSet=reg, exponent=exponent)
+        res<-gseaScores4RTN(geneList=phenotype,geneSet=reg, exponent=exponent, alternative=alternative)
       } else {
         res<-0
       }
@@ -1428,6 +1478,23 @@ treemap<-function(hc){
     scoresObserved <- NULL
   }
   return(scoresObserved)
+}
+
+#---------------------------------------------------------------
+.get.regulon.summary <- function(obj){
+  ref <- tni.get(obj, what = "refregulons")
+  if(length(ref)>0){
+    ref <- summary(unlist(lapply(ref, length)))
+  } else {
+    ref <- summary(0)
+  }
+  dpi <- tni.get(obj, what = "regulons")
+  if(length(dpi)>0){
+    dpi <- summary(unlist(lapply(dpi, length)))
+  } else {
+    dpi <- summary(0)
+  }
+  rbind(tnet.ref=ref,tnet.dpi=dpi)
 }
 
 #---------------------------------------------------------------

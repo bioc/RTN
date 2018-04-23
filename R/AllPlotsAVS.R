@@ -50,7 +50,8 @@ avs.plot2<-function(object, what="evse", fname=what, width=14, height=2.5,
   tnai.checks(name="xlab",para=xlab)
   
   if( !is.null(object@results[[what]]) && object@status[toupper(what)]=="[x]" ){
-    stats<-object@results$stats[[what]]
+    stats <- object@results$stats[[what]]
+    para <- object@para[[what]]
     if(any(names(stats)=="escore")){
       stats$score<-stats$escore #just to correct label!
     }
@@ -59,7 +60,7 @@ avs.plot2<-function(object, what="evse", fname=what, width=14, height=2.5,
     }
     ucounts<-object@results$counts[[what]]
     avsplot2(stats=stats,ucounts=ucounts,fname=fname, height=height, width=width, rmargin=rmargin, 
-             bxseq=bxseq, ylab=ylab, xlab=xlab, label=toupper(what),decreasing=decreasing)
+             bxseq=bxseq, ylab=ylab, xlab=xlab, label=toupper(what),decreasing=decreasing, para=para)
   } else {
     warning(paste("NOTE:",toupper(what),"results not available!"),call. = FALSE)
   }
@@ -112,7 +113,7 @@ avsplot1<-function(mtally,nulldist,fname,ylab, xlab, breaks, maxy,
 }
 
 #-------------------------------------------------------------------------
-avsplot2<-function(stats,ucounts,fname="vseplot",height=2, width=14, rmargin=1, 
+avsplot2<-function(stats,ucounts,para,fname="vseplot",height=2, width=14, rmargin=1, 
                    bxseq=seq(-4,8,2),ylab=ylab, xlab="Clusters of risk-associated and linked SNPs",
                    label="EVSE",decreasing=TRUE){
   #---shortcut to set left margin
@@ -140,6 +141,16 @@ avsplot2<-function(stats,ucounts,fname="vseplot",height=2, width=14, rmargin=1,
   pvalue<-stats$pvalue
   score<-stats$score
   ci<-stats$ci
+  #----pAdjustMethod
+  padjm <- para$pAdjustMethod
+  padjm <- switch(padjm,
+                  holm='Holm threshold',
+                  hochberg='Hochberg threshold',
+                  bonferroni='Bonferroni',
+                  BH='BH threshold',
+                  BY='BY threshold',
+                  fdr='FDR threshold')
+
   #----sort by score (untie with mtally)
   tp<-colSums(mtally);tp<-tp/sum(tp)
   idx<-sort.list(score+tp,decreasing=!decreasing)
@@ -175,7 +186,7 @@ avsplot2<-function(stats,ucounts,fname="vseplot",height=2, width=14, rmargin=1,
   axis(side=3,at=bxseq[-1], labels=bxseq[-1], cex.axis=0.7, padj=0.5, hadj=0.5, las=1, lwd=1.0)
   tx<-paste("Enrichment\nscore (",label,")",sep="")
   mtext(tx, side=3, line=2, cex=0.75, las=1, adj=0, at=-0.5)
-  mtext("Bonferroni", side=3, line=1.2, cex=0.75, las=1, col="gray75", adj=0, at=-0.5)
+  mtext(padjm, side=3, line=1.2, cex=0.75, las=1, col="gray75", adj=0, at=-0.5)
   #----add stats
   pcol<-ifelse(score>ci,"red","black")
   points(x=score,y=at.y,col=pcol,pch=18,cex=1)

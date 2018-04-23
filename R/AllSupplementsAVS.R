@@ -552,7 +552,7 @@ getUniverseCounts2<-function(vSet,annotation,maxgap){
 }
 
 #-------------------------------------------------------------------------
-vseformat<-function(resavs, pValueCutoff=0.01, boxcox=TRUE){
+vseformat<-function(resavs, pValueCutoff=0.01, pAdjustMethod="bonferroni", boxcox=TRUE){
   groups<-rep(1,length(resavs)) #'groups' nao ativo!
   ntests<-length(resavs)
   #get mtally
@@ -574,10 +574,14 @@ vseformat<-function(resavs, pValueCutoff=0.01, boxcox=TRUE){
   })
   score<-nulldist[nrow(nulldist),]
   nulldist<-nulldist[-nrow(nulldist),,drop=FALSE]
-  #----get stats
+  #----get ci
   pvals <- pnorm(score, lower.tail=FALSE)
-  if(is.null(ntests))ntests<-length(pvals)
-  ci <- qnorm(1-(pValueCutoff/ntests))
+  if(pAdjustMethod=="bonferroni"){
+    ci <- qnorm(1-(pValueCutoff/length(pvals)))
+  } else {
+    ci <- qnorm(1-p.threshold(pvals, pValueCutoff, pAdjustMethod))
+  }
+  
   #----powerTransform
   if(boxcox){
     ptdist<-sapply(1:ncol(nulldist),function(i){
@@ -966,4 +970,28 @@ report.vset<-function(variantSet){
   colnames(summ) <- c("rs","linked_rs")
   return(summ)
 }
+
+##------------------------------------------------------------------------
+##returns rejection threshold for methods in 'p.adjust'
+p.threshold <- function (pvals, alpha=0.05, method="BH") {
+  pvals <- sort(pvals)
+  padj <- p.adjust(pvals, method = method)
+  thset <- which(padj <= alpha)
+  if(length(thset)>0){
+    mx1 <- mx2 <- which.max(thset)
+    if(mx2<length(padj)) mx2 <- mx2 + 1
+    th <- (pvals[mx1] + min(pvals[mx2],alpha) ) / 2
+  } else {
+    th <- min(c(alpha,pvals))
+  }
+  return(th)
+}
+# p.threshold <- function (pvals, alpha=0.05, method="BH") {
+#   pvals <- sort(pvals)
+#   padj <- p.adjust(pvals, method = method)
+#   thset <- which(padj <= alpha)
+#   ifelse(length(thset) == 0, 0, pvals[thset[which.max(thset)]])
+# }
+
+
 

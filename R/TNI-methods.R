@@ -246,7 +246,8 @@ setMethod(
     } else {
       res<-tni.perm.separate(object,verbose)
     }
-    object@results$adjpv <- res$adjpv
+    # object@results$mipval <- res$mipval
+    # object@results$miadjpv <- res$miadjpv
     object@results$tn.ref <- res$tn.ref * tni.cor(object@gexp, res$tn.ref, estimator=object@para$perm$estimator)
     object@status["Permutation"] <- "[x]"
     if(verbose)cat("-Permutation analysis complete! \n\n")
@@ -326,8 +327,8 @@ setMethod(
 setMethod(
   "tni.gsea2",
   "TNI",function(object, minRegulonSize=15, doSizeFilter=FALSE, exponent=1, tnet="dpi",
-                 tfs=NULL, samples=NULL, features=NULL, refsamp=NULL, log=FALSE,
-                 verbose=TRUE) {
+                 tfs=NULL, samples=NULL, features=NULL, refsamp=NULL, log=FALSE, 
+                 alternative=c("two.sided", "less", "greater"), verbose=TRUE) {
     if(object@status["Preprocess"]!="[x]")stop("NOTE: TNI object is not compleate: requires preprocessing!")
     if(object@status["Permutation"]!="[x]")stop("NOTE: TNI object is not compleate: requires permutation/bootstrap and DPI filter!")  
     if(object@status["DPI.filter"]!="[x]")stop("NOTE: TNI object is not compleate: requires DPI filter!")
@@ -337,7 +338,7 @@ setMethod(
     
     ##-----check and assign parameters
     tnai.checks(name="minRegulonSize",para=minRegulonSize)
-    #doSizeFilter
+    tnai.checks(name="doSizeFilter",para=doSizeFilter)
     tnai.checks(name="exponent",para=exponent)
     tnai.checks(name="gsea.tnet",para=tnet)
     tnai.checks(name="tfs",para=tfs)
@@ -345,6 +346,7 @@ setMethod(
     #features
     #refsamp
     #log
+    alternative <- match.arg(alternative)
     tnai.checks(name="verbose",para=verbose) 
     object@para$gsea2<-list(minRegulonSize=minRegulonSize, exponent=exponent,tnet=tnet)
     ##------ compute reference gx vec
@@ -451,14 +453,14 @@ setMethod(
       }
     }
     
-    #---compute phenotypes
+    #-----get phenotypes
     if(log){
       dt<-log2(1+object@gexp)-log2(1+gxref)
     } else {
       dt <- object@gexp-gxref
     }
     
-    ##------reset names to integer values
+    #-----reset names to integer values
     junk<-lapply(names(listOfRegulonsAndMode), function(i){
       reg<-listOfRegulonsAndMode[[i]]
       names(listOfRegulonsAndMode[[i]])<<-match(names(reg),rownames(dt))
@@ -466,15 +468,16 @@ setMethod(
     })
     rownames(dt)<-1:nrow(dt)
     
-    #------
+    #-----
     if(verbose) cat("Computing two-tailed GSEA for",length(listOfRegulonsAndMode),"regulon(s) and",length(samples),'sample(s)!\n')
     if(verbose) pb <- txtProgressBar(style=3)
     EScores<-list()
     for(i in 1:length(samples)){
-      res<-.run.tni.gsea2(
+      res <- .run.tni.gsea2.alternative(
         listOfRegulonsAndMode=listOfRegulonsAndMode,
         phenotype=dt[, samples[i]],
         exponent=object@para$gsea2$exponent,
+        alternative = alternative,
         verbose=FALSE
       )
       EScores$pos<-rbind(EScores$pos,res$positive[tfs])
@@ -569,10 +572,7 @@ setMethod(
     } else if(what=="regulatoryElements"){
       query<-object@regulatoryElements
       if(!is.null(idkey))
-        
         query[]<-translateQuery(query,idkey,object,"vecAndContent",reportNames)
-      
-      
     } else if(what=="para"){
       query<-object@para
     } else if(what=="refnet"){
@@ -668,6 +668,7 @@ setMethod(
       if(!is.null(idkey))warning("'idkey' argument has no effect on consolidated tables!")
     } else if(what=="summary"){
       query<-object@summary
+      query$results$regulonSize <- .get.regulon.summary(object)
     } else if(what=="rowAnnotation"){
       query<-object@rowAnnotation
     } else if(what=="colAnnotation"){

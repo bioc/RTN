@@ -239,8 +239,8 @@ tnai.checks <- function(name, para) {
   }
   else if(name=="pAdjustMethod") {
     if(!is.character(para) || length(para)!=1 || 
-      !(para %in% c("holm", "hochberg", "hommel", "bonferroni", "BH", "BY", "fdr", "none")))
-      stop("'pAdjustMethod' should be any one of 'holm','hochberg','hommel','bonferroni','BH','BY','fdr' and 'none'!",call.=FALSE)
+      !(para %in% c("holm", "hochberg", "hommel", "bonferroni", "BH", "BY", "fdr")))
+      stop("'pAdjustMethod' should be any one of 'holm','hochberg','hommel','bonferroni','BH','BY' and 'fdr'!",call.=FALSE)
   }
   else if(name=="coverage") {
     if(!is.character(para) || length(para)!=1 || 
@@ -267,6 +267,10 @@ tnai.checks <- function(name, para) {
   else if(name=="pooledNullDistribution") {
     if(!is.logical(para) || length(para)!=1)
       stop("'pooledNullDistribution' should be a logical value!",call.=FALSE)
+  }
+  else if(name=="doSizeFilter") {
+    if(!is.logical(para) || length(para)!=1)
+      stop("'doSizeFilter' should be a logical value!",call.=FALSE)
   }
   else if(name=="nPermutations") {
     if(!(is.integer(para) || is.numeric(para)) || length(para)!=1 || para<1 || round(para,0)!=para)

@@ -7,7 +7,7 @@
 ## Entry point for the all TNI/TNA pipelines, including pre-processing
 tni.constructor <- function(expData, regulatoryElements, rowAnnotation=NULL, 
                             colAnnotation=NULL, cvfilter=TRUE, verbose=TRUE){
-  #---todo: option to use summarizedExperiment (with expData)
+  #---todo: summarizedExperiment (with expData)
   #
   #---
   object <- new("TNI", gexp=expData, regulatoryElements=regulatoryElements)
@@ -206,6 +206,11 @@ setMethod(
         }
       }
     }
+    
+    ##-----sort by available names
+    idx <- sort.list(names(object@regulatoryElements))
+    object@regulatoryElements <- object@regulatoryElements[idx]
+    
     ##-----updade status and return
     object@status["Preprocess"] <- "[x]"
     object@status["Permutation"] <- "[ ]"

@@ -53,7 +53,6 @@ see 'tn.ref' option in \code{\link[RTN:tni.get]{tni.get}}.
 
 \seealso{
 \code{\link[RTN:TNI-class]{TNI-class}}
-\code{\link[snow:makeCluster]{makeCluster}}
 }
 
 \examples{

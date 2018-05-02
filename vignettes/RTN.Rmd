@@ -125,7 +125,7 @@ tna.get(rtna, what="gsea2")
 
 To visualize the GSEA distributions, the user can apply the `tna.plot.gsea1` and `tna.plot.gsea2` functions that plot the one-tailed and two-tailed GSEA results, respectively:
 
-```{r label='Plot GSEA', eval=TRUE, results='hide'}
+```{r label='Plot GSEA', eval=FALSE, results='hide'}
 tna.plot.gsea1(rtna, file="tna_gsea1", labPheno="abs(log2) diff. expression") 
 tna.plot.gsea2(rtna, file="tna_gsea2", labPheno="log2 diff. expression") 
 ``` 

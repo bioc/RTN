@@ -141,6 +141,9 @@ setMethod(
         tp2<-paste("should provide an extra column named SYMBOL!", sep="")       
         if(verbose)warning(tp1,tp2,call.=FALSE)
       }
+    } else {
+      tp <- rownames(object@gexp)
+      object@rowAnnotation <- data.frame(ID=tp, row.names=tp, stringsAsFactors = FALSE)
     }
     ##-----check colAnnotation if available
     if(!is.null(colAnnotation)){
@@ -148,7 +151,10 @@ setMethod(
       if( any(!colnames(object@gexp)%in%rownames(colAnnotation)) ){
         stop("NOTE: all colnames in 'expression data' should be available in col1 of 'colAnnotation'!",call.=FALSE)
       }
-      object@colAnnotation<-colAnnotation[colnames(object@gexp),]
+      object@colAnnotation <- colAnnotation[colnames(object@gexp),]
+    } else {
+      tp <- colnames(object@gexp)
+      object@colAnnotation <- data.frame(ID=tp, row.names=tp, stringsAsFactors = FALSE)
     }
     #----check sd in gexp
     sd.check <- apply(object@gexp,1,sd)
@@ -171,6 +177,7 @@ setMethod(
         object@modulators<-object@modulators[!idx]
       }
     }
+    
     #-----check TFs in gexp
     object@summary$tfs[,"input"]<-length(object@regulatoryElements)
     if(verbose) cat("--Checking TFs in the dataset...\n")
@@ -473,31 +480,54 @@ setMethod(
     })
     rownames(dt)<-1:nrow(dt)
     
-    #-----
-    if(verbose) cat("Computing two-tailed GSEA for",length(listOfRegulonsAndMode),"regulon(s) and",length(samples),'sample(s)!\n')
-    if(verbose) pb <- txtProgressBar(style=3)
-    EScores<-list()
-    for(i in 1:length(samples)){
-      res <- .run.tni.gsea2.alternative(
-        listOfRegulonsAndMode=listOfRegulonsAndMode,
-        phenotype=dt[, samples[i]],
-        exponent=object@para$gsea2$exponent,
-        alternative = alternative,
-        verbose=FALSE
-      )
-      EScores$pos<-rbind(EScores$pos,res$positive[tfs])
-      EScores$neg<-rbind(EScores$neg,res$negative[tfs])
-      EScores$dif<-rbind(EScores$dif,res$differential[tfs])
-      if(verbose) setTxtProgressBar(pb, i/length(samples))
+    #-----run 2t-gsea
+    if(isParallel() && length(samples)>1){
+      if(verbose)cat("-Performing two-tailed GSEA (parallel version - ProgressBar disabled)...\n")
+      if(verbose)cat("--For", length(listOfRegulonsAndMode), "regulons and",length(samples),'sample(s)...\n')
+      cl<-getOption("cluster")
+      snow::clusterExport(cl, list(".run.tni.gsea2.alternative",".gsea2tni.alternative","gseaScores4RTN"),
+                          envir=environment())
+      regulonActivity <- list()
+      res <- parLapply(cl, samples, function(sample){
+        .run.tni.gsea2.alternative(
+          listOfRegulonsAndMode=listOfRegulonsAndMode,
+          phenotype=dt[, sample],
+          exponent=object@para$gsea2$exponent,
+          alternative = alternative,
+          verbose=FALSE
+        )
+      })
+      regulonActivity$pos <- t(sapply(res, function(r) r$pos))
+      regulonActivity$neg <- t(sapply(res, function(r) r$neg))
+      regulonActivity$dif <- t(sapply(res, function(r) r$dif))
+    } else {
+      if(verbose)cat("-Performing two-tailed GSEA...\n")
+      if(verbose)cat("--For", length(listOfRegulonsAndMode), "regulons and",length(samples),'sample(s)...\n')
+      if(verbose)pb <- txtProgressBar(style=3)
+      regulonActivity<-list()
+      for(i in 1:length(samples)){
+        res <- .run.tni.gsea2.alternative(
+          listOfRegulonsAndMode=listOfRegulonsAndMode,
+          phenotype=dt[, samples[i]],
+          exponent=object@para$gsea2$exponent,
+          alternative = alternative,
+          verbose=FALSE
+        )
+        regulonActivity$pos<-rbind(regulonActivity$pos,res$positive[tfs])
+        regulonActivity$neg<-rbind(regulonActivity$neg,res$negative[tfs])
+        regulonActivity$dif<-rbind(regulonActivity$dif,res$differential[tfs])
+        if(verbose) setTxtProgressBar(pb, i/length(samples))
+      }
+      if(verbose) close(pb)
     }
-    if(verbose) close(pb)
-    colnames(EScores$pos)<-names(tfs)
-    colnames(EScores$neg)<-names(tfs)
-    colnames(EScores$dif)<-names(tfs)
-    rownames(EScores$pos)<-samples
-    rownames(EScores$neg)<-samples
-    rownames(EScores$dif)<-samples
-    return(EScores)
+    colnames(regulonActivity$pos)<-names(tfs)
+    colnames(regulonActivity$neg)<-names(tfs)
+    colnames(regulonActivity$dif)<-names(tfs)
+    rownames(regulonActivity$pos)<-samples
+    rownames(regulonActivity$neg)<-samples
+    rownames(regulonActivity$dif)<-samples
+    regulonActivity <- .get.regstatus(regulonActivity, nSections = 1)
+    return(regulonActivity)
   }
 )
 
@@ -953,7 +983,6 @@ setMethod(
     if(verbose && !mdStability) pb <- txtProgressBar(style=3)
     
     for(i in 1:length(modulators)){
-      
       md<-modulators[i]
       #get sample ordering
       lw<-idxLow[md,]
@@ -1038,7 +1067,7 @@ setMethod(
             dks<-1
             pvks<-0
           } else {
-            kst<-ks.test(pheno[-hits],pheno[hits],alternative="greater")
+            kst<-suppressWarnings(ks.test(pheno[-hits],pheno[hits],alternative="greater"))
             dks<-kst$statistic
             pvks<-kst$p.value
           }
@@ -1473,8 +1502,16 @@ upgradeTNI <- function(object){
     if(.hasSlot(object, "transcriptionFactors") && !.hasSlot(object, "regulatoryElements")){
       object@regulatoryElements <- object@transcriptionFactors
       object@rowAnnotation <- object@annotation
-      IDs <- colnames(object@gexp)
-      object@colAnnotation <- data.frame(IDs, row.names = IDs, stringsAsFactors = FALSE)
+      ID <- colnames(object@gexp)
+      object@colAnnotation <- data.frame(ID, row.names = ID, stringsAsFactors = FALSE)
+    }
+    if(length(object@rowAnnotation)==0){
+      tp <- rownames(object@gexp)
+      object@rowAnnotation <- data.frame(ID=tp, row.names=tp, stringsAsFactors = FALSE)
+    }
+    if(length(object@colAnnotation)==0){
+      tp <- colnames(object@gexp)
+      object@colAnnotation <- data.frame(ID=tp, row.names=tp, stringsAsFactors = FALSE)
     }
   }
   return(object)

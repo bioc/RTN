@@ -13,10 +13,10 @@
 ##and all potential targets. Sig. mi values are inferred by permutation 
 ##analysis.
 tni.pmin<-function(x,tfs,estimator="pearson",setdg=0,
-                   simplified=FALSE,getadj=FALSE)
-  {
-  x=t(x)
-  pmim=cor(x[,tfs],x, method=estimator,use="complete.obs")^2
+                   simplified=FALSE,getadj=FALSE){
+  x <- t(x)
+  pmim <- suppressWarnings(cor(x[,tfs],x, method=estimator,use="complete.obs")^2)
+  pmim[is.na(pmim)] <- 0
   if(length(tfs)>1){
     diag(pmim[,tfs])=setdg
   } else {
@@ -102,14 +102,14 @@ tni.perm.separate<-function(object,verbose=TRUE){
     snow::clusterExport(cl, list(".perm.pmin.separate"),envir=environment())
     if(verbose)cat("-Performing permutation analysis (parallel version - ProgressBar disabled)...\n")
     if(verbose)cat("--For", length(object@regulatoryElements), "regulons...\n")
-    mipval<-parSapply(cl, object@regulatoryElements, function(tf) {
+    mipval<-parSapply(cl, object@regulatoryElements, function(tf){
       pi<-which(tf==rownames(object@gexp))
       midist <- .perm.pmin.separate(object@gexp, pi, object@para$perm$estimator, object@para$perm$nPermutations)
       midist<-sort(midist, na.last = NA)
       np<-length(midist)
       midist<-np-findInterval(pmim[,tf],midist)
       midist <- (1 + midist)/(1 + np)
-      midist    
+      midist
     })
   } else {
     if(verbose)cat("-Performing permutation analysis...\n")
@@ -290,14 +290,16 @@ tni.boot<-function(object, parChunks=10, verbose=TRUE){
 ##------------------------------------------------------------------------
 
 ##------------------------------------------------------------------------
-##This function takes a gene expression matrix (x), a tnet and
-##computes a simple correlation matrix, i.e., between each TF 
-##and all targets, and returns the mode of action (-/+)
-##of all pre-computed sig. associations.
-tni.cor<-function(x,tnet,estimator="pearson",dg=0, asInteger=TRUE, mapAssignedAssociation=TRUE){
-  tfs<-colnames(tnet)
-  tar<-rownames(tnet)
-  ids<-unique(c(tfs,setdiff(tar,tfs)))
+##This function adds (-/+) correlation signals to inferred associations.
+##It takes a gene expression matrix (x) and a tnet, and computes a simple 
+##correlation between each TF and all targets; i.e. it adds direction 
+##to all pre-computed associations.
+tni.cor<-function(x,tnet,estimator="pearson",dg=0, asInteger=TRUE, 
+                  mapAssignedAssociation=TRUE){
+  tnet <- abs(tnet)
+  tfs <- colnames(tnet)
+  tar <- rownames(tnet)
+  ids <- unique(c(tfs,setdiff(tar,tfs)))
   x=x[ids,]
   x=t(x)
   #--
@@ -767,7 +769,8 @@ tni.mmap<-function(object,mnet,tnet,pvnet,othertfs,testedtfs,modulators){
 setregs1<-function(object,g,testedtfs,modulators){
   #add rowAnnotation
   if(.hasSlot(object, "rowAnnotation")){
-    if(nrow(object@rowAnnotation)>0)g<-att.mapv(g=g,dat=object@rowAnnotation,refcol=1)
+    tp <- dim(object@rowAnnotation)
+    if(tp[1]>0 && tp[2]>1)g<-att.mapv(g=g,dat=object@rowAnnotation,refcol=1)
   }
   #set names if available
   if(!is.null(V(g)$SYMBOL)){
@@ -1495,6 +1498,35 @@ treemap<-function(hc){
     dpi <- summary(0)
   }
   rbind(tnet.ref=ref,tnet.dpi=dpi)
+}
+
+##------------------------------------------------------------------------------
+.get.regstatus <- function(regulonActivity, nSections = 1){
+  regstatus <- sign(regulonActivity$dif)
+  for (reg in colnames(regstatus)){
+    sq <- c(seq_len(nSections))
+    pos <- regulonActivity$pos[, reg]
+    neg <- regulonActivity$neg[, reg]
+    dif <- regulonActivity$dif[, reg]
+    #---
+    regstatus[sign(pos) == sign(neg), reg] <- 0
+    tp <- regstatus[, reg]
+    #---
+    tp1 <- sort(dif[tp > 0], decreasing = TRUE)
+    tp1[] <- rep(sq, each = ceiling(length(tp1)/nSections), length.out = length(tp1))
+    regstatus[names(tp1), reg] <- tp1
+    #---
+    tp2 <- sort(dif[tp < 0], decreasing = TRUE)
+    tp2[] <- rep(sq + nSections + 1, each = ceiling(length(tp2)/nSections), length.out = length(tp2))
+    regstatus[names(tp2), reg] <- tp2
+  }
+  mid <- nSections + 1
+  regstatus[regstatus == 0] <- mid
+  #---
+  regstatus <- -1 * (regstatus - mid)
+  #---
+  regulonActivity$regstatus <- regstatus
+  return(regulonActivity)
 }
 
 #---------------------------------------------------------------

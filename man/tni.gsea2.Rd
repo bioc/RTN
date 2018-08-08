@@ -91,6 +91,12 @@ rtni <- tni.dpi.filter(rtni)
 #run GSEA2 analysis pipeline
 EScores <- tni.gsea2(rtni)
 
+#parallel version with SNOW package!
+library(snow)
+options(cluster=makeCluster(3, "SOCK"))
+EScores <- tni.gsea2(rtni)
+stopCluster(getOption("cluster"))
+
 }
 }
 

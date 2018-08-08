@@ -482,6 +482,7 @@ gsplot2 <- function(runningScoreUp, enrichmentScoreUp, runningScoreDown, enrichm
   rsc.vec<-rsc.vec[rsc.vec[,2]!=0,]  
   #-------------------------------------------------
   # layout
+  op <- par(no.readonly = TRUE)
   np<-sum(heightPanels>0)
   ht<-heightPanels
   ht<-ht[ht>0]
@@ -491,12 +492,6 @@ gsplot2 <- function(runningScoreUp, enrichmentScoreUp, runningScoreDown, enrichm
   if(heightPanels[1]>0){
     xlim<-c(0,length(geneList))
     nn<-ifelse(min(geneList)<0,4,3)
-    # if(min(geneList)<min(ylimPanels) || max(geneList)>max(ylimPanels) ){
-    #   pp<-pretty(c(range(geneList),ylimPanels[1:2]),n=nn)
-    #   ylim<-c(min(pp),max(pp))
-    # } else {
-    #   ylim<-ylimPanels[1:2]
-    # }
     ylim<-ylimPanels[1:2]
     par(mar=c(0.1, 5.0, 1.5, 1.5),mgp=c(2.2,0.6,0),tcl=-0.2,family="sans")
     plot(x=c(1,max(rsc.vec[,1])),y=c(min(geneList),max(geneList)), type="n", 
@@ -594,6 +589,7 @@ gsplot2 <- function(runningScoreUp, enrichmentScoreUp, runningScoreDown, enrichm
     legend("topright", legend=label, col=NA, pch=NA, bty="n",cex=cexlev[1]*1.3, pt.cex=1.2, title=NULL,  ...=...)
     legend("bottomright", legend=paste("dES = ",dES,sep=""), col=NA, pch=NA, bty="n",cex=cexlev[1]*0.6, title=NULL,  ...=...)
   }
+  par(op)
 }
 
 

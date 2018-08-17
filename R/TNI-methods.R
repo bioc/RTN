@@ -927,8 +927,10 @@ setMethod(
         x<-gxtemp[tf,]
         if(shapiro.test(x)$p.value<0.05){
           if(any(x<=0))x<-x+1-min(x)
-          l<-coef(powerTransform(x),round=TRUE)
-          x<-bcPower(x,l, jacobian.adjusted=TRUE)
+          # l <- coef(powerTransform(x),round=TRUE)
+          # x <- bcPower(x,l, jacobian.adjusted=TRUE)
+          l <- round(.estimate.bcpower(x),digits=5)
+          x <- .bcpower(x,l, jacobian.adjusted=TRUE)
           gxtemp[tf,]<<-x
         }
         NULL

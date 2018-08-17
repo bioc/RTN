@@ -552,7 +552,8 @@ getUniverseCounts2<-function(vSet,annotation,maxgap){
 }
 
 #-------------------------------------------------------------------------
-vseformat<-function(resavs, pValueCutoff=0.01, pAdjustMethod="bonferroni", boxcox=TRUE){
+vseformat<-function(resavs, pValueCutoff=0.01, 
+                    pAdjustMethod="bonferroni", boxcox=TRUE){
   groups<-rep(1,length(resavs)) #'groups' nao ativo!
   ntests<-length(resavs)
   #get mtally
@@ -584,27 +585,29 @@ vseformat<-function(resavs, pValueCutoff=0.01, pAdjustMethod="bonferroni", boxco
   
   #----powerTransform
   if(boxcox){
-    ptdist<-sapply(1:ncol(nulldist),function(i){
-      null<-nulldist[,i]
-      obs<-score[i] 
+    ptdist <- sapply(1:ncol(nulldist),function(i){
+      null <- nulldist[,i]
+      obs <- score[i] 
       if(isnormlzd[i] && shtest(null)){
-        minval<-min(c(nulldist[,i],score[i]))
-        minval<-ifelse(minval<=0,abs(minval)+1,minval)
-        nullm<-null+minval
-        obsm<-obs+minval
-        obsm<-round(obsm,digits=5)
-        l<-coef(powerTransform(c(nullm,obsm)), round=TRUE)
-        ptdat<-bcPower(c(nullm,obsm),l)
-        ptdat<-(ptdat-median(ptdat))/sd(ptdat)
+        minval <- min(c(nulldist[,i],score[i]))
+        minval <- ifelse(minval<=0,abs(minval)+1,minval)
+        nullm <- null+minval
+        obsm <- obs+minval
+        obsm <- round(obsm,digits=5)
+        # l <- coef(powerTransform(c(nullm,obsm)), round=TRUE)
+        # ptdat <- bcPower(c(nullm,obsm),l)
+        l <- round(.estimate.bcpower(c(nullm,obsm)),digits=5)
+        ptdat <- .bcpower(c(nullm,obsm),l)
+        ptdat <- (ptdat-median(ptdat))/sd(ptdat)
         return(ptdat)
       } else {
         return(c(null,obs))
       }
     })
-    colnames(ptdist)<-names(score)
-    score<-ptdist[nrow(ptdist),]
-    nulldist<-ptdist[-nrow(ptdist),,drop=FALSE]
-    pvals<-pnorm(score, lower.tail=FALSE)
+    colnames(ptdist) <- names(score)
+    score <- ptdist[nrow(ptdist),]
+    nulldist <- ptdist[-nrow(ptdist),,drop=FALSE]
+    pvals <- pnorm(score, lower.tail=FALSE)
     # (NEW) it corrects distributions not able of transformation and
     # obvious non-significant cases introduced by distortions of 
     # very sparse null distributions or absence of observations
@@ -633,6 +636,62 @@ vseformat<-function(resavs, pValueCutoff=0.01, pAdjustMethod="bonferroni", boxco
     nulldist<-nulldist[,ord]
   }
   return(list(mtally=mtally,nulldist=nulldist,score=score,pvalue=pvals,ci=ci))
+}
+
+#-------------------------------------------------------------------------
+# this internal function was required to fix installation of
+# some dependencies (see "car" package for original implamation)
+.bcpower <- function(U, lambda, jacobian.adjusted=FALSE){
+  bc1 <- function(U, lambda){
+    if(any(U[!is.na(U)] <= 0)) 
+      stop("First argument must be strictly positive.")
+    if (abs(lambda) <= 1e-06){
+      z <- log(U)
+    } else {
+      z <- ((U^lambda) - 1)/lambda
+    }
+    if (jacobian.adjusted == TRUE){
+      z <- z * (exp(mean(log(U), na.rm = TRUE)))^(1 - lambda)
+    }
+    z
+  }
+  out <- U
+  if(is.matrix(out) | is.data.frame(out)){
+    if (is.null(colnames(out))) 
+      colnames(out) <- paste("Z", 1:dim(out)[2], sep = "")
+    for (j in 1:ncol(out)){
+      out[, j] <- bc1(out[, j], lambda[j])
+    }
+    colnames(out) <- paste(colnames(out), round(lambda, 2), sep = "^")
+  } else {
+    out <- bc1(out, lambda)
+  }
+  out
+}
+.estimate.bcpower <- function(obj){
+  fam <- .bcpower
+  Y <- as.matrix(obj)
+  X <- matrix(rep(1, dim(Y)[1]), ncol=1) 
+  w <- 1
+  nc <- dim(Y)[2]
+  nr <- nrow(Y)
+  xqr <- qr(w * X)
+  llik <- function(lambda){
+    (nr/2)*log(((nr - 1)/nr) * det(var(qr.resid(xqr, w*fam(Y, lambda, j=TRUE)))))
+  }
+  llik1d <- function(lambda,Y){
+    (nr/2)*log(((nr - 1)/nr) * var(qr.resid(xqr, w*fam(Y, lambda, j=TRUE))))
+  }
+  start <- rep(1, nc)
+  for(j in 1:nc){
+    res<- suppressWarnings(
+      optimize(
+        f = function(lambda) llik1d(lambda,Y[ , j, drop=FALSE]),
+        lower=-3, upper=+3)
+    )
+    start[j] <- res$minimum
+  }
+  start
 }
 
 #-------------------------------------------------------------------------

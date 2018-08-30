@@ -26,10 +26,15 @@ setGeneric("tni.conditional",
                     iConstraint=TRUE, verbose=TRUE, ...)
              standardGeneric("tni.conditional"), package="RTN")
 setGeneric("tni.gsea2",
-           function(object, minRegulonSize=15, doSizeFilter=FALSE, exponent=1, tnet="dpi",
+           function(object, minRegulonSize=15, doSizeFilter=FALSE, scale=FALSE, exponent=1, tnet="dpi",
                     tfs=NULL, samples=NULL, features=NULL, refsamp=NULL, log=FALSE,
                     alternative=c("two.sided", "less", "greater"),verbose=TRUE) 
              standardGeneric("tni.gsea2"), package="RTN")
+setGeneric("tni.area3",
+           function(object, minRegulonSize=15, doSizeFilter=FALSE, scale=FALSE, tnet="dpi",
+                    tfs=NULL, samples=NULL, features=NULL, refsamp=NULL, 
+                    log=FALSE, verbose=TRUE)
+             standardGeneric("tni.area3"), package="RTN")
 setGeneric("tni.graph",
            function(object, tnet="dpi", gtype="rmap", minRegulonSize=15, tfs=NULL, amapFilter="quantile", amapCutoff=NULL, ntop=NULL, ...)
              standardGeneric("tni.graph"), package="RTN")
@@ -51,12 +56,12 @@ setGeneric("tna.overlap",
              standardGeneric("tna.overlap"), package="RTN")
 setGeneric("tna.gsea1",
            function(object, pValueCutoff=0.05, pAdjustMethod="BH",  minRegulonSize=15, 
-                    nPermutations=1000,exponent=1, tnet="dpi", orderAbsValue=TRUE, stepFilter=TRUE, 
+                    nPermutations=1000, exponent=1, tnet="dpi", orderAbsValue=TRUE, stepFilter=TRUE, 
                     tfs=NULL, verbose=TRUE) 
              standardGeneric("tna.gsea1"), package="RTN")
 setGeneric("tna.gsea2",
            function(object, pValueCutoff=0.05, pAdjustMethod="BH",  minRegulonSize=15, 
-                    nPermutations=1000,exponent=1, tnet="dpi", stepFilter=TRUE, tfs=NULL, verbose=TRUE) 
+                    nPermutations=1000, exponent=1, tnet="dpi", stepFilter=TRUE, tfs=NULL, verbose=TRUE) 
              standardGeneric("tna.gsea2"), package="RTN")
 setGeneric("tna.synergy",
            function(object, pValueCutoff=0.05, pAdjustMethod="BH", minRegulonSize=15, minIntersectSize=1,

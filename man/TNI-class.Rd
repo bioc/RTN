@@ -10,6 +10,7 @@
 \alias{tni.graph,TNI-method}
 \alias{tni.conditional,TNI-method}
 \alias{tni.gsea2,TNI-method}
+\alias{tni.area3,TNI-method}
 \alias{tni2tna.preprocess,TNI-method}
 
 \title{Class \code{"TNI"}: an S4 class for Transcriptional Network Inference.}
@@ -75,6 +76,8 @@ for high-throughput gene expression.
     see \code{\link[RTN:tni.graph]{tni.graph}} } 
     \item{tni.gsea2}{\code{signature(object = "TNI")}: 
     see \code{\link[RTN:tni.gsea2]{tni.gsea2}} }
+    \item{tni.area3}{\code{signature(object = "TNI")}: 
+    see \code{\link[RTN:tni.area3]{tni.area3}} }    
     \item{tni2tna.preprocess}{\code{signature(object = "TNI")}: 
     see \code{\link[RTN:tni2tna.preprocess]{tni2tna.preprocess}} }
 	 }

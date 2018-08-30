@@ -1378,52 +1378,7 @@ treemap<-function(hc){
   obj$rootid<-root
   return(obj)
 }
-# ##---------------------------------------------------------
-# .run.tni.gsea2 <- function(listOfRegulonsAndMode, phenotype, exponent=1, verbose=TRUE) {
-#   ##-----get ordered phenotype
-#   phenotype<-phenotype[order(phenotype,decreasing=TRUE)]
-#   ##-----calculate enrichment scores for all regulons
-#   listOfRegulonsUp <- lapply(listOfRegulonsAndMode, function(reg){
-#     names(reg[reg>0])
-#   })
-#   listOfRegulonsDown <- lapply(listOfRegulonsAndMode, function(reg){
-#     names(reg[reg<0])
-#   })
-#   GSEA2.results.up <- .gsea2tni(listOfRegulonsUp, phenotype=phenotype,exponent=exponent)
-#   GSEA2.results.down <- .gsea2tni(listOfRegulonsDown, phenotype=phenotype,exponent=exponent)
-#   ##-----
-#   b1<-length(GSEA2.results.up)>0 && length(GSEA2.results.down)>0
-#   b2<-length(GSEA2.results.up)==length(GSEA2.results.down)
-#   if(b1 && b2) {
-#     GSEA2.results.both <- GSEA2.results.up-GSEA2.results.down
-#   } else {
-#     GSEA2.results.up <- numeric()
-#     GSEA2.results.down <- numeric()
-#     GSEA2.results.both <- numeric()
-#   }
-#   #-----format, pack and return results
-#   GSEA2.results.up<-round(GSEA2.results.up,2)
-#   GSEA2.results.down<-round(GSEA2.results.down,2)
-#   GSEA2.results.both<-round(GSEA2.results.both,2)
-#   GSEA2.results<-list(positive=GSEA2.results.up,negative=GSEA2.results.down,differential=GSEA2.results.both)
-#   return( GSEA2.results )
-# }
-# ##---------------------------------------------------------
-# .gsea2tni <- function(listOfRegulons, phenotype, exponent) {
-#   if(length(listOfRegulons) > 0){
-#     scoresObserved<-sapply(listOfRegulons,function(reg){
-#       if(length(reg)>0){
-#         res<-gseaScores4RTN(geneList=phenotype,geneSet=reg, exponent=exponent)
-#       } else {
-#         res<-0
-#       }
-#       return(res)
-#     })
-#   } else {
-#     scoresObserved <- NULL
-#   }
-#   return(scoresObserved)
-# }
+
 ##---------------------------------------------------------
 .run.tni.gsea2.alternative <- function(listOfRegulonsAndMode, phenotype, exponent, 
                                        alternative, verbose=TRUE) {
@@ -1436,7 +1391,6 @@ treemap<-function(hc){
   listOfRegulonsDown <- lapply(listOfRegulonsAndMode, function(reg){
     names(reg[reg<0])
   })
-  
   ##-----set character string specifying the alternative hypothesis
   ## ...observe that greater/less refer to regulon activity
   if(alternative=="two.sided"){
@@ -1445,11 +1399,12 @@ treemap<-function(hc){
     alternative_up <- ifelse(alternative=="greater","greater", "less")
     alternative_down <- ifelse(alternative=="greater","less", "greater")
   }
-  GSEA2.results.up <- .gsea2tni.alternative(listOfRegulonsUp, phenotype=phenotype,exponent=exponent,
-                                            alternative=alternative_up)
-  GSEA2.results.down <- .gsea2tni.alternative(listOfRegulonsDown, phenotype=phenotype,exponent=exponent,
-                                              alternative=alternative_down)
-  ##-----
+  GSEA2.results.up <- sapply(listOfRegulonsUp, .fgseaScores4TNI, 
+                             geneList=phenotype, exponent=exponent, 
+                             alternative=alternative)
+  GSEA2.results.down <- sapply(listOfRegulonsDown, .fgseaScores4TNI, 
+                               geneList=phenotype, exponent=exponent, 
+                               alternative=alternative)
   b1<-length(GSEA2.results.up)>0 && length(GSEA2.results.down)>0
   b2<-length(GSEA2.results.up)==length(GSEA2.results.down)
   if(b1 && b2) {
@@ -1466,21 +1421,37 @@ treemap<-function(hc){
   GSEA2.results<-list(positive=GSEA2.results.up,negative=GSEA2.results.down,differential=GSEA2.results.both)
   return( GSEA2.results )
 }
+
 ##---------------------------------------------------------
-.gsea2tni.alternative <- function(listOfRegulons, phenotype, exponent, alternative) {
-  if(length(listOfRegulons) > 0){
-    scoresObserved<-sapply(listOfRegulons,function(reg){
-      if(length(reg)>0){
-        res<-gseaScores4RTN(geneList=phenotype,geneSet=reg, exponent=exponent, alternative=alternative)
-      } else {
-        res<-0
-      }
-      return(res)
-    })
+.fgseaScores4TNI <- function(geneSet, geneList, exponent=1, 
+                            alternative="two.sided"){
+  if(length(geneSet)>0){
+    nh <- length(geneSet)
+    N <- length(geneList)
+    ES <- 0
+    Phit <- rep(0, N)
+    Pmiss <- rep(0, N)
+    runningES <- rep(0, N)
+    hits <- match(geneSet,names(geneList))
+    Phit[hits] <- abs(geneList[hits])^exponent
+    NR <- sum(Phit)
+    Pmiss[-hits] <- 1/(N-nh)
+    Phit <- cumsum(Phit/NR)
+    Pmiss <- cumsum(Pmiss)
+    runningES <- Phit-Pmiss
+    ESmax <- max(runningES)
+    ESmin <- min(runningES)
+    if(alternative=="greater"){
+      ES <- ESmax
+    } else if(alternative=="less"){
+      ES <- ESmin
+    } else {
+      ES <- ifelse(abs(ESmin)>abs(ESmax), ESmin, ESmax)
+    }
   } else {
-    scoresObserved <- NULL
+    ES <- 0
   }
-  return(scoresObserved)
+  return(ES)
 }
 
 #---------------------------------------------------------------
@@ -1501,7 +1472,7 @@ treemap<-function(hc){
 }
 
 ##------------------------------------------------------------------------------
-.get.regstatus <- function(regulonActivity, nSections = 1){
+.tni.stratification.gsea2 <- function(regulonActivity, nSections=1, center=TRUE){
   regstatus <- sign(regulonActivity$dif)
   for (reg in colnames(regstatus)){
     sq <- c(seq_len(nSections))
@@ -1523,10 +1494,105 @@ treemap<-function(hc){
   mid <- nSections + 1
   regstatus[regstatus == 0] <- mid
   #---
-  regstatus <- -1 * (regstatus - mid)
+  if(center){
+    regstatus <- -1 * (regstatus - mid)
+    mid <- 0
+  }
   #---
   regulonActivity$regstatus <- regstatus
+  regulonActivity$nSections <- nSections
+  regulonActivity$center <- mid
   return(regulonActivity)
+}
+
+##------------------------------------------------------------------------------
+.tni.stratification.area <- function(regulonActivity, nSections=1, center=FALSE){
+  regstatus <- sign(regulonActivity$dif)
+  for (reg in colnames(regstatus)){
+    sq <- c(seq_len(nSections))
+    dif <- regulonActivity$dif[, reg]
+    tp <- regstatus[, reg]
+    #---
+    tp1 <- sort(dif[tp > 0], decreasing = TRUE)
+    tp1[] <- rep(sq, each = ceiling(length(tp1)/nSections), length.out = length(tp1))
+    regstatus[names(tp1), reg] <- tp1
+    #---
+    tp2 <- sort(dif[tp < 0], decreasing = TRUE)
+    tp2[] <- rep(sq + nSections + 1, each = ceiling(length(tp2)/nSections), length.out = length(tp2))
+    regstatus[names(tp2), reg] <- tp2
+  }
+  #--- obs. this stratification generates a 'midle' group 
+  #--- only when there are samples with regulon activity assigned with 0 or NA
+  mid <- nSections + 1
+  regstatus[regstatus == 0 | is.na(regstatus)] <- mid
+  #---
+  if(center){
+    regstatus <- -1 * (regstatus - mid)
+    mid <- 0
+  }
+  #---
+  regulonActivity$regstatus <- regstatus
+  regulonActivity$nSections <- nSections
+  regulonActivity$center <- mid
+  return(regulonActivity)
+}
+
+#---------------------------------------------------------------
+#--- simple function to generate gmm scores
+.mi2gmm.dpi <- function(object, idkey=NULL){
+  #--- set input
+  regs <- tni.get(object, what="regulatoryElements", idkey=idkey)
+  #--- get tf-tar mi
+  tftar_mi <- lapply(tni.get(object, what="regulons.and.mode", idkey=idkey), abs)
+  #--- get tf-tar correlation
+  object@results$tn.dpi <- tni.cor(object@gexp, object@results$tn.dpi, asInteger=FALSE,
+                                   estimator=object@para$perm$estimator)
+  tftar_cor <- tni.get(object, what="regulons.and.mode", idkey=idkey)
+  #--- get tf-tar mixed scores
+  tftar_gmm <- .gmm.scores(tftar_cor)
+  #--- get a list
+  .gmmlist(tftar_gmm, tftar_mi, regs)
+}
+.mi2gmm.ref <- function(object, idkey=NULL){
+  #--- set input
+  regs <- tni.get(object, what="regulatoryElements", idkey=idkey)
+  #--- get tf-tar mi
+  tftar_mi <- lapply(tni.get(object, what="refregulons.and.mode", idkey=idkey), abs)
+  #--- get tf-tar correlation
+  object@results$tn.ref <- tni.cor(object@gexp, object@results$tn.ref, asInteger=FALSE,
+                                   estimator=object@para$perm$estimator)
+  tftar_cor <- tni.get(object, what="refregulons.and.mode", idkey=idkey)
+  #--- get tf-tar mixed scores
+  tftar_gmm <- .gmm.scores(tftar_cor)
+  #--- get a list
+  .gmmlist(tftar_gmm, tftar_mi, regs)
+}
+.gmmlist <- function(tftar_gmm, tftar_mi, regs){
+  res <- list()
+  for(rg in regs){
+    res[[rg]]$gmm <- tftar_gmm[[rg]]
+    res[[rg]]$mi <- tftar_mi[[rg]]
+  }
+  return(res)
+}
+
+#--- fit a normal mixture model that maximizes the conditional 
+#--- expected log-likelihood at each M-step of the algorithm
+.gmm.scores <- function(tftar_cor, lambda=c(0.3,0.3,0.3), 
+                        mu=c(-0.5,0,0.5), sigma=c(0.15,0.2,0.15)){
+  x <- unlist(tftar_cor, use.names=FALSE)
+  emf <- mixtools::normalmixEM(x, lambda=lambda, mu=mu, sigma=sigma, 
+                               mean.constr=c(NA, 0, NA), verb=FALSE)
+  tftar_scores <- lapply(tftar_cor, function(x){
+    df1 <- pnorm(x, emf$mu[1], emf$sigma[1], lower.tail = FALSE)
+    df2 <- pnorm(x, emf$mu[2], emf$sigma[2], lower.tail = FALSE)
+    df3 <- pnorm(x, emf$mu[2], emf$sigma[2], lower.tail = TRUE)
+    df4 <- pnorm(x, emf$mu[3], emf$sigma[3], lower.tail = TRUE)
+    r1 <- df1/(df1 + df3 + df4) * (x < 0)
+    r2 <- df4/(df1 + df2 + df4) * (x >= 0)
+    r2 - r1
+  })
+  return(tftar_scores)
 }
 
 #---------------------------------------------------------------

@@ -13,6 +13,7 @@ exportMethods(
   "tni.graph",
   "tni.conditional",
   "tni.gsea2",
+  "tni.area3",
   "tni2tna.preprocess",
   "tna.mra",
   "tna.gsea1",
@@ -53,5 +54,7 @@ importFrom(grDevices, col2rgb, colorRampPalette, dev.off, palette, pdf, rgb)
 importFrom(graphics, abline, axis, boxplot, hist, image, layout, legend, lines, mtext, par, plot, plot.new, points, polygon, segments, title)
 importFrom(stats, aggregate, anova, aov, as.dist, coef, cor, formula, hclust, ks.test, lm, manova, median, model.matrix, p.adjust, phyper, pnorm, qnorm, quantile, sd, shapiro.test)
 importFrom(utils, data, setTxtProgressBar, txtProgressBar)
+importFrom(mixtools,normalmixEM)
+importFrom(viper,aREA)
 
 

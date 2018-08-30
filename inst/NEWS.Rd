@@ -2,6 +2,12 @@
 \title{RTN News}
 \encoding{UTF-8}
 
+\section{Version 2.6.0}{
+  \itemize{
+    \item Make available GSEA-2T and aREA-3T algorithms for single-sample analysis.
+  }
+}
+
 \section{Version 2.4.0}{
   \itemize{
     \item Improved RTN workflows.

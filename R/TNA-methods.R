@@ -227,8 +227,6 @@ setMethod(
       query<-list()
       if(is.null(ntop)){
         tp<-rownames(getqs(object@results$GSEA2.results$differential))
-        #tp<-intersect(tp,rownames(getqs(object@results$GSEA2.results$positive)))
-        #tp<-intersect(tp,rownames(getqs(object@results$GSEA2.results$negative)))
         dft<-getqs(object@results$GSEA2.results$differential,order,reportNames)
         dft<-dft[rownames(dft)%in%tp,]
         query$differential<-dft
@@ -320,22 +318,6 @@ setMethod(
       for(i in names(object@listOfReferenceRegulons)){
         tp<-object@referenceNetwork[object@listOfReferenceRegulons[[i]],i]
         names(tp)<-object@listOfReferenceRegulons[[i]]
-        query[[i]]<-tp
-      }
-      if(!is.null(idkey))query<-translateQuery(query,idkey,object,"listAndNames",reportNames)
-    } else if(what=="nondpiregulons.and.mode"){
-      query<-list()
-      for(i in names(object@listOfReferenceRegulons)){
-        tp<-object@referenceNetwork[object@listOfReferenceRegulons[[i]],i]
-        names(tp)<-object@listOfReferenceRegulons[[i]]
-        #---
-        tp <- tp[!names(tp) %in% object@listOfRegulons[[i]] ]
-        #---
-        tpPos <- sort(tp[tp>0], decreasing = TRUE)
-        tpNeg <- sort(tp[tp<0], decreasing = FALSE)
-        if(length(tpPos)>300) tpPos <- tpPos[1:300]
-        if(length(tpNeg)>300) tpNeg <- tpNeg[1:300]
-        tp <- sort(c(tpNeg,tpPos))
         query[[i]]<-tp
       }
       if(!is.null(idkey))query<-translateQuery(query,idkey,object,"listAndNames",reportNames)
@@ -462,16 +444,7 @@ setMethod(
     object@summary$para$gsea1[1,]<-c(pValueCutoff, pAdjustMethod, minRegulonSize, 
                                      nPermutations,exponent,tnet,orderAbsValue)
     ##-----get regulons
-    if(tnet=="cdt"){
-      if(length(object@listOfModulators)>0){
-        rgcs<-lapply(object@listOfModulators,function(reg){
-          names(reg)
-        })
-        stepFilter=FALSE
-      } else {
-        stop("NOTE: slot 'listOfModulators' is emmpty!")
-      }
-    } else if(tnet=="ref"){
+    if(tnet=="ref"){
       rgcs<-object@listOfReferenceRegulons
     } else {
       rgcs<-object@listOfRegulons
@@ -512,6 +485,12 @@ setMethod(
       stop(paste("NOTE: no regulon has >= ", minRegulonSize, tp, max(gs.size), sep=""),call.=FALSE)
     }
     rgcs <- rgcs[which(gs.size >= minRegulonSize)]
+    
+    ##-----remove genes not listed in phenotype
+    for(i in names(rgcs)){
+      regs <- rgcs[[i]]
+      rgcs[[i]] <- regs[regs %in% names(object@phenotype)]
+    }
     
     ##-----run gsea1
     GSEA1.results<-run.gsea1(
@@ -575,18 +554,12 @@ setMethod(
       warning("NOTE: it is expected 'phenotype' data as differential expression values (e.g. logFC)!")
     }
     ##-----get tnet and regulons
-    if(tnet=="cdt"){ #REVISAR p/ compatibilidade com arg 'tfs'
-      tnet<-object@transcriptionalNetwork
-      listOfRegulonsAndMode<-object@listOfModulators
-    } else if(tnet=="ref"){
-      tnet<-object@referenceNetwork
-      listOfRegulonsAndMode<-tna.get(object,what="refregulons.and.mode")
-    } else if(tnet=="nondpi"){
-      tnet<-object@transcriptionalNetwork
-      listOfRegulonsAndMode<-tna.get(object,what="nondpiregulons.and.mode")
+    if(tnet=="ref"){
+      tnet <- object@referenceNetwork
+      listOfRegulonsAndMode <- tna.get(object,what="refregulons.and.mode")
     } else {
       tnet<-object@transcriptionalNetwork
-      listOfRegulonsAndMode<-tna.get(object,what="regulons.and.mode")
+      listOfRegulonsAndMode <- tna.get(object,what="regulons.and.mode")
     }
     ##-----Either tfs or stepFilter: use a sublist or significant regulons inferred from MRA analysis
     if(!is.null(tfs)){
@@ -641,14 +614,16 @@ setMethod(
     listOfRegulonsAndMode<-listOfRegulonsAndMode[which(gs.size>=minRegulonSize)]
     tfs<-tfs[tfs%in%names(listOfRegulonsAndMode)]
     
-    #possible check-point for cmap!
-    phenotype<-object@phenotype
-    #names(phenotype)<-sample(names(object@phenotype))
+    ##-----remove genes not listed in phenotype
+    for(i in names(listOfRegulonsAndMode)){
+      regs <- listOfRegulonsAndMode[[i]] 
+      listOfRegulonsAndMode[[i]] <- regs[names(regs)%in%names(object@phenotype)]
+    }
     
     ##-----run gsea2
     GSEA2.results<-run.gsea2(
       listOfRegulonsAndMode=listOfRegulonsAndMode,
-      phenotype=phenotype,
+      phenotype=object@phenotype,
       pAdjustMethod=object@para$gsea2$pAdjustMethod,
       pValueCutoff=object@para$gsea2$pValueCutoff,
       nPermutations=object@para$gsea2$nPermutations, 
@@ -656,43 +631,6 @@ setMethod(
       verbose=verbose
     )
     
-    ##----run cmap on downstream tnet (Experimental!)
-    
-    #get observed enrichment scores for the input regulons
-    dfpheno<-GSEA2.results$differential[,"Observed.Score"]
-    names(dfpheno)<-rownames(GSEA2.results$differential)
-    dfpheno<-dfpheno[GSEA2.results$differential[,"Adjusted.Pvalue"]<pValueCutoff]
-    #get the expected phenotype on the observed tnet structure
-    idx<-c(names(dfpheno),setdiff(names(listOfRegulonsAndMode),names(dfpheno)))
-    tnet<-tnet[idx,names(dfpheno),drop=FALSE]
-    expectedEffect<-tnet[rowSums(abs(tnet))>0,,drop=FALSE]
-    if(nrow(expectedEffect)>0){
-      for(i in 1:nrow(expectedEffect)){
-        tp<-dfpheno/abs(dfpheno);tp[is.nan(tp)]=0
-        expectedEffect[i,]<-expectedEffect[i,]*tp
-      }
-      #get observed enrichment score for all regulons
-      obscore<-run.tna.cmap(listOfRegulonsAndMode, phenotype, exponent)
-      #check consistency of downstream effects
-      dseffect<-list()
-      cn<-colnames(expectedEffect)
-      rn<-rownames(expectedEffect)
-      sapply(cn,function(reg){
-        expeffect<-expectedEffect[,reg]
-        idx<-which(expeffect!=0)
-        expeffect<-expeffect[idx]
-        obs<-obscore[rn[idx]]
-        expeffect<-expeffect/abs(expeffect)
-        obseffect<-obs/abs(obs)
-        obseffect[is.nan(obseffect)]=0
-        res<-rbind(expected.effect=expeffect,observed.effect=obseffect,observed.score=obs)
-        colnames(res)<-rn[idx]
-        dseffect[[reg]]<<-res
-        NULL
-      })
-      GSEA2.results$dseffect<-dseffect
-    }
-
     ##-----add results
     object@results$GSEA2.results<-GSEA2.results
     GSEA2.results<-tna.get(object,what="gsea2", reportNames=FALSE)
@@ -1583,12 +1521,13 @@ run.gsea1 <- function(listOfRegulons, phenotype, pAdjustMethod="BH",
                      exponent=1, orderAbsValue=TRUE, verbose=TRUE) {
   
   ##-----get ordered phenotype
-  if(orderAbsValue)phenotype<-abs(phenotype)
-  phenotype<-phenotype[order(phenotype,decreasing=TRUE)]
+  if(orderAbsValue) phenotype <- abs(phenotype)
+  phenotype <- phenotype[order(phenotype,decreasing=TRUE)]
   
   ##-----reset names to integer values
   listOfRegulons<-lapply(listOfRegulons, match, table=names(phenotype))
   names(phenotype)<-1:length(phenotype)
+  
   
   ##-----calculate enrichment scores for all regulons
   test.collection<-list()
@@ -1635,27 +1574,26 @@ run.gsea2 <- function(listOfRegulonsAndMode, phenotype, pAdjustMethod="BH",
   phenotype<-phenotype[order(phenotype,decreasing=TRUE)]
   
   ##---reset names to integer values
-  lapply(names(listOfRegulonsAndMode), function(i){
+  for(i in names(listOfRegulonsAndMode)){
     reg<-listOfRegulonsAndMode[[i]]
-    names(listOfRegulonsAndMode[[i]])<<-match(names(reg),names(phenotype))
-    NULL
-  })
-  names(phenotype)<-1:length(phenotype)
+    names(listOfRegulonsAndMode[[i]]) <- match(names(reg),names(phenotype))
+  }
+  names(phenotype) <- 1:length(phenotype)
   
   ##-----calculate enrichment scores for all regulons
-  test.collection.up<-list()
-  test.collection.down<-list()
+  test.collection.up <- list()
+  test.collection.down <- list()
   if(length(listOfRegulonsAndMode) > 0){
     listOfRegulonsUp <- lapply(names(listOfRegulonsAndMode), function(reg){
       tp<-listOfRegulonsAndMode[[reg]]
       names(tp[tp>0])
     })
-    names(listOfRegulonsUp)<-names(listOfRegulonsAndMode)
+    names(listOfRegulonsUp) <- names(listOfRegulonsAndMode)
     listOfRegulonsDown <- lapply(names(listOfRegulonsAndMode), function(reg){
       tp<-listOfRegulonsAndMode[[reg]]
       names(tp[tp<0])
     })
-    names(listOfRegulonsDown)<-names(listOfRegulonsAndMode)
+    names(listOfRegulonsDown) <- names(listOfRegulonsAndMode)
     gs.size.up <- unlist(lapply(listOfRegulonsUp, length))
     gs.size.down <- unlist(lapply(listOfRegulonsDown, length))
     test.collection.up <- gsea2tna(listOfRegulonsUp, phenotype=phenotype,exponent=exponent,
@@ -1852,33 +1790,5 @@ run.shadow <- function(collectionsOfPairsR1, collectionsOfPairsR2, labpair, phen
   shadow.results[,"Adjusted.Pvalue"]<-signif(shadow.results[,"Adjusted.Pvalue"], digits=4)
   if(verbose)cat("-Shadow analysis complete \n\n")
   return(list(shadowR1=shadowR1.test, shadowR2=shadowR2.test, results=shadow.results))
-}
-
-##------------------------------------------------------------------------------
-##GSEA2 for CMAP
-run.tna.cmap <- function(listOfRegulonsAndMode, phenotype, exponent) {
-  if(length(listOfRegulonsAndMode) > 0){
-    phenotype<-phenotype[order(phenotype,decreasing=TRUE)]
-    listOfRegulonsUp <- lapply(names(listOfRegulonsAndMode), function(reg){
-      tp<-listOfRegulonsAndMode[[reg]]
-      names(tp[tp>0])
-    })
-    names(listOfRegulonsUp)<-names(listOfRegulonsAndMode)
-    listOfRegulonsDown <- lapply(names(listOfRegulonsAndMode), function(reg){
-      tp<-listOfRegulonsAndMode[[reg]]
-      names(tp[tp<0])
-    })
-    names(listOfRegulonsDown)<-names(listOfRegulonsAndMode)
-    scoreMatUp<-sapply(names(listOfRegulonsUp),function(reg){
-      gseaScores4CMAP(phenotype,listOfRegulonsUp[[reg]],exponent)
-    })
-    scoreMatDown<-sapply(names(listOfRegulonsDown),function(reg){
-      gseaScores4CMAP(phenotype,listOfRegulonsDown[[reg]],exponent)
-    })
-    diffScoreMat<-scoreMatUp-scoreMatDown
-  } else {
-    diffScoreMat<-numeric()
-  }
-  return(diffScoreMat)
 }
 

@@ -472,7 +472,7 @@ setMethod(
       if(verbose)cat("-Performing two-tailed GSEA (parallel version - ProgressBar disabled)...\n")
       if(verbose)cat("--For", length(listOfRegulonsAndMode), "regulons and",length(samples),'sample(s)...\n')
       cl<-getOption("cluster")
-      snow::clusterExport(cl, list(".run.tni.gsea2.alternative",".gsea2tni.alternative","gseaScores4RTN"),
+      snow::clusterExport(cl, list(".run.tni.gsea2.alternative",".fgseaScores4TNI","gseaScores4RTN"),
                           envir=environment())
       regulonActivity <- list()
       res <- parLapply(cl, samples, function(samp){
@@ -480,8 +480,7 @@ setMethod(
           listOfRegulonsAndMode=listOfRegulonsAndMode,
           phenotype=dt[, samp],
           exponent=object@para$gsea2$exponent,
-          alternative = alternative,
-          verbose=FALSE
+          alternative = alternative
         )
       })
       regulonActivity$pos <- t(sapply(res, function(r) r$pos))
@@ -497,8 +496,7 @@ setMethod(
           listOfRegulonsAndMode=listOfRegulonsAndMode,
           phenotype=dt[, samples[i]],
           exponent=object@para$gsea2$exponent,
-          alternative = alternative,
-          verbose=FALSE
+          alternative = alternative
         )
         regulonActivity$pos<-rbind(regulonActivity$pos,res$positive[tfs])
         regulonActivity$neg<-rbind(regulonActivity$neg,res$negative[tfs])

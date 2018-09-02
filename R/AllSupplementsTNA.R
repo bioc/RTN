@@ -67,28 +67,17 @@ gsea1tna <- function(listOfRegulons, phenotype, exponent=1,
 ##This function computes observed and permutation-based scores 
 gsea2tna <- function(listOfRegulons, phenotype, exponent=1, nPermutations=1000, 
                      verbose1=TRUE, verbose2=TRUE) {   
-  #OBS1:names provided as integer values!
-  #OBS2:max/min sizes checked in the previous functions!
   pheno.names <- as.integer(names(phenotype))
   nRegulons <- length(listOfRegulons)
   if(nRegulons > 0){
-    ##Generate a matrix to store the permutation-based scores, with 
-    ##one row for each gene set (that has been tagged) and one column 
-    ##for each permutation	
     scoresperm <- matrix(rep(0, (nPermutations * nRegulons)), nrow=nRegulons)
     rownames(scoresperm) <- names(listOfRegulons)
-    ##Generate a vector to store the experimental scores
-    ##one entry for each gene set (that has been tagged)
     scoresObserved <- rep(0, nRegulons)
     names(scoresObserved) <- names(listOfRegulons)
-    ##Compute the scores	
-    ##create permutation gene list
     perm.gL <- sapply(1:nPermutations, function(n) pheno.names[
       sample(1:length(phenotype), length(phenotype),replace=FALSE)])
     perm.gL<-cbind(pheno.names,perm.gL)
-    ##check if package snow has been loaded and a cluster object 
-    ##has been created for HTSanalyzeR
-    if(isParallel() && nRegulons>1) {
+    if(isParallel() && nRegulons>1){
       if(verbose1 && verbose2)cat("-Performing two-tailed GSEA (parallel version - ProgressBar disabled)...\n")
       if(verbose1 && verbose2)cat("--For", length(listOfRegulons), "regulons...\n")      
       scores <- gseaScoresBatchParallel4RTN(geneList=phenotype, geneNames.perm = perm.gL,
@@ -333,39 +322,6 @@ tna.permutation.pvalues <- function(permScores, dataScores){
 }
 
 ##------------------------------------------------------------------------
-tni.permutation.pvalues <- function(permScores, dataScores){
-  if(!is.matrix(permScores)) 
-    stop("NOTE: the argument permScores should be a matrix!")
-  if(!is.matrix(dataScores)) 
-    stop("NOTE: the argument dataScores should be a matrix!")
-  if(!is.integer(dataScores) && !is.numeric(dataScores)) 
-    stop("NOTE: the argument dataScores should be a numerical vector!")
-  if(nrow(permScores) != ncol(dataScores)) 
-    warning("The number of rows of the permScores matrix is not ",
-            "equal to the ncols of dataScores")
-  pvalMat<-sapply(1:nrow(dataScores), function(i){
-    dtScores<-dataScores[i,]
-    l.dataScores <- length(dtScores)
-    nPerm <- ncol(permScores)
-    ##initialize a pvalues vector  
-    pval <- rep(1, l.dataScores)
-    valid.id <- which(!is.na(dtScores) & dtScores!=0)
-    sapply(valid.id, function(j) {
-      pval[j]<<-ifelse(
-        dtScores[j] > 0,
-        (sum(permScores[j, ] > dtScores[j])+1)/(nPerm+1),
-        (sum(permScores[j, ] < dtScores[j])+1)/(nPerm+1)
-      )
-      NULL
-    })
-    pval
-  })
-  colnames(pvalMat)<-colnames(dataScores)
-  rownames(pvalMat)<-rownames(dataScores)
-  return(pvalMat)
-}
-
-##------------------------------------------------------------------------
 ##This function compute the nominal p-value associated with a GSEA for a
 ##collection of regulons, from the outputs of collectionGsea
 ##minor changes for shadow analysis!
@@ -568,10 +524,6 @@ hyperGeoTest4RTN <- function(geneSet, universe, hits) {
   return(hyp.vec)
 }
 
-#--------------------------------------------------------------------
-#The next 3 functions have being extracted from HTSanalyzeR
-#due to compatibility issues!
-#--------------------------------------------------------------------
 ##This function computes enrichment scores for GSEA, running score and 
 ##position of hits for a gene set.
 gseaScores4RTN <- function(geneList, geneSet, exponent=1, mode="score", 
@@ -645,75 +597,38 @@ gseaScores4RTN <- function(geneList, geneSet, exponent=1, mode="score",
     return(list("enrichmentScore"=ES, "runningScore"=runningES, "positions"=hitsType))
   }
 }
-##------------------------------------------------------------------------------
-gseaScores4CMAP <- function(geneList, geneSet, exponent) {
-  nh <- length(geneSet)
-  N <- length(geneList)  
-  ES <- 0
-  Phit <- rep(0, N)
-  Pmiss <- rep(0, N)
-  runningES <- rep(0, N)
-  hits <- rep(FALSE, N)
-  hits[which(names(geneList)%in%geneSet)] <- TRUE  
-  if(sum(hits)!=0) {
-    Phit[which(hits)]<-abs(geneList[which(hits)])^exponent
-    NR=sum(Phit)	
-    Pmiss[which(!hits)]<-1/(N-nh)	
-    Phit=cumsum(Phit/NR)
-    Pmiss=cumsum(Pmiss)
-    runningES<-Phit-Pmiss		
-    ESmax<-max(runningES)
-    ESmin<-min(runningES)
-    ES<-ifelse(abs(ESmin)>abs(ESmax), ESmin, ESmax)
-  }
-  return(ES)
-}
+
 #--------------------------------------------------------------------
 ##This function computes enrichment score for both input 'geneList' 
 ##and its permutations for one gene set.
 gseaScoresBatch4RTN <- function(geneList, geneNames.perm, geneSet, 
                             exponent=1, nPermutations=1000) {
-  if(!is.matrix(geneNames.perm))
-    stop("NOTE: 'geneNames.perm' should be a matrix!\n")
-  if(ncol(geneNames.perm) != (nPermutations+1))
-    stop("NOTE: the No of columns of 'geneNames.perm' should be equal to 'nPermutations'!\n")
-  geneList.names <- as.integer(names(geneList)) #ja foi transformado em inteiros!
-  ##Compute the size of the gene set and of the genelist	
-  nh<-length(geneSet)
-  N<-length(geneList)
-  ##The geneSet should be a subset of the gene universe, i.e. we keep 
-  ##only those element of the gene set that appear in the geneList		
-  geneSet<-intersect(geneList.names,geneSet)
-  ES<-rep(0,nPermutations+1)
-  Phit<-matrix(0,nrow=N,ncol=nPermutations+1)
-  Pmiss<-Phit
-  runningES<-NULL
-  
-  if(nh>N) {
-    stop("NOTE: gene set is larger than gene list!")
-  } else {
-    hits <- matrix(FALSE, nrow = N, ncol = nPermutations+1)
-    hits[which(!is.na(match(geneNames.perm, geneSet)))] <- TRUE	
-    hits <- matrix(hits,ncol = nPermutations+1 , byrow = FALSE)		
-    if(sum(hits[,1]) > 0) {
-      junk <- sapply(1:(nPermutations+1), function(i) 
-        Phit[which(hits[, i]), i] <<- 
-          abs(geneList[which(hits[, i])])^exponent)	
-      NR <- colSums(Phit)		
-      Pmiss[which(!hits)] <- 1/(N-nh)		
-      Pmiss <- sapply(1:(nPermutations+1), function(i) 
-        cumsum(Pmiss[, i]))
-      Phit <- sapply(1:(nPermutations+1), function(i) 
-        cumsum(Phit[, i])/NR[i])		
-      runningES <- Phit - Pmiss		
-      ESrange <- sapply(1:(nPermutations+1), function(i) 
-        range(runningES[, i]))
-      ES <- sapply(1:(nPermutations+1), function(i) 
-        ESrange[which.max(abs(ESrange[, i])), i])	
-      if(is.list(ES)) ES<-unlist(ES)
+  geneList.names <- as.integer(names(geneList))
+  nh <- length(geneSet)
+  N <- length(geneList)
+  ES <- rep(0,nPermutations+1)
+  Phit <- Pmiss <- matrix(0,nrow=N,ncol=nPermutations+1)
+  runningES <- NULL
+  hits <- matrix(FALSE, nrow = N, ncol = nPermutations+1)
+  hits[which(!is.na(match(geneNames.perm, geneSet)))] <- TRUE	
+  if(sum(hits[,1]) > 0){
+    for(i in 1:(nPermutations+1)){
+      idx <- which(hits[, i])
+      Phit[idx, i] <- abs(geneList[idx])^exponent
     }
+    NR <- colSums(Phit)		
+    Pmiss[which(!hits)] <- 1/(N-nh)		
+    Pmiss <- sapply(1:(nPermutations+1), function(i) 
+      cumsum(Pmiss[, i]))
+    Phit <- sapply(1:(nPermutations+1), function(i) 
+      cumsum(Phit[, i])/NR[i])		
+    runningES <- Phit - Pmiss		
+    ESrange <- sapply(1:(nPermutations+1), function(i) 
+      range(runningES[, i]))
+    ES <- sapply(1:(nPermutations+1), function(i) 
+      ESrange[which.max(abs(ESrange[, i])), i])	
+    if(is.list(ES)) ES<-unlist(ES)
   }
-  #Return the relevant information according to mode		
   ES<-list(scoresObserved=ES[1], scoresperm=ES[2:(nPermutations+1)])
   return(ES)	
 }
@@ -723,36 +638,21 @@ gseaScoresBatch4RTN <- function(geneList, geneNames.perm, geneSet,
 gseaScoresBatchParallel4RTN <- function(geneList, geneNames.perm, 
                                     collectionOfGeneSets, 
                                     exponent = 1, nPermutations = 1000) {
-  if(!is.matrix(geneNames.perm))
-    stop("NOTE: 'geneNames.perm' should be a matrix!\n")
-  if(ncol(geneNames.perm)!=(nPermutations+1))
-    stop("NOTE: the No of columns of 'geneNames.perm' should be equal to 'nPermutations'!\n")	
-  ##local function for computation of gsea scores with a single core
   gseaScoresBatchLocal <- function(geneList, geneNames.perm, geneSet, 
-                                   exponent, nPermutations) {	
+                                   exponent, nPermutations){	
     geneList.names <- as.integer(names(geneList))
-    ##Compute the size of the gene set and of the genelist	
     nh <- length(geneSet)
     N <- length(geneList)
-    ##The geneSet should be a subset of the gene universe, i.e. we 
-    ##keep only those element of the gene set that appear in the 
-    ##geneList		
-    geneSet <- intersect(geneList.names, geneSet)
     ES <- rep(0, nPermutations+1)
-    Phit <- matrix(0, nrow = N, ncol = nPermutations+1)
-    Pmiss <- Phit
+    Phit <- Pmiss <- matrix(0, nrow=N, ncol=nPermutations+1)
     runningES <- NULL
-    
-    if(nh > N)
-      stop("NOTE: gene set is larger than gene list!")
-    
     hits <- matrix(FALSE, nrow = N, ncol = nPermutations+1) 	
     hits[which(!is.na(match(geneNames.perm, geneSet)))] <- TRUE	
-    hits <- matrix(hits, ncol = nPermutations+1, byrow = FALSE)		
-    if(sum(hits[,1]) > 0) {
-      junk <- sapply(1:(nPermutations+1), function(i) 
-        Phit[which(hits[, i]), i] <<- 
-          abs(geneList[which(hits[, i])])^exponent)	
+    if(sum(hits[,1]) > 0){
+      for(i in 1:(nPermutations+1)){
+        idx <- which(hits[, i])
+        Phit[idx, i] <- abs(geneList[idx])^exponent
+      }
       NR <- colSums(Phit)		
       Pmiss[which(!hits)] <- 1/(N-nh)		
       Pmiss <- sapply(1:(nPermutations+1), function(i) 
@@ -766,11 +666,9 @@ gseaScoresBatchParallel4RTN <- function(geneList, geneNames.perm,
         ESrange[which.max(abs(ESrange[,i])),i])	
       if(is.list(ES)) ES <- unlist(ES)
     }	
-    ##Return the relevant information according to mode		
     ES <- list(scoresObserved = ES[1], scoresperm = ES[2:(nPermutations+1)])
     return(ES)	
   }
-  #parallel computing
   scores <- parSapply(getOption("cluster"), 1:length(collectionOfGeneSets), function(i) {
     gseaScoresBatchLocal(geneList, geneNames.perm = geneNames.perm, geneSet = collectionOfGeneSets[[i]], 
                          exponent = exponent, nPermutations = nPermutations)

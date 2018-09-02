@@ -1379,19 +1379,20 @@ treemap<-function(hc){
   return(obj)
 }
 
-##---------------------------------------------------------
-.run.tni.gsea2.alternative <- function(listOfRegulonsAndMode, phenotype, exponent, 
-                                       alternative, verbose=TRUE) {
-  ##-----get ordered phenotype
-  phenotype<-phenotype[order(phenotype,decreasing=TRUE)]
-  ##-----calculate enrichment scores for all regulons
+.run.tni.gsea2.alternative <- function(listOfRegulonsAndMode, 
+                                       phenotype, exponent, 
+                                       alternative){
+  ##-----get ranked phenotype
+  phenorank <- rank(-phenotype)
+  
+  ##-----get regulons
   listOfRegulonsUp <- lapply(listOfRegulonsAndMode, function(reg){
-    names(reg[reg>0])
+    as.numeric(names(reg[reg>0]))
   })
   listOfRegulonsDown <- lapply(listOfRegulonsAndMode, function(reg){
-    names(reg[reg<0])
+    as.numeric(names(reg[reg<0]))
   })
-  ##-----set character string specifying the alternative hypothesis
+  ##-----set alternative hypothesis
   ## ...observe that greater/less refer to regulon activity
   if(alternative=="two.sided"){
     alternative_up <- alternative_down <- alternative
@@ -1400,11 +1401,11 @@ treemap<-function(hc){
     alternative_down <- ifelse(alternative=="greater","less", "greater")
   }
   GSEA2.results.up <- sapply(listOfRegulonsUp, .fgseaScores4TNI, 
-                             geneList=phenotype, exponent=exponent, 
-                             alternative=alternative)
+                             phenotype=phenotype, phenorank=phenorank, 
+                             exponent=exponent, alternative=alternative)
   GSEA2.results.down <- sapply(listOfRegulonsDown, .fgseaScores4TNI, 
-                               geneList=phenotype, exponent=exponent, 
-                               alternative=alternative)
+                               phenotype=phenotype, phenorank=phenorank, 
+                               exponent=exponent, alternative=alternative)
   b1<-length(GSEA2.results.up)>0 && length(GSEA2.results.down)>0
   b2<-length(GSEA2.results.up)==length(GSEA2.results.down)
   if(b1 && b2) {
@@ -1423,17 +1424,17 @@ treemap<-function(hc){
 }
 
 ##---------------------------------------------------------
-.fgseaScores4TNI <- function(geneSet, geneList, exponent=1, 
-                            alternative="two.sided"){
+.fgseaScores4TNI <- function(geneSet, phenotype, phenorank, 
+                             exponent=1, alternative="two.sided"){
   if(length(geneSet)>0){
     nh <- length(geneSet)
-    N <- length(geneList)
+    N <- length(phenorank)
     ES <- 0
     Phit <- rep(0, N)
     Pmiss <- rep(0, N)
     runningES <- rep(0, N)
-    hits <- match(geneSet,names(geneList))
-    Phit[hits] <- abs(geneList[hits])^exponent
+    hits <- phenorank[geneSet]
+    Phit[hits] <- abs(phenotype[geneSet])^exponent
     NR <- sum(Phit)
     Pmiss[-hits] <- 1/(N-nh)
     Phit <- cumsum(Phit/NR)

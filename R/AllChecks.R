@@ -9,19 +9,27 @@ tnai.checks <- function(name, para) {
       stop("'maxgap' should be an integer value >=0!\n",call.=FALSE)
   }
   else if(name=="tna.what"){
-    opts<-c("tnet","regulatoryElements","pheno","regulons","refregulons","para","mra","gsea1",
-            "gsea2","overlap","synergy","shadow","summary","status",
-            "regulons.and.pheno","refregulons.and.pheno","regulons.and.mode",
-            "refregulons.and.mode","nondpiregulons.and.mode","rowAnnotation", "colAnnotation")
-    if(!is.character(para) || length(para)!=1 || !(para %in% opts))
+    opts<-c("summary","status","para",
+            "pheno","hits", "regulatoryElements", 
+            "tnet", "refnet",
+            "regulons","refregulons",
+            "regulons.and.mode", "refregulons.and.mode",
+            "rowAnnotation", "colAnnotation",
+            "mra","gsea1", "gsea2",
+            "overlap","synergy","shadow")
+    supps <- c("nondpiregulons.and.mode","regulons.and.pheno","refregulons.and.pheno")
+    if(!is.character(para) || length(para)!=1 || !(para %in% c(opts,supps)))
       stop(paste("'what' should be any one of the options: \n", paste(opts,collapse = ", ") ),call.=FALSE )
   }
   else if(name=="tni.what"){
-    opts<-c("gexp","regulatoryElements","para","refnet","tnet","refregulons",
-            "regulons","cdt","cdtrev", "summary","status", "regulons.and.mode",
-            "refregulons.and.mode","rowAnnotation", "colAnnotation",
-            "regulons.and.mode.gmm","refregulons.and.mode.gmm")
-    if(!is.character(para) || length(para)!=1 || !(para %in% opts))
+    opts<-c("summary","status", "para",
+            "gexp","regulatoryElements",
+            "tnet","refnet",
+            "regulons","refregulons",
+            "regulons.and.mode", "refregulons.and.mode",
+            "rowAnnotation", "colAnnotation", "cdt","cdtrev")
+    supps <- c("regulons.and.mode.gmm","refregulons.and.mode.gmm")
+    if(!is.character(para) || length(para)!=1 || !(para %in% c(opts,supps)))
       stop(paste("'what' should be any one of the options: \n", paste(opts,collapse = ", ") ) ,call.=FALSE )
   }
   else if(name=="avs.what"){
@@ -162,8 +170,8 @@ tnai.checks <- function(name, para) {
   else if(name=="regulatoryElements") {
     if( !is.character(para) || any(is.na(para)) || any(para==""))
       stop("'regulatoryElements' should be a character vector, without 'NA' or empty names!",call.=FALSE)
-    if(any(duplicated(para)))
-      stop("'regulatoryElements' should have unique identifiers!",call.=FALSE)
+    para <- para[!duplicated(para)]
+    return(para)
   }
   else if(name=="samples") {
     if(!is.null(para)){
@@ -609,23 +617,29 @@ tnai.checks <- function(name, para) {
     if(is.null(para)){
       return(para)
     } else {
-      if( (!is.matrix(para) && !is.data.frame(para) ) || ncol(para)<2){
+      if((!is.matrix(para) && !is.data.frame(para)) || ncol(para)<2){
         stop("'colAnnotation' should be a data frame (or a matrix of characters) with ncol >=2 !",call.=FALSE)
       }
-      if(is.matrix(para))para<-data.frame(para,stringsAsFactors=FALSE, check.names=FALSE)
-      junk<-sapply(1:ncol(para),function(i){
-        tp<-para[,i]
-        if(is.list(tp))tp<-unlist(tp)
-        tp<-as.character(tp)
-        para[,i]<<-tp
-      })
+      if(is.matrix(para)) {
+        para <- data.frame(para,stringsAsFactors=FALSE, check.names=FALSE)
+      }
+      for (i in 1:ncol(para)) {
+        column <- para[,i]
+        if (is.list(column)) {
+          column <- sapply(column, paste, collapse = ", ")
+          para[,i] <- column
+        }
+      }
+      if(is.null(rownames(para))) {
+        rownames(para) <- para[,1]
+      }
+      
       #check Col 1 (rownames)
-      if( (any(is.na(para[,1])) || any(para[,1]=="") ) ){
+      if(any(is.na(para[,1])) || any(para[,1]=="")){
         stop("Col 1 in 'colAnnotation' should have no NA or empty value!",call.=FALSE)
       }
-      if( any(duplicated(para[,1])) )
+      if(any(duplicated(para[,1])))
         stop("Col 1 in 'colAnnotation' should have unique ids!",call.=FALSE)
-      rownames(para)<-para[,1]
       #check colnames
       if(is.null(colnames(para))){
         stop("'colAnnotation' must have colnames!")
@@ -633,6 +647,7 @@ tnai.checks <- function(name, para) {
       if(any(duplicated(colnames(para)))){
         stop("'colAnnotation' should have unique col names!")
       }
+      
       return(para)
     }
   }

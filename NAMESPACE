@@ -26,13 +26,12 @@ exportMethods(
   "avs.vse",
   "avs.evse",
   "avs.pevse",
-  "avs.get"
+  "avs.get",
+  "tni.regulon.summary"
 )
 
 export(
   "tni.constructor",
-  "avs.preprocess.LDHapMapRel27",
-  "avs.preprocess.LD1000gRel20130502",
   "tna.plot.gsea1",
   "tna.plot.gsea2",
   "avs.plot1",
@@ -56,5 +55,6 @@ importFrom(stats, aggregate, anova, aov, as.dist, coef, cor, formula, hclust, ks
 importFrom(utils, data, setTxtProgressBar, txtProgressBar)
 importFrom(mixtools,normalmixEM)
 importFrom(viper,aREA)
+importFrom(SummarizedExperiment, assays, rowData, colData)
 
 

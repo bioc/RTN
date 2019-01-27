@@ -214,7 +214,7 @@ vsea<-function(vSet,rSet,annot,verbose=TRUE){
     cl<-getOption("cluster")
     snow::clusterExport(cl, list("get.avsdist","IRanges","overlapsAny",".mtdata"),
                         envir=environment())
-    resrset<-parSapply(cl, 1:length(rSet), function(i) {
+    resrset <- snow::parSapply(cl, 1:length(rSet), function(i) {
       sum(get.avsdist(rSet[[i]],annot))
     })
   } else {
@@ -310,7 +310,7 @@ pre_evsea<-function(vSet, rSet, annot, eqtls, verbose=TRUE){
     snow::clusterExport(cl, list("get.pre_eqtldist","IRanges","overlapsAny",
                                  "findOverlaps","%chin%",".mtdata"),
                         envir=environment())
-    resrset<-parSapply(cl, 1:length(rSet), function(i) {
+    resrset <- snow::parSapply(cl, 1:length(rSet), function(i) {
       sum(get.pre_eqtldist(rSet[[i]], annot, eqtls))
     })
   } else {
@@ -379,7 +379,7 @@ evsea<-function(vSet, rSet, annot, gxdata, snpdata, pValueCutoff=0.01,verbose=TR
     snow::clusterExport(cl, list("get.eqtldist","eqtlTest","IRanges","overlapsAny",
                                  "findOverlaps",".mtdata"),
                         envir=environment())
-    resrset<-parSapply(cl, 1:length(rSet), function(i) {
+    resrset <- snow::parSapply(cl, 1:length(rSet), function(i) {
       sum(get.eqtldist(rSet[[i]], annot, gxdata, snpdata, pValueCutoff))
     })
   } else {
@@ -402,7 +402,7 @@ evseaproxy<-function(rSet, annot, gxdata, snpdata, pValueCutoff=0.01,verbose=TRU
     snow::clusterExport(cl, list("get.eqtldist","eqtlTest","IRanges",
                                  "overlapsAny","findOverlaps",".mtdata"),
                         envir=environment())
-    nulldist<-parSapply(cl, 1:length(rSet), function(i) {
+    nulldist <- snow::parSapply(cl, 1:length(rSet), function(i) {
       res<-get.eqtldist(rSet[[i]], annot, gxdata, snpdata, pValueCutoff)
       sum(res)
     })

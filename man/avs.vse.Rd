@@ -18,7 +18,7 @@ an object. When this function is implemented as the S4 method of class
 \code{\link[RTN:AVS-class]{AVS-class}}, this argument is an object of class 'AVS'.
 }
 \item{annotation}{
-a data frame with genomic annotations listing chromosome coordinates to which a particular property or function has been attributed. It should include the following columns: <CHROM>, <START>, <END> and <ID>. The <ID> column can be any genomic identifier, while values in <CHROM> should be listed in ['chr1', 'chr2', 'chr3' ..., 'chrX']. Both <START> and <END> columns correspond to chromosome positions mapped to the human genome assembly used to build the AVS object (see \code{\link[RTN:avs.preprocess.LDHapMapRel27]{avs.preprocess.LDHapMapRel27}}).
+a data frame with genomic annotations listing chromosome coordinates to which a particular property or function has been attributed. It should include the following columns: <CHROM>, <START>, <END> and <ID>. The <ID> column can be any genomic identifier, while values in <CHROM> should be listed in ['chr1', 'chr2', 'chr3' ..., 'chrX']. Both <START> and <END> columns correspond to chromosome positions mapped to the human genome assembly used to build the AVS object.
 }
 \item{maxgap}{
 a single integer value specifying the max distant (kb) between the AVS and the annotation used to compute the enrichment analysis.
@@ -57,7 +57,7 @@ or not (when verbose=FALSE).
 
 \dontrun{
 # This example requires the RTNdata package! (currently available under request)
-library(RTNdata.LDHapMapRel27)
+library(RTNdata.LDHapMapRel27.hg18)
 library(Fletcher2013b)
 library(TxDb.Hsapiens.UCSC.hg18.knownGene)
 
@@ -66,10 +66,10 @@ library(TxDb.Hsapiens.UCSC.hg18.knownGene)
 ##################################################
 
 #--- step 1: load 'risk SNPs' data (e.g. BCa risk SNPs from the GWAS catalog)
-data(bcarisk, package="RTNdata.LDHapMapRel27")
+data(bcarisk, package = "RTNdata.LDHapMapRel27.hg18")
 
 #--- step 2: build an AVS and 1000 matched random AVSs for the input 'risk SNPs'
-bcavs <- avs.preprocess.LDHapMapRel27(bcarisk, nrand=1000)
+bcavs <- avs.preprocess.LDHapMapRel27.hg18(bcarisk, nrand=1000)
 
 ##################################################
 ### Example of VSE analysis for ERa and FOXA1 
@@ -77,7 +77,7 @@ bcavs <- avs.preprocess.LDHapMapRel27(bcarisk, nrand=1000)
 ##################################################
 
 #--- step 1: load a precomputed AVS (same 'bcavs' object as above!)
-data(bcavs, package="RTNdata.LDHapMapRel27")
+data(bcavs, package="RTNdata.LDHapMapRel27.hg18")
 
 #--- step 2: load cistrome data from the Fletcher2013b package
 #NOTE: Fletcher2013b is a large data package, but only two 'bed files' 
@@ -99,7 +99,7 @@ avs.plot2(bcavs,"vse",height=2.2)
 ##################################################
 
 #--- step 1: load the precomputed AVS (same 'bcavs' object as above!)
-data("bcavs", package="RTNdata.LDHapMapRel27")
+data(bcavs, package="RTNdata.LDHapMapRel27.hg18")
 
 #--- step 2: load genomic annotation for all genes
 genemap <- as.data.frame(genes(TxDb.Hsapiens.UCSC.hg18.knownGene))

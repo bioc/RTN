@@ -16,14 +16,13 @@ idkey=NULL)
 
 \arguments{
 \item{object}{
-an object of class 'TNI' \code{\link[RTN:TNI-class]{TNI-class}}.
+an object of class \code{\link[RTN:TNI-class]{TNI-class}}.
 }
 \item{what}{
-a single character value specifying which information should be retrieved from the slots. Options: 'gexp', 'regulatoryElements', 'para', 'refnet', 'tnet','refregulons','regulons','cdt', 'summary', 'annotation' and 'status'. Regulons can also be retrieved mapped to the assiged mode of action ('regulons.and.mode', 'refregulons.and.mode').
+a single character value specifying which information should be retrieved from the slots. Options: 'summary', 'status', 'para', 'gexp','regulatoryElements', 'tnet', 'refnet', 'regulons', 'refregulons', 'regulons.and.mode', 'refregulons.and.mode', 'rowAnnotation', 'colAnnotation', 'cdt', 'cdtrev').
 }
 \item{order}{
-a single logical value specifying whether or not the output data should be ordered by significance. 
-Valid only for 'cdt' option.
+a single logical value specifying whether or not the output data should be ordered by significance. Valid only for 'cdt' option.
 }
 \item{ntop}{
 a single integer value specifying to select how many results of top significance from 'cdt' option.
@@ -36,8 +35,64 @@ an optional single character value specifying an ID name from the available 'TNI
 }
 }
 
+\details{
+
+Options for the 'what' argument retrieve the following types of information:
+
+\describe{
+
+\item{summary}{
+A list summarizing parameters and results available in the TNI object (see \code{\link[RTN:tni.regulon.summary]{tni.regulon.summary}} for a summary of the network and regulons).
+}
+\item{status}{
+A vector indicating the status of each available method in the pipeline.
+}
+\item{para}{
+A list with the parameters used by each available method in the pipeline.
+}
+\item{gexp}{
+A gene expression matrix.
+}
+\item{regulatoryElements}{
+A vector of regulatory elements (e.g. transcription factors).
+}
+\item{tnet}{
+A data matrix with MI values, evaluated by the DPI filter. MI values are computed between regulators and targets, with regulators on cols and targets on rows. Note that signals (+/-) are assigned to the inferred associations in order to represent the 'mode of action', which is derived from Pearson's correlation between regulators and targets.
+}
+\item{refnet}{
+A data matrix with MI values (not evaluated by the DPI filter). MI values are computed between regulators and targets, with regulators on cols and targets on rows. Note that signals (+/-) are assigned to the inferred associations in order to represent the 'mode of action', which is derived from Pearson's correlation between regulators and targets.
+}
+\item{regulons}{
+A list with regulons extracted from the 'tnet' data matrix.
+}
+\item{refregulons}{
+A list with regulons extracted from the 'refnet' data matrix.
+}
+\item{regulons.and.mode}{
+A list with regulons extracted from the 'tnet' data matrix, including the assiged 'mode of action'.
+}
+\item{refregulons.and.mode}{
+A list with regulons extracted from the 'refnet' data matrix, including the assiged 'mode of action'.
+}
+\item{rowAnnotation}{
+A data frame with probe-to-gene annotation.
+}
+\item{colAnnotation}{
+A data frame with sample annotation.
+}
+\item{cdt}{
+A data frame with results from the \code{\link[RTN:tni.conditional]{tni.conditional}} analysis pipeline.
+}
+\item{cdtrev}{
+A data frame with the same results as retrieved above (using 'cdt'), but arranged in a different format.
+}
+
+}
+
+}
+
 \value{
-get the slot content from an object of class 'TNI' \code{\link[RTN:TNI-class]{TNI-class}}.
+Get the slot content from a \code{\link[RTN:TNI-class]{TNI-class}} object.
 }
 
 \author{
@@ -62,10 +117,12 @@ rtni<-tni.dpi.filter(rtni)
 # check summary
 tni.get(rtni,what="summary")
 
-# get reference/relevance network
+# get a data matrix with MI values 
+# (not evaluated by 'tni.dpi.filter')
 refnet<-tni.get(rtni,what="refnet")
 
-# get transcriptional network
+# get a data matrix with MI values
+# (evaluated by 'tni.dpi.filter')
 tnet<-tni.get(rtni,what="tnet")
 
 # get status of the pipeline

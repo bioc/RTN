@@ -102,7 +102,7 @@ tni.perm.separate<-function(object,verbose=TRUE){
     snow::clusterExport(cl, list(".perm.pmin.separate"),envir=environment())
     if(verbose)cat("-Performing permutation analysis (parallel version - ProgressBar disabled)...\n")
     if(verbose)cat("--For", length(object@regulatoryElements), "regulons...\n")
-    mipval<-parSapply(cl, object@regulatoryElements, function(tf){
+    mipval <- snow::parSapply(cl, object@regulatoryElements, function(tf){
       pi<-which(tf==rownames(object@gexp))
       midist <- .perm.pmin.separate(object@gexp, pi, object@para$perm$estimator, object@para$perm$nPermutations)
       midist<-sort(midist, na.last = NA)
@@ -165,7 +165,7 @@ tni.perm.pooled<-function(object, parChunks=10, verbose=TRUE){
     nperChunks<-unlist(lapply(nperChunks,length))
     if(verbose)pb<-txtProgressBar(style=3)
     for(i in 1:parChunks){
-      permdist <- parLapply(cl,1:nperChunks[i],function(j){
+      permdist <- snow::parLapply(cl,1:nperChunks[i],function(j){
         permt <- .perm.pmin.pooled(object@gexp,length(object@regulatoryElements),object@para$perm$estimator)
         permt <- sort(permt, na.last = NA)
         length(permt)-findInterval(uniqueVec,permt)
@@ -238,7 +238,7 @@ tni.boot<-function(object, parChunks=10, verbose=TRUE){
     nbootChunks<-unlist(lapply(nbootChunks,length))
     if(verbose)pb<-txtProgressBar(style=3)
     for(i in 1:parChunks){
-      bootdist<-parLapply(cl,1:nbootChunks[i],function(j){
+      bootdist <- snow::parLapply(cl,1:nbootChunks[i],function(j){
         #--- get bootstrap sample
         x <- object@gexp[,sample(ncol(object@gexp),replace=TRUE)]
         #--- add a null dist to deal with eventual sd==0
@@ -538,7 +538,7 @@ cv.filter<-function(gexp, ids){
   meangx<-apply(gexp,1,mean,na.rm=TRUE)
   sdgx<-apply(gexp,1,sd,na.rm=TRUE)
   cvgx<-abs(sdgx/meangx)
-  # aline ids
+  # align ids
   ids <- data.frame(ids[rownames(gexp),], CV=cvgx, stringsAsFactors=FALSE)
   # remove probes without rowAnnotation
   ids <- ids[!is.na(ids[,2]),]
@@ -1596,6 +1596,28 @@ treemap<-function(hc){
   return(tftar_scores)
 }
 
+#-- Helper function for tni.regulon.summary
+.regulon.summary <- function(tf, refnet, tnet) {
+    #-- Initialize
+    regulonSummary <- list()
+    
+    #-- Add target information
+    regulonSummary$targets <- as.matrix(data.frame(
+        Total = c(sum(tnet[,tf] != 0), sum(refnet[,tf] != 0)),
+        `Positive` = c(sum(tnet[,tf] > 0), 
+                       `Positive targets` = sum(refnet[,tf] > 0)),
+        `Negative` = c(sum(tnet[,tf] < 0),
+                       `Negative targets` = sum(refnet[,tf] < 0)),
+        row.names = c("DPInet", "Refnet")))
+    #-- Add information about MI with other regulators
+    tfMI <- refnet[tf,]
+    other_regs <- tfMI[order(abs(tfMI), decreasing = TRUE)]
+    regulonSummary$regulatorsMI <- other_regs[other_regs != 0]
+    
+    return(regulonSummary)
+    
+}
+
 #---------------------------------------------------------------
 #test Cohen's Kappa agreement between Modulon and regulons
 # pkappa<-function (Modulon,Regulon){
@@ -1691,3 +1713,4 @@ treemap<-function(hc){
 #   rownames(hcEdges)<-NULL
 #   hcEdges
 # }
+

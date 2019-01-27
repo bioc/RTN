@@ -63,17 +63,15 @@ Mauro Castro
 
 \seealso{
 \code{\link[RTN:TNA-class]{TNA-class}}
-\code{\link[RTN:avs.preprocess.LDHapMapRel27]{avs.preprocess.LDHapMapRel27}}
 }
 
 \examples{
 
 \dontrun{
 #This example requires the RTNdata package! (currently available under request)
-library(RTNdata.LDHapMapRel27)
-data(bcarisk) #mapped to the same genome build of the RTNdata!
-avs <- new("AVS", markers=bcarisk)
-# see the 'avs.preprocess.LDHapMapRel27' constructor
+library(RTNdata.LDHapMapRel27.hg18)
+data(bcarisk, package = "RTNdata.LDHapMapRel27.hg18")
+avs <- avs.preprocess.LDHapMapRel27.hg18(bcarisk, nrand=100)
 }
 }
 

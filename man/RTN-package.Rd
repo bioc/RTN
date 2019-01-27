@@ -36,6 +36,7 @@ LazyLoad: \tab yes\cr
 \link[RTN:tni.conditional]{tni.conditional}: \tab conditional mutual information analysis.\cr
 \link[RTN:tni.get]{tni.get}: \tab get information from individual slots in a TNI object.\cr
 \link[RTN:tni.graph]{tni.graph}: \tab compute a graph from TNI objects.\cr
+\link[RTN:tni.regulon.summary]{tni.regulon.summary}: \tab return a summary of network and regulons. \cr
 \link[RTN:tni2tna.preprocess]{tni2tna.preprocess}: \tab a preprocessing method for objects of class TNI.\cr
 \link[RTN:TNA-class]{TNA-class}: \tab an S4 class for Transcriptional Network Analysis.\cr
 \link[RTN:tna.mra]{tna.mra}: \tab master regulator analysis (MRA) over a list of regulons.\cr
@@ -48,8 +49,6 @@ LazyLoad: \tab yes\cr
 \link[RTN:tna.plot.gsea1]{tna.plot.gsea1}: \tab plot results from the one-tailed GSEA.\cr
 \link[RTN:tna.plot.gsea2]{tna.plot.gsea2}: \tab plot results from the two-tailed GSEA.\cr
 \link[RTN:AVS-class]{AVS-class}: \tab an S4 class to do enrichment analyses in associated variant sets (AVSs).\cr
-\link[RTN:avs.preprocess.LDHapMapRel27]{avs.preprocess.LDHapMapRel27}: \tab constructor for associated variant sets (AVS).\cr
-\link[RTN:avs.preprocess.LD1000gRel20130502]{avs.preprocess.LD1000gRel20130502}: \tab constructor for associated variant sets (AVS).\cr
 \link[RTN:avs.vse]{avs.vse}: \tab variant set enrichment analysis.\cr
 \link[RTN:avs.evse]{avs.evse}: \tab an eQTL/VSE pipeline for variant set enrichment analysis.\cr
 \link[RTN:avs.pevse]{avs.pevse}: \tab an EVSE pipeline using precomputed eQTLs.\cr

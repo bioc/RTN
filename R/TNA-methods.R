@@ -18,9 +18,9 @@ setMethod("initialize",
 			if(missing(regulatoryElements))stop("NOTE: 'regulatoryElements' is missing!",call.=FALSE)
 			tnai.checks(name="transcriptionalNetwork",transcriptionalNetwork)
 			tnai.checks(name="referenceNetwork",referenceNetwork)
-			tnai.checks(name="regulatoryElements",regulatoryElements)      
 			tnai.checks(name="phenotype",phenotype)
 			tnai.checks(name="hits",hits)
+			regulatoryElements <- tnai.checks(name="regulatoryElements",regulatoryElements)    
       if(is.null(phenotype) && is.null(hits)){
        stop("NOTE: either 'phenotype' or 'hits' should be available!",call.=FALSE)
       }
@@ -29,7 +29,7 @@ setMethod("initialize",
 			if(b1 || b2) stop("NOTE: col and row names in 'referenceNetwork' should match 'transcriptionalNetwork'!",call.=FALSE)
 			if(sum(!regulatoryElements%in%colnames(transcriptionalNetwork))>0)
 			  stop("NOTE: one or more 'regulatoryElements' missing in the 'transcriptionalNetwork'!",call.=FALSE)
-      if(is.null(names(regulatoryElements)))names(regulatoryElements)<-regulatoryElements      
+      if(is.null(names(regulatoryElements)))names(regulatoryElements) <- regulatoryElements      
 			##-----initialization
 			.Object@transcriptionalNetwork<-transcriptionalNetwork
 			.Object@referenceNetwork<-referenceNetwork
@@ -329,6 +329,8 @@ setMethod(
       query<-object@colAnnotation      
     } else if(what=="status"){
       query<-object@status
+    } else if(what=="hits"){
+      query<-object@hits
     }
     return(query)
   }

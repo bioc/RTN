@@ -7,48 +7,47 @@
 ## Entry point for the all TNI/TNA pipelines, including pre-processing
 tni.constructor <- function(expData, regulatoryElements, rowAnnotation=NULL, 
                             colAnnotation=NULL, cvfilter=TRUE, verbose=TRUE){
-  #---todo: summarizedExperiment (with expData)
-  #
-  #---
-  object <- new("TNI", gexp=expData, regulatoryElements=regulatoryElements)
-  object <- tni.preprocess(object, rowAnnotation, colAnnotation, cvfilter,verbose)
-  return(object)
+    
+    #--- summarizedExperiment (with expData)
+    if (class(expData) == "SummarizedExperiment" || 
+        class(expData) == "RangedSummarizedExperiment") {
+        if (length(assays(expData)) > 1) {
+            stop("NOTE: please input a SummarizedExperiment with only one assay")
+        }
+        rowAnnotation <- as.data.frame(rowData(expData))
+        colAnnotation <- as.data.frame(colData(expData))
+        expData <- assays(expData)[[1]]
+    }
+    object <- new("TNI", gexp=expData, regulatoryElements=regulatoryElements)
+    object <- tni.preprocess(object, rowAnnotation, colAnnotation, cvfilter,verbose)
+    return(object)
 }
 
 ##------------------------------------------------------------------------------
 ##initialization method
 setMethod("initialize",
           "TNI",
-          function(.Object, gexp, regulatoryElements, transcriptionFactors) {
-            
-            #---check compatibility
-            .Object <- upgradeTNI(.Object)
-            
-            if(!missing(transcriptionFactors)){
-              warning("'transcriptionFactors' argument is deprected!
-                      please use 'regulatoryElements' instead.'")
-              regulatoryElements <- transcriptionFactors
-            }
+          function(.Object, gexp, regulatoryElements) {
             
             ##-----checks of required objects
             if(missing(gexp))stop("NOTE: 'gexp' is missing!",call.=FALSE)    
             if(missing(regulatoryElements))stop("NOTE: 'regulatoryElements' is missing!",call.=FALSE)            
             tnai.checks(name="gexp",gexp)
-            tnai.checks(name="regulatoryElements",regulatoryElements)
+            regulatoryElements <- tnai.checks(name="regulatoryElements",regulatoryElements)
             ##-----initialization
-            .Object@gexp<-gexp
-            .Object@regulatoryElements<-regulatoryElements
-            .Object@modulators<-character()
+            .Object@gexp <- gexp
+            .Object@regulatoryElements <- regulatoryElements
+            .Object@modulators <- character()
             ##-----result slot
             .Object@results<-list()
             ##-----status matrix
             .Object@status <- rep("[ ]", 1, 5)
             names(.Object@status) <- c("Preprocess", "Permutation", "Bootstrap", "DPI.filter", "Conditional")
             ##-----summary info
-            ##-----tfs
-            sum.info.tfs<-matrix(,1,2)
-            rownames(sum.info.tfs)<-"TF"
-            colnames(sum.info.tfs)<-c("input","valid")           
+            ##-----regulatoryElements
+            sum.info.regElements<-matrix(,1,2)
+            rownames(sum.info.regElements)<-"regulatoryElements"
+            colnames(sum.info.regElements)<-c("input","valid")           
             ##-----parameters
             sum.info.para <- list()
             sum.info.para$perm<-matrix(,1,6)
@@ -68,15 +67,15 @@ setMethod("initialize",
             ##-----results
             sum.info.results<-list()
             sum.info.results$tnet<-matrix(,2,3)
-            colnames(sum.info.results$tnet)<-c("TFs","Targets","Edges")
+            colnames(sum.info.results$tnet)<-c("regulatoryElements","Targets","Edges")
             rownames(sum.info.results$tnet)<-c("tnet.ref","tnet.dpi")
-            .Object@summary<-list(tfs=sum.info.tfs,para=sum.info.para,results=sum.info.results)			
+            .Object@summary<-list(regulatoryElements=sum.info.regElements,
+                                  para=sum.info.para,results=sum.info.results)			
             .Object
           }
 )
 
 ##------------------------------------------------------------------------------
-## deprecated method (July 18, 2017), use tni.constructor!
 setMethod(
   "tni.preprocess",
   "TNI",
@@ -104,13 +103,28 @@ setMethod(
     if(na.check>0){
       stop("--NOTE: 'expression data' should be a positive numeric matrix, without NAs or NaNs! \n")
     }
+    object@summary$regulatoryElements[,"input"] <- length(object@regulatoryElements)
     
     ##-----check rowAnnotation if available
     if(!is.null(rowAnnotation)){
       if(verbose)cat("--Mapping 'gexp' to 'rowAnnotation'...\n")
       if( any(!rownames(object@gexp)%in%rownames(rowAnnotation)) ){
-        stop("NOTE: all rownames in 'expression data' should be available in col1 of 'rowAnnotation'!",call.=FALSE)
+        stop("NOTE: all rownames in 'expression data' should be available in col1 of 'rowAnnotation'!",
+             call.=FALSE)
       }
+      
+      #--- check 'regulatoryElements' in rowAnnotation
+      #--- if not in col1, then update ids
+      col1 <- sapply(1:ncol(rowAnnotation),function(i){
+        sum(object@regulatoryElements%in%rowAnnotation[,i],na.rm=TRUE)
+      })
+      col1 <- which(col1==max(col1))[1]
+      if(col1!=1){
+        idx <- rowAnnotation[[col1]] %in% object@regulatoryElements
+        object@regulatoryElements <- rownames(rowAnnotation)[idx]
+      }
+      
+      #--- cvfilter
       if(cvfilter){
         if(verbose)cat("--Removing duplicated genes (keep max coefficient of variation!)...\n")
         #i.e. col1=probe, col2=gene (collapse cv by col2)
@@ -124,7 +138,7 @@ setMethod(
         tp2<-paste("should be provided with unique and matched probe-to-gene identifiers!", sep="")          
         if(verbose)warning(tp1,tp2,call.=FALSE)
       }
-      #correct 'symbol' column if a valid name 
+      #check 'symbol' col in rowAnnotation
       #ps. rowAnnotation is already check for duplicated col names!
       idx<-toupper(colnames(object@rowAnnotation))%in%"SYMBOL"
       if(any(idx)){
@@ -145,6 +159,7 @@ setMethod(
       tp <- rownames(object@gexp)
       object@rowAnnotation <- data.frame(ID=tp, row.names=tp, stringsAsFactors = FALSE)
     }
+    
     ##-----check colAnnotation if available
     if(!is.null(colAnnotation)){
       if(verbose)cat("--Mapping 'gexp' to 'colAnnotation'...\n")
@@ -156,6 +171,7 @@ setMethod(
       tp <- colnames(object@gexp)
       object@colAnnotation <- data.frame(ID=tp, row.names=tp, stringsAsFactors = FALSE)
     }
+    
     #----check sd in gexp
     sd.check <- apply(object@gexp,1,sd)
     if(any(is.na(sd.check))){
@@ -165,32 +181,18 @@ setMethod(
     sd.check <- sd.check==0
     if(any(sd.check)){
       if(verbose)cat("--Removing inconsistent data: standard deviation is zero for", sum(sd.check),"gene(s)! \n")
-      rmv<-rownames(object@rowAnnotation)[sd.check]
-      object@gexp<-object@gexp[!sd.check,]
-      object@rowAnnotation<-object@rowAnnotation[!sd.check,]
-      idx<-object@regulatoryElements%in%rmv
-      if(any(idx)){
-        object@regulatoryElements<-object@regulatoryElements[!idx]
-      }
-      idx<-object@modulators%in%rmv
-      if(any(idx)){
-        object@modulators<-object@modulators[!idx]
-      }
+      object@gexp <- object@gexp[!sd.check,]
+      object@rowAnnotation <- object@rowAnnotation[!sd.check,]
     }
     
-    #-----check TFs in gexp
-    object@summary$tfs[,"input"]<-length(object@regulatoryElements)
-    if(verbose) cat("--Checking TFs in the dataset...\n")
-    idxtfs<-object@regulatoryElements%in%rownames(object@gexp)
-    object@regulatoryElements<-object@regulatoryElements[idxtfs]
-    object@summary$tfs[,"valid"]<-length(object@regulatoryElements)
+    #-----check 'regulatoryElements' in gexp
+    if(verbose) cat("--Checking 'regulatoryElements' in 'gexp'...\n")
+    idx <- object@regulatoryElements%in%rownames(object@gexp)
+    object@regulatoryElements <- object@regulatoryElements[idx]
     if(length(object@regulatoryElements)==0)stop("NOTE: input 'regulatoryElements' contains no useful data!\n",call.=FALSE)
-    ##-----make sure 'regulatoryElements' is a named character vector
-    if(!is.character(object@regulatoryElements)){
-      nm<-names(object@regulatoryElements)
-      object@regulatoryElements<-as.character(object@regulatoryElements)
-      names(object@regulatoryElements)<-nm
-    }
+    object@summary$regulatoryElements[,"valid"] <- length(object@regulatoryElements)
+    
+    ##-----make sure 'regulatoryElements' is named
     if(is.null(names(object@regulatoryElements))){
       #..if null names, add available ones
       if(!is.null(object@rowAnnotation$SYMBOL)){
@@ -199,22 +201,23 @@ setMethod(
         names(object@regulatoryElements)<-object@regulatoryElements
       }
     } else {
-      #..else remove any empty space or NA from TF names!!!
-      tfnames<-names(object@regulatoryElements)
-      idx<-tfnames==""|tfnames=="NA"
-      names(object@regulatoryElements)[idx]<-object@regulatoryElements[idx]
-      #..and check possible incositency between 'rowAnnotation' and 'regulatoryElements' names
       if(!is.null(object@rowAnnotation$SYMBOL)){
+        #..check possible incositency between 'rowAnnotation' and 'regulatoryElements' names
         tp<-object@rowAnnotation[object@regulatoryElements,"SYMBOL"]
         if(any(tp!=names(object@regulatoryElements))){
           tp1<-"NOTE: inconsistent symbol(s) found in the named vector 'regulatoryElements'!\n"
           tp2<-"Please, use symbols consistent with col <SYMBOL> in 'rowAnnotation'!"
           warning(tp1,tp2)
         }
+      } else {
+        #..remove any empty space or NA from 'regulatoryElements' names
+        rnames<-names(object@regulatoryElements)
+        idx<-rnames==""|rnames=="NA"
+        names(object@regulatoryElements)[idx]<-object@regulatoryElements[idx]
       }
     }
     
-    ##-----sort by available names
+    ##-----sort by names
     idx <- sort.list(names(object@regulatoryElements))
     object@regulatoryElements <- object@regulatoryElements[idx]
     
@@ -475,7 +478,7 @@ setMethod(
       snow::clusterExport(cl, list(".run.tni.gsea2.alternative",".fgseaScores4TNI","gseaScores4RTN"),
                           envir=environment())
       regulonActivity <- list()
-      res <- parLapply(cl, samples, function(samp){
+      res <- snow::parLapply(cl, samples, function(samp){
         .run.tni.gsea2.alternative(
           listOfRegulonsAndMode=listOfRegulonsAndMode,
           phenotype=dt[, samp],
@@ -1631,6 +1634,117 @@ setMethod(
   }
 )
 
+#-------------------------------------------------------------------------------
+## tni.regulon.summary returns a summary of useful information about a particular
+## regulon(s) or the network, to aid in interpretation
+setMethod(
+    "tni.regulon.summary",
+    "TNI",
+    function(object, regulatoryElements = NULL, verbose = TRUE) {
+        #-- Basic checks
+        if(object@status["DPI.filter"]!="[x]")
+            stop("NOTE: input 'object' needs dpi analysis!")
+        if(!is.null(regulatoryElements)){
+          regulatoryElements <- tnai.checks("regulatoryElements",regulatoryElements)
+        }
+        tnai.checks("verbose",verbose)
+        
+        #-- if regulatoryElements = NULL, get a summary of network as a whole
+        if (is.null(regulatoryElements)) {
+            networkSummary <- tni.get(object)$results
+            
+            if(verbose) {
+                nRegulators <- paste("This regulatory network comprised of", 
+                                     networkSummary$tnet["tnet.dpi", "regulatoryElements"],
+                                     "regulons. \n")
+                cat(nRegulators)
+                message("-- DPI-filtered network: ")
+                print(networkSummary$tnet["tnet.dpi",], quote = FALSE)
+                print(networkSummary$regulonSize["tnet.dpi",], quote = FALSE, 
+                      digits = 3)
+                message("-- Reference network: ")
+                print(networkSummary$tnet["tnet.ref",], quote = FALSE) 
+                print(networkSummary$regulonSize["tnet.ref",], quote = FALSE,
+                      digits = 3)
+                cat("---\n")
+            }
+            
+            invisible(networkSummary)
+        } else { #-- Otherwise, get TF summaries
+            #-- Find out annotation input type
+            rowAnnot <- tni.get(object, "rowAnnotation")
+            idkeys <- apply(rowAnnot, 2, function(annotType) {
+                all(regulatoryElements %in% annotType)
+            })
+            if (sum(idkeys) != 1) {
+                stop("NOTE: input 'regulatoryElements' contains no useful data!\n")
+            }
+            idkey <- names(idkeys)[idkeys]
+            
+            #-- Get all regulon and ref regulon information for regulatoryElements
+            tnet <- tni.get(object, "tnet", idkey = idkey)
+            refnet <-  tni.get(object, "refnet", idkey = idkey)
+            
+            #-- Add names for prettyness
+            names(regulatoryElements) <- regulatoryElements
+            
+            #-- Get summaries
+            allRegulonSummary <- lapply(regulatoryElements, .regulon.summary, refnet, tnet)
+            
+            #-- Print
+            if (verbose) {
+                for(tf in regulatoryElements) {
+                    regSummary <- allRegulonSummary[[tf]]
+                    
+                    if (length(regSummary$regulatorsMI) <= 10) {
+                        textRegsMI <- paste0(paste(names(regSummary$regulatorsMI),
+                                                   collapse = ", "), "\n", "\n")
+                    } else {
+                        textRegsMI <- paste0(paste(names(regSummary$regulatorsMI)[1:10],
+                                                   collapse = ", "),
+                                             "...[", 
+                                             length(regSummary$regulatorsMI) - 10, 
+                                             " more]", "\n", "\n")
+                    }
+                    
+                    nTars <- regSummary$targets["DPInet", "Total"]
+                    
+                    #-- Size info
+                    if(nTars < 50) regsize <- "small"
+                    else if (nTars < 200) regsize <- "medium-sized"
+                    else regsize <- "large"
+                    
+                    #-- Balance info
+                    posTars <- regSummary$targets["DPInet","Positive"]
+                    regbalance <- ifelse(posTars > 0.75*nTars || posTars < 0.25*nTars,
+                                         "unbalanced", "balanced")
+                    
+                    
+                    #-- Print
+                    cat(paste("The", tf, "regulon", "has", nTars, 
+                              "targets, it's a", regsize, 
+                              "and", regbalance,
+                              "regulon.", "\n"))
+                    message("-- DPI filtered network targets:")
+                    print(regSummary$targets["DPInet",], quote = FALSE)
+                    message("-- Reference network targets:")
+                    print(regSummary$targets["Refnet",], quote = FALSE)
+                    message("-- Regulators with mutual information:")
+                    cat(textRegsMI)
+                    
+                    #-- Warning for < 15 targets in a cloud
+                    if (regSummary$targets["DPInet","Positive"] < 15) {
+                        warning("WARNING: This regulon has less than 15 positive targets. Regulon activity readings may be unreliable.\n")
+                    } else if (regSummary$targets["DPInet","Negative"] < 15) {
+                        warning("WARNING: This regulon has less than 15 negative targets. Regulon activity readings may be unreliable.\n")
+                    }
+                    cat("---\n")
+                }
+            }
+            invisible(allRegulonSummary)
+        }
+    }
+)
 
 ##------------------------------------------------------------------------------
 ##------------------------------------------------------------------------------
@@ -1658,6 +1772,11 @@ upgradeTNI <- function(object){
       object@colAnnotation <- data.frame(ID=tp, row.names=tp, stringsAsFactors = FALSE)
     }
   }
+  sum.info.results <- object@summary$results
+  colnames(sum.info.results$tnet)<-c("regulatoryElements","Targets","Edges")
+  object@summary$results <- sum.info.results
+  names(object@summary) <- c("regulatoryElements","para","results")
+  rownames(object@summary$regulatoryElements) <- "regulatoryElements"
   return(object)
 }
 

@@ -9,7 +9,7 @@ setMethod("initialize",
           function(.Object, markers) {
             ##-----check arguments
             if(missing(markers))stop("NOTE: 'markers' is missing!",call.=FALSE) 
-            markers=avs.checks(name="markers",markers)
+            markers <- .avs.checks(name="markers",markers)
             ##-----initialization
             .Object@validatedMarkers<-markers
             .Object@markers<-markers$rsid
@@ -564,3 +564,27 @@ setMethod(
   }
 )
 
+##------------------------------------------------------------------------------
+##This function is used for argument checking
+.avs.checks <- function(name, para){
+  if(name=="markers") {
+    if( !is.data.frame(para) || ncol(para)<4 ){
+      stop("'markers' should be a dataframe, a 'BED file' format with ncol >= 4 !",call.=FALSE)
+    }
+    para<-para[,1:4]
+    b1 <- !is.numeric(para[,2]) && !is.integer(para[,2])
+    b2 <- !is.numeric(para[,3]) && !is.integer(para[,3])
+    if(b1 || b2){
+      stop("'markers' should have a 'BED file' format, with chromosomal positions as integer values!",call.=FALSE)
+    }
+    para$start<-as.integer(para$start)
+    para$end<-as.integer(para$end)
+    colnames(para)<-c("chrom","start","end","rsid")
+    if(is.numeric(para$chrom) || is.integer(para$chrom)){
+      para$chrom <- paste("chr",para$chrom,sep="")
+    }
+    para$chrom<-as.character(para$chrom)
+    para$rsid<-as.character(para$rsid)
+    return(para)
+  }
+}

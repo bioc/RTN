@@ -124,7 +124,7 @@ pairwiseSynergy <- function(collectionsOfPairs, phenotype, exponent=1,
     #get permutation scores
     cl<-getOption("cluster")
     snow::clusterExport(cl, list("gseaScores4RTN"),envir=environment())
-    permScores<-parSapply(cl,1:length(collectionsOfPairs), function(i){
+    permScores <- snow::parSapply(cl,1:length(collectionsOfPairs), function(i){
       gsPair<-collectionsOfPairs[[i]]
       bl1 <- length(gsPair[[2]]) >= 1
       bl2 <- length(gsPair[[2]]) >= minter*length(gsPair[[1]])
@@ -193,7 +193,7 @@ pairwiseShadow <- function(collectionsOfPairs, phenotype, exponent=1,
     #get permutation scores
     cl<-getOption("cluster")
     snow::clusterExport(cl, list("gseaScores4RTN"),envir=environment())
-    permScores<-parSapply(cl,1:length(collectionsOfPairs), function(i){
+    permScores <- snow::parSapply(cl,1:length(collectionsOfPairs), function(i){
       gsPair<-collectionsOfPairs[[i]]
       bl1 <- length(gsPair[[1]])-length(gsPair[[2]]) >= 1
       bl2 <- length(gsPair[[1]])-length(gsPair[[2]]) >= minter*length(gsPair[[1]])
@@ -669,7 +669,7 @@ gseaScoresBatchParallel4RTN <- function(geneList, geneNames.perm,
     ES <- list(scoresObserved = ES[1], scoresperm = ES[2:(nPermutations+1)])
     return(ES)	
   }
-  scores <- parSapply(getOption("cluster"), 1:length(collectionOfGeneSets), function(i) {
+  scores <- snow::parSapply(getOption("cluster"), 1:length(collectionOfGeneSets), function(i) {
     gseaScoresBatchLocal(geneList, geneNames.perm = geneNames.perm, geneSet = collectionOfGeneSets[[i]], 
                          exponent = exponent, nPermutations = nPermutations)
   }

@@ -38,9 +38,12 @@ setGeneric("tni.area3",
 setGeneric("tni.graph",
            function(object, tnet="dpi", gtype="rmap", minRegulonSize=15, tfs=NULL, amapFilter="quantile", amapCutoff=NULL, ntop=NULL, ...)
              standardGeneric("tni.graph"), package="RTN")
+setGeneric("tni.regulon.summary",
+           function(object, regulatoryElements = NULL, verbose = TRUE)
+               standardGeneric("tni.regulon.summary"), package="RTN")
 setGeneric("tni2tna.preprocess",
            function(object, phenotype=NULL, hits=NULL, phenoIDs=NULL, duplicateRemoverMethod="max", 
-                    verbose=TRUE) 
+                    verbose=TRUE)
              standardGeneric("tni2tna.preprocess"), package="RTN")
 ##-------------------------------------------------------------------------
 setGeneric("tna.graph",

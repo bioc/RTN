@@ -9,7 +9,7 @@ This is a generic function, provides all preprocessing methods for the 'tni.cons
 
 \usage{
 tni.preprocess(object, rowAnnotation=NULL, colAnnotation=NULL, cvfilter=TRUE, 
-verbose=TRUE, gexpIDs)
+verbose=TRUE)
 }
 
 \arguments{
@@ -28,9 +28,6 @@ a single logical value specifying to remove duplicated genes in the gene express
 \item{verbose}{
 a single logical value specifying to display detailed messages (when verbose=TRUE) 
 or not (when verbose=FALSE).
-}
-\item{gexpIDs}{
-deprected argument! please use 'rowAnnotation'.
 }
 }
 

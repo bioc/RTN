@@ -595,20 +595,26 @@ tnai.checks <- function(name, para) {
         tp<-as.character(tp)
         para[,i]<<-tp
       })
-      #check Col 1 (rownames)
-      if( (any(is.na(para[,1])) || any(para[,1]=="") ) ){
-        stop("Col 1 in 'rowAnnotation' should have no NA or empty value!",call.=FALSE)
-      }
-      if( any(duplicated(para[,1])) )
-        stop("Col 1 in 'rowAnnotation' should have unique ids!",call.=FALSE)
-      rownames(para)<-para[,1]
       #check colnames
       if(is.null(colnames(para))){
-        colnames(para)<-paste("C",1:ncol(para),sep="")
+        stop("'rowAnnotation' must have colnames!")
       }
       colnames(para)<-toupper(colnames(para))
       if(any(duplicated(colnames(para)))){
-        stop("'rowAnnotation' should have unique col names (not case sensitive)!")
+        stop("'rowAnnotation' should have unique colnames (not case sensitive)!")
+      }
+      #check rownames
+      if(is.null(rownames(para))){
+        if(any(is.na(para[,1])) || any(para[,1]=="")){
+          stop("Col 1 in 'rowAnnotation' should have no NA or empty value!",call.=FALSE)
+        }
+        if(any(duplicated(para[,1])))
+          stop("Col 1 in 'rowAnnotation' should have unique ids!",call.=FALSE)
+        rownames(para) <- para[,1]
+      } else {
+        if(!identical(rownames(para),para[,1])){
+          para <- cbind(ID=rownames(para), para)
+        }
       }
       return(para)
     }
@@ -630,16 +636,6 @@ tnai.checks <- function(name, para) {
           para[,i] <- column
         }
       }
-      if(is.null(rownames(para))) {
-        rownames(para) <- para[,1]
-      }
-      
-      #check Col 1 (rownames)
-      if(any(is.na(para[,1])) || any(para[,1]=="")){
-        stop("Col 1 in 'colAnnotation' should have no NA or empty value!",call.=FALSE)
-      }
-      if(any(duplicated(para[,1])))
-        stop("Col 1 in 'colAnnotation' should have unique ids!",call.=FALSE)
       #check colnames
       if(is.null(colnames(para))){
         stop("'colAnnotation' must have colnames!")
@@ -647,7 +643,19 @@ tnai.checks <- function(name, para) {
       if(any(duplicated(colnames(para)))){
         stop("'colAnnotation' should have unique col names!")
       }
-      
+      #check rownames
+      if(is.null(rownames(para))){
+        if(any(is.na(para[,1])) || any(para[,1]=="")){
+          stop("Col 1 in 'colAnnotation' should have no NA or empty value!",call.=FALSE)
+        }
+        if(any(duplicated(para[,1])))
+          stop("Col 1 in 'colAnnotation' should have unique ids!",call.=FALSE)
+        rownames(para) <- para[,1]
+      } else {
+        if(!identical(rownames(para),para[,1])){
+          para <- cbind(ID=rownames(para), para)
+        }
+      }
       return(para)
     }
   }

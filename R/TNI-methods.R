@@ -18,8 +18,9 @@ tni.constructor <- function(expData, regulatoryElements, rowAnnotation=NULL,
         colAnnotation <- as.data.frame(colData(expData))
         expData <- assays(expData)[[1]]
     }
+  
     object <- new("TNI", gexp=expData, regulatoryElements=regulatoryElements)
-    object <- tni.preprocess(object, rowAnnotation, colAnnotation, cvfilter,verbose)
+    object <- tni.preprocess(object, rowAnnotation, colAnnotation, cvfilter, verbose)
     return(object)
 }
 
@@ -80,15 +81,10 @@ setMethod(
   "tni.preprocess",
   "TNI",
   function(object, rowAnnotation=NULL, colAnnotation=NULL, cvfilter=TRUE, 
-           verbose=TRUE, gexpIDs){
+           verbose=TRUE){
     
     #---check compatibility
     object <- upgradeTNI(object)
-    
-    if(!missing(gexpIDs)){
-      warning("'gexpIDs' argument is deprected! please use 'rowAnnotation' instead.'")
-      rowAnnotation <- gexpIDs
-    }
     
     ##-----check input arguments
     rowAnnotation <- tnai.checks(name="rowAnnotation",rowAnnotation)
@@ -99,7 +95,7 @@ setMethod(
     if(verbose)cat("-Preprocessing for input data...\n")
     
     #----check NAs and NaNs in gexp
-    na.check <- sum ( is.na(object@gexp) | is.nan(object@gexp) )
+    na.check <- sum( is.na(object@gexp) | is.nan(object@gexp) )
     if(na.check>0){
       stop("--NOTE: 'expression data' should be a positive numeric matrix, without NAs or NaNs! \n")
     }
@@ -139,8 +135,8 @@ setMethod(
         if(verbose)warning(tp1,tp2,call.=FALSE)
       }
       #check 'symbol' col in rowAnnotation
-      #ps. rowAnnotation is already check for duplicated col names!
-      idx<-toupper(colnames(object@rowAnnotation))%in%"SYMBOL"
+      #ps. rowAnnotation is already checked for duplicated colnames!
+      idx<-toupper(colnames(object@rowAnnotation))=="SYMBOL"
       if(any(idx)){
         idx<-which(idx)[1]
         colnames(object@rowAnnotation)[idx]<-"SYMBOL"
@@ -176,7 +172,7 @@ setMethod(
     sd.check <- apply(object@gexp,1,sd)
     if(any(is.na(sd.check))){
       stop("NOTE: unpredicted exception found in the input data matrix! 
-           (a possible cause is the presence of 'Inf' values). ")
+           ...a possible cause is the presence of 'Inf' values. ")
     }
     sd.check <- sd.check==0
     if(any(sd.check)){
@@ -1771,12 +1767,12 @@ upgradeTNI <- function(object){
       tp <- colnames(object@gexp)
       object@colAnnotation <- data.frame(ID=tp, row.names=tp, stringsAsFactors = FALSE)
     }
+    sum.info.results <- object@summary$results
+    colnames(sum.info.results$tnet)<-c("regulatoryElements","Targets","Edges")
+    object@summary$results <- sum.info.results
+    names(object@summary) <- c("regulatoryElements","para","results")
+    rownames(object@summary$regulatoryElements) <- "regulatoryElements"
   }
-  sum.info.results <- object@summary$results
-  colnames(sum.info.results$tnet)<-c("regulatoryElements","Targets","Edges")
-  object@summary$results <- sum.info.results
-  names(object@summary) <- c("regulatoryElements","para","results")
-  rownames(object@summary$regulatoryElements) <- "regulatoryElements"
   return(object)
 }
 

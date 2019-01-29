@@ -2,7 +2,7 @@
 ##-------------------------------------------------------------------------
 setGeneric("tni.preprocess",
            function(object, rowAnnotation=NULL, colAnnotation=NULL, cvfilter=TRUE, 
-                    verbose=TRUE, gexpIDs)
+                    verbose=TRUE)
              standardGeneric("tni.preprocess"), package="RTN")
 setGeneric("tni.permutation",
            function(object, pValueCutoff=0.01, pAdjustMethod="BH", globalAdjustment=TRUE, 

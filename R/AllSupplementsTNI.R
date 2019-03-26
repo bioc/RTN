@@ -325,8 +325,9 @@ tni.cor<-function(x,tnet,estimator="pearson",dg=0, asInteger=TRUE,
 
 ##------------------------------------------------------------------------
 ##compute delta mi from pooled null distributions, returns global mi markers
-miThresholdMd=function(gexp, nsamples, prob=c(0.05,0.95), nPermutations=1000, 
-                       estimator="pearson", verbose=TRUE){
+miThresholdMd <- function(gexp, nsamples, prob=c(0.05,0.95), 
+                          nPermutations=1000, estimator="pearson", 
+                          verbose=TRUE){
   if(length(prob)==1)prob=sort(c(1-prob,prob))
   if(nsamples>ncol(gexp))nsamples=ncol(gexp)
   ##build null distribution
@@ -1379,12 +1380,10 @@ treemap<-function(hc){
   return(obj)
 }
 
+##-----------------------------------------------------------------------------
 .run.tni.gsea2.alternative <- function(listOfRegulonsAndMode, 
-                                       phenotype, exponent, 
+                                       phenotype, phenorank, exponent, 
                                        alternative){
-  ##-----get ranked phenotype
-  phenorank <- rank(-phenotype)
-  
   ##-----get regulons
   listOfRegulonsUp <- lapply(listOfRegulonsAndMode, function(reg){
     as.numeric(names(reg[reg>0]))
@@ -1419,7 +1418,9 @@ treemap<-function(hc){
   GSEA2.results.up<-round(GSEA2.results.up,2)
   GSEA2.results.down<-round(GSEA2.results.down,2)
   GSEA2.results.both<-round(GSEA2.results.both,2)
-  GSEA2.results<-list(positive=GSEA2.results.up,negative=GSEA2.results.down,differential=GSEA2.results.both)
+  GSEA2.results<-list(positive=GSEA2.results.up,
+                      negative=GSEA2.results.down,
+                      differential=GSEA2.results.both)
   return( GSEA2.results )
 }
 
@@ -1596,8 +1597,9 @@ treemap<-function(hc){
   return(tftar_scores)
 }
 
-#-- Helper function for tni.regulon.summary
-.regulon.summary <- function(tf, refnet, tnet) {
+#---------------------------------------------------------------
+#--- helper function for tni.regulon.summary
+.regulon.summary <- function(tf, refnet, tnet, regnames) {
     #-- Initialize
     regulonSummary <- list()
     
@@ -1612,14 +1614,79 @@ treemap<-function(hc){
     #-- Add information about MI with other regulators
     tfMI <- refnet[tf,]
     other_regs <- tfMI[order(abs(tfMI), decreasing = TRUE)]
-    regulonSummary$regulatorsMI <- other_regs[other_regs != 0]
-    
+    other_regs <- names(other_regs[other_regs != 0])
+    other_regs <- regnames[regnames%in%other_regs]
+    regulonSummary$regulatorsMI <- other_regs
     return(regulonSummary)
-    
+}
+
+##------------------------------------------------------------------------------
+## target contribution for regulon activity
+.target.contribution <- function(listOfRegulonsAndMode, regulonActivity, 
+                                 phenoranks, phenotypes, exponent, 
+                                 alternative, verbose){
+  regs <- names(listOfRegulonsAndMode)
+  nsamp <- ncol(phenoranks)
+  if(isParallel() && length(regs)>1){
+    if(verbose)cat("-Assessing target contribution (parallel version - ProgressBar disabled)...\n")
+    if(verbose)cat("--For", length(listOfRegulonsAndMode), "regulon(s) and", nsamp,'sample(s)...\n')
+    cl<-getOption("cluster")
+    snow::clusterExport(cl, list(".gsea2.target.contribution",".run.tni.gsea2.alternative",
+                                 ".fgseaScores4TNI"), envir=environment())
+    tcontrib <- snow::parLapply(cl,regs, function(reg){
+      regulonAndMode <- listOfRegulonsAndMode[[reg]]
+      tc <- sapply(1:length(regulonAndMode), function(i){
+        react <- .gsea2.target.contribution(regulonAndMode[-i], phenotypes, 
+                                            phenoranks, exponent, alternative)
+        sqrt(mean((react - regulonActivity$dif[,reg])^2))
+      })
+      names(tc) <- names(regulonAndMode)
+      return(tc)
+    })
+  } else {
+    if(verbose) cat("-Assessing target contribution...\n")
+    if(verbose)cat("--For", length(listOfRegulonsAndMode), "regulon(s) and", nsamp,'sample(s)...\n')
+    if(verbose) pb <- txtProgressBar(style=3)
+    ntotal <- sum(unlist(lapply(listOfRegulonsAndMode, length)))
+    ncount <- 0
+    tcontrib <- lapply(regs, function(reg){
+      regulonAndMode <- listOfRegulonsAndMode[[reg]]
+      tc <- sapply(1:length(regulonAndMode), function(i){
+        ncount <<- ncount + 1
+        if(verbose) setTxtProgressBar(pb, ncount/ntotal)
+        react <- .gsea2.target.contribution(regulonAndMode[-i], phenotypes, 
+                                            phenoranks, exponent, alternative)
+        sqrt(mean((react - regulonActivity$dif[,reg])^2))
+      })
+      names(tc) <- names(regulonAndMode)
+      return(tc)
+    })
+    if(verbose) close(pb)
+  }
+  names(tcontrib) <- regs
+  return(tcontrib)
+}
+## gsea2 for target contribution
+.gsea2.target.contribution <- function(regulonAndMode, phenotypes, 
+                                       phenoranks, exponent, alternative){
+  samples <- colnames(phenotypes)
+  regActivity <- NULL
+  for(samp in samples){
+    res <- .run.tni.gsea2.alternative(
+      listOfRegulonsAndMode=list(regulonAndMode),
+      phenotype=phenotypes[, samp],
+      phenorank=phenoranks[, samp],
+      exponent=exponent,
+      alternative=alternative
+    )
+    regActivity <- c(regActivity,res$differential)
+  }
+  names(regActivity) <- samples
+  return(regActivity)
 }
 
 #---------------------------------------------------------------
-#test Cohen's Kappa agreement between Modulon and regulons
+#test Cohen's Kappa agreement between modulons and regulons
 # pkappa<-function (Modulon,Regulon){
 #   ttab<-data.frame(A=Modulon,B=Regulon)
 #   ttab<-table(ttab)
@@ -1713,4 +1780,3 @@ treemap<-function(hc){
 #   rownames(hcEdges)<-NULL
 #   hcEdges
 # }
-

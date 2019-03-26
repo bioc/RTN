@@ -27,7 +27,8 @@ exportMethods(
   "avs.evse",
   "avs.pevse",
   "avs.get",
-  "tni.regulon.summary"
+  "tni.regulon.summary",
+  "tni.prune"
 )
 
 export(

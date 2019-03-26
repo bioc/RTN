@@ -20,9 +20,7 @@ a processed object of class 'TNI' \code{\link[RTN:TNI-class]{TNI-class}} evaluat
 \code{\link[RTN:tni.permutation]{tni.permutation}} and \code{\link[RTN:tni.bootstrap]{tni.bootstrap}}.
 }
 \item{eps}{
-a single numeric value specifying the threshold 
-under which Aracne algorithm should apply the dpi filter.
-For additional detail see \code{\link[minet:aracne]{aracne}}.
+a single numeric value specifying the threshold under which ARACNe algorithm should apply the dpi filter (eps>=0). If not available (i.e. eps=NA), then the threshold is estimated from the empirical null distribution computed in the permutation and bootstrap steps. For additional details see \code{\link[minet:aracne]{aracne}}.
 }
 \item{verbose}{
 a single logical value specifying to display detailed messages (when 

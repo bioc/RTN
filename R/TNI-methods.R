@@ -309,16 +309,24 @@ setMethod(
   "tni.dpi.filter",
   "TNI",
   function(object, eps=0, verbose=TRUE){
-    if(object@status["Permutation"]!="[x]")stop("NOTE: input 'object' needs permutation/bootstrep analysis!")
+    if(object@status["Permutation"]!="[x]")
+      stop("NOTE: input 'object' needs permutation/bootstrep analysis!")
     
     #---check compatibility
     object <- upgradeTNI(object)
     
-    ##-----check and assign parameters
+    ##---check and assign parameters
     tnai.checks(name="eps",para=eps)
     tnai.checks(name="verbose",para=verbose)
-    object@para$dpi<-list(eps=eps)
+    
+    ##---if not provided, estimate eps from tn.ref
+    if(is.na(eps)){
+      eps <- abs(object@results$tn.ref)
+      eps <- min(eps[eps!=0])/2
+    }
+    object@para$dpi <- list(eps=eps)
     object@summary$para$dpi[1,]<-unlist(object@para$dpi)
+    
     ##---apply dpi filter
     if(verbose)cat("-Applying dpi filter...\n")
     object@results$tn.dpi<-tni.dpi(abs(object@results$tn.ref), eps=object@para$dpi$eps)
@@ -337,12 +345,17 @@ setMethod(
 ##GSEA2 for TNI
 setMethod(
   "tni.gsea2",
-  "TNI",function(object, minRegulonSize=15, doSizeFilter=FALSE, scale=FALSE, exponent=1, tnet="dpi",
-                 tfs=NULL, samples=NULL, features=NULL, refsamp=NULL, 
-                 log=FALSE, alternative=c("two.sided", "less", "greater"), verbose=TRUE) {
-    if(object@status["Preprocess"]!="[x]")stop("NOTE: TNI object is not compleate: requires preprocessing!")
-    if(object@status["Permutation"]!="[x]")stop("NOTE: TNI object is not compleate: requires permutation/bootstrap and DPI filter!")  
-    if(object@status["DPI.filter"]!="[x]")stop("NOTE: TNI object is not compleate: requires DPI filter!")
+  "TNI",function(object, minRegulonSize=15, doSizeFilter=FALSE, 
+                 scale=FALSE, exponent=1, tnet="dpi", tfs=NULL, 
+                 samples=NULL, features=NULL, refsamp=NULL, log=FALSE, 
+                 alternative=c("two.sided", "less", "greater"), 
+                 targetContribution=FALSE, additionalData=FALSE, verbose=TRUE){
+    if(object@status["Preprocess"]!="[x]")
+      stop("NOTE: TNI object is not compleate: requires preprocessing!")
+    if(object@status["Permutation"]!="[x]")
+      stop("NOTE: TNI object is not compleate: requires permutation/bootstrap and DPI filter!")  
+    if(object@status["DPI.filter"]!="[x]")
+      stop("NOTE: TNI object is not compleate: requires DPI filter!")
     
     #---check compatibility
     object <- upgradeTNI(object)
@@ -359,9 +372,13 @@ setMethod(
     tnai.checks(name="refsamp",para=refsamp)
     tnai.checks(name="log",para=log) 
     alternative <- match.arg(alternative)
+    tnai.checks(name="targetContribution",para=targetContribution)
+    tnai.checks(name="additionalData",para=additionalData)
     tnai.checks(name="verbose",para=verbose) 
     object@para$gsea2<-list(minRegulonSize=minRegulonSize, exponent=exponent,
-                            tnet=tnet, doSizeFilter=doSizeFilter)
+                            tnet=tnet, doSizeFilter=doSizeFilter, 
+                            alternative=alternative, scale=scale, log=log)
+    
     ##------ compute reference gx vec
     if(scale) object@gexp <- t(scale(t(object@gexp)))
     if(is.null(refsamp)){
@@ -454,32 +471,40 @@ setMethod(
     
     #-----get phenotypes
     if(log){
-      dt<-log2(1+object@gexp)-log2(1+gxref)
+      phenotypes<-log2(1+object@gexp)-log2(1+gxref)
     } else {
-      dt <- object@gexp-gxref
+      phenotypes <- object@gexp-gxref
     }
     
     #-----reset names to integer values
+    listOfRegulons <- lapply(listOfRegulonsAndMode, names)
     for(i in names(listOfRegulonsAndMode)){
       reg <- listOfRegulonsAndMode[[i]]
-      names(listOfRegulonsAndMode[[i]]) <- match(names(reg),rownames(dt))
+      names(listOfRegulonsAndMode[[i]]) <- match(names(reg),rownames(phenotypes))
     }
-    rownames(dt)<-1:nrow(dt)
+    rnames_phenotypes <- rownames(phenotypes)
+    rownames(phenotypes)<-1:nrow(phenotypes)
     
+    ##-----get ranked phenotypes
+    phenoranks <- apply(-phenotypes, 2, rank)
+    colnames(phenoranks) <- colnames(phenotypes)
+    rownames(phenoranks) <- rownames(phenotypes)
+
     #-----run 2t-gsea
     if(isParallel() && length(samples)>1){
       if(verbose)cat("-Performing two-tailed GSEA (parallel version - ProgressBar disabled)...\n")
-      if(verbose)cat("--For", length(listOfRegulonsAndMode), "regulons and",length(samples),'sample(s)...\n')
+      if(verbose)cat("--For", length(listOfRegulonsAndMode), "regulon(s) and",length(samples),'sample(s)...\n')
       cl<-getOption("cluster")
-      snow::clusterExport(cl, list(".run.tni.gsea2.alternative",".fgseaScores4TNI","gseaScores4RTN"),
+      snow::clusterExport(cl, list(".run.tni.gsea2.alternative",".fgseaScores4TNI"), 
                           envir=environment())
       regulonActivity <- list()
       res <- snow::parLapply(cl, samples, function(samp){
         .run.tni.gsea2.alternative(
           listOfRegulonsAndMode=listOfRegulonsAndMode,
-          phenotype=dt[, samp],
-          exponent=object@para$gsea2$exponent,
-          alternative = alternative
+          phenotype=phenotypes[, samp],
+          phenorank=phenoranks[, samp],
+          exponent=exponent,
+          alternative=alternative
         )
       })
       regulonActivity$pos <- t(sapply(res, function(r) r$pos))
@@ -487,15 +512,17 @@ setMethod(
       regulonActivity$dif <- t(sapply(res, function(r) r$dif))
     } else {
       if(verbose)cat("-Performing two-tailed GSEA...\n")
-      if(verbose)cat("--For", length(listOfRegulonsAndMode), "regulons and",length(samples),'sample(s)...\n')
+      if(verbose)cat("--For", length(listOfRegulonsAndMode), "regulon(s) and",
+                     length(samples),'sample(s)...\n')
       if(verbose)pb <- txtProgressBar(style=3)
       regulonActivity<-list()
       for(i in 1:length(samples)){
         res <- .run.tni.gsea2.alternative(
           listOfRegulonsAndMode=listOfRegulonsAndMode,
-          phenotype=dt[, samples[i]],
-          exponent=object@para$gsea2$exponent,
-          alternative = alternative
+          phenotype=phenotypes[, samples[i]],
+          phenorank=phenoranks[, samples[i]],
+          exponent=exponent,
+          alternative=alternative
         )
         regulonActivity$pos<-rbind(regulonActivity$pos,res$positive[tfs])
         regulonActivity$neg<-rbind(regulonActivity$neg,res$negative[tfs])
@@ -504,13 +531,29 @@ setMethod(
       }
       if(verbose) close(pb)
     }
-    colnames(regulonActivity$pos)<-names(tfs)
-    colnames(regulonActivity$neg)<-names(tfs)
-    colnames(regulonActivity$dif)<-names(tfs)
     rownames(regulonActivity$pos)<-samples
     rownames(regulonActivity$neg)<-samples
     rownames(regulonActivity$dif)<-samples
     regulonActivity <- .tni.stratification.gsea2(regulonActivity)
+    if(targetContribution){
+      tc <- .target.contribution(listOfRegulonsAndMode, regulonActivity, 
+                                 phenoranks, phenotypes, exponent, 
+                                 alternative, verbose)
+      regulonActivity$data$listOfTargetContribution <- tc
+    }
+    if(additionalData || targetContribution){
+      regulonActivity$data$listOfRegulons <-listOfRegulons
+      regulonActivity$data$listOfRegulonsAndMode <- listOfRegulonsAndMode
+      regulonActivity$data$phenoranks <- phenoranks
+      regulonActivity$data$phenotypes <- phenotypes
+      regulonActivity$data$rnames_phenotypes <- rnames_phenotypes
+      regulonActivity$data$exponent <- exponent
+      regulonActivity$data$alternative <- alternative
+    } else {
+      colnames(regulonActivity$pos)<-names(tfs)
+      colnames(regulonActivity$neg)<-names(tfs)
+      colnames(regulonActivity$dif)<-names(tfs)
+    }
     return(regulonActivity)
   }
 )
@@ -519,8 +562,8 @@ setMethod(
 ##aREA-3T for TNI
 setMethod(
   "tni.area3",
-  "TNI",function(object, minRegulonSize=15, doSizeFilter=FALSE, scale=FALSE, tnet="dpi",
-                 tfs=NULL, samples=NULL, features=NULL, refsamp=NULL, 
+  "TNI",function(object, minRegulonSize=15, doSizeFilter=FALSE, scale=FALSE, 
+                 tnet="dpi", tfs=NULL, samples=NULL, features=NULL, refsamp=NULL, 
                  log=FALSE, verbose=TRUE){
     if(object@status["Preprocess"]!="[x]")stop("NOTE: TNI object is not compleate: requires preprocessing!")
     if(object@status["Permutation"]!="[x]")stop("NOTE: TNI object is not compleate: requires permutation/bootstrap and DPI filter!")  
@@ -540,7 +583,10 @@ setMethod(
     tnai.checks(name="refsamp",para=refsamp)
     tnai.checks(name="log",para=log) 
     tnai.checks(name="verbose",para=verbose) 
-    object@para$area3 <- list(minRegulonSize=minRegulonSize, tnet=tnet, doSizeFilter=doSizeFilter)
+    object@para$area3 <- list(minRegulonSize=minRegulonSize, 
+                              doSizeFilter=doSizeFilter,
+                              scale=scale, tnet=tnet, log=log)
+    
     ##------ compute reference gx vec
     if(scale) object@gexp <- t(scale(t(object@gexp)))
     if(is.null(refsamp)){
@@ -633,9 +679,9 @@ setMethod(
     
     #--- get phenotypes
     if(log){
-      dt <- log2(1+object@gexp)-log2(1+gxref)
+      phenotypes <- log2(1+object@gexp)-log2(1+gxref)
     } else {
-      dt <- object@gexp-gxref
+      phenotypes <- object@gexp-gxref
     }
     
     #--- get regulons evaluated by EM algorithm
@@ -658,7 +704,7 @@ setMethod(
     if (verbose) {
       cat("Running aREA algorithm...\n")
     }
-    nes <- t(aREA(eset=dt, regulon=arearegs, minsize=0, verbose=FALSE)$nes)
+    nes <- t(aREA(eset=phenotypes, regulon=arearegs, minsize=0, verbose=FALSE)$nes)
     nes <- nes[samples,tfs]
     colnames(nes) <- names(tfs)
     
@@ -1640,16 +1686,14 @@ setMethod(
         #-- Basic checks
         if(object@status["DPI.filter"]!="[x]")
             stop("NOTE: input 'object' needs dpi analysis!")
-        if(!is.null(regulatoryElements)){
+        if(!is.null(regulatoryElements))
           regulatoryElements <- tnai.checks("regulatoryElements",regulatoryElements)
-        }
         tnai.checks("verbose",verbose)
         
         #-- if regulatoryElements = NULL, get a summary of network as a whole
-        if (is.null(regulatoryElements)) {
+        if (is.null(regulatoryElements)){
             networkSummary <- tni.get(object)$results
-            
-            if(verbose) {
+            if(verbose){
                 nRegulators <- paste("This regulatory network comprised of", 
                                      networkSummary$tnet["tnet.dpi", "regulatoryElements"],
                                      "regulons. \n")
@@ -1664,80 +1708,71 @@ setMethod(
                       digits = 3)
                 cat("---\n")
             }
-            
             invisible(networkSummary)
         } else { #-- Otherwise, get TF summaries
-            #-- Find out annotation input type
-            rowAnnot <- tni.get(object, "rowAnnotation")
-            idkeys <- apply(rowAnnot, 2, function(annotType) {
-                all(regulatoryElements %in% annotType)
-            })
-            if (sum(idkeys) != 1) {
-                stop("NOTE: input 'regulatoryElements' contains no useful data!\n")
+          regnames <- tni.get(object, "regulatoryElements")
+          if(sum(regulatoryElements%in%regnames) > 
+             sum(regulatoryElements%in%names(regnames))){
+            regulatoryElements <- regnames[regnames%in%regulatoryElements]
+          } else {
+            regulatoryElements <- regnames[names(regnames)%in%regulatoryElements]
+          }
+          if(length(regulatoryElements)==0)
+            stop("NOTE: 'regulatoryElements' argument has no valid names!")
+          
+          #-- Get all regulon and ref regulon information for regulatoryElements
+          tnet <- tni.get(object, "tnet")
+          refnet <-  tni.get(object, "refnet")
+          
+          #-- Get summaries
+          allRegulonSummary <- lapply(regulatoryElements, .regulon.summary, 
+                                      refnet, tnet, regnames)
+          #-- Print
+          if(verbose){
+            for(tf in names(regulatoryElements)) {
+              regSummary <- allRegulonSummary[[tf]]
+              
+              if (length(regSummary$regulatorsMI) <= 10) {
+                textRegsMI <- paste0(paste(names(regSummary$regulatorsMI),
+                                           collapse = ", "), "\n", "\n")
+              } else {
+                textRegsMI <- paste0(paste(names(regSummary$regulatorsMI)[1:10],
+                                           collapse = ", "),
+                                     "...[", 
+                                     length(regSummary$regulatorsMI) - 10, 
+                                     " more]", "\n", "\n")
+              }
+              nTars <- regSummary$targets["DPInet", "Total"]
+              
+              #-- Size info
+              if(nTars < 50) regsize <- "small"
+              else if (nTars < 200) regsize <- "medium-sized"
+              else regsize <- "large"
+              #-- Balance info
+              posTars <- regSummary$targets["DPInet","Positive"]
+              regbalance <- ifelse(posTars > 0.75*nTars || posTars < 0.25*nTars,
+                                   "unbalanced", "balanced")
+              #-- Print
+              cat(paste("The", tf, "regulon", "has", nTars, 
+                        "targets, it's a", regsize, 
+                        "and", regbalance,
+                        "regulon.", "\n"))
+              message("-- DPI filtered network targets:")
+              print(regSummary$targets["DPInet",], quote = FALSE)
+              message("-- Reference network targets:")
+              print(regSummary$targets["Refnet",], quote = FALSE)
+              message("-- Regulators with mutual information:")
+              cat(textRegsMI)
+              #-- Warning for < 15 targets in a cloud
+              if (regSummary$targets["DPInet","Positive"] < 15) {
+                warning("WARNING: This regulon has less than 15 positive targets. Regulon activity readings may be unreliable.\n")
+              } else if (regSummary$targets["DPInet","Negative"] < 15) {
+                warning("WARNING: This regulon has less than 15 negative targets. Regulon activity readings may be unreliable.\n")
+              }
+              cat("---\n")
             }
-            idkey <- names(idkeys)[idkeys]
-            
-            #-- Get all regulon and ref regulon information for regulatoryElements
-            tnet <- tni.get(object, "tnet", idkey = idkey)
-            refnet <-  tni.get(object, "refnet", idkey = idkey)
-            
-            #-- Add names for prettyness
-            names(regulatoryElements) <- regulatoryElements
-            
-            #-- Get summaries
-            allRegulonSummary <- lapply(regulatoryElements, .regulon.summary, refnet, tnet)
-            
-            #-- Print
-            if (verbose) {
-                for(tf in regulatoryElements) {
-                    regSummary <- allRegulonSummary[[tf]]
-                    
-                    if (length(regSummary$regulatorsMI) <= 10) {
-                        textRegsMI <- paste0(paste(names(regSummary$regulatorsMI),
-                                                   collapse = ", "), "\n", "\n")
-                    } else {
-                        textRegsMI <- paste0(paste(names(regSummary$regulatorsMI)[1:10],
-                                                   collapse = ", "),
-                                             "...[", 
-                                             length(regSummary$regulatorsMI) - 10, 
-                                             " more]", "\n", "\n")
-                    }
-                    
-                    nTars <- regSummary$targets["DPInet", "Total"]
-                    
-                    #-- Size info
-                    if(nTars < 50) regsize <- "small"
-                    else if (nTars < 200) regsize <- "medium-sized"
-                    else regsize <- "large"
-                    
-                    #-- Balance info
-                    posTars <- regSummary$targets["DPInet","Positive"]
-                    regbalance <- ifelse(posTars > 0.75*nTars || posTars < 0.25*nTars,
-                                         "unbalanced", "balanced")
-                    
-                    
-                    #-- Print
-                    cat(paste("The", tf, "regulon", "has", nTars, 
-                              "targets, it's a", regsize, 
-                              "and", regbalance,
-                              "regulon.", "\n"))
-                    message("-- DPI filtered network targets:")
-                    print(regSummary$targets["DPInet",], quote = FALSE)
-                    message("-- Reference network targets:")
-                    print(regSummary$targets["Refnet",], quote = FALSE)
-                    message("-- Regulators with mutual information:")
-                    cat(textRegsMI)
-                    
-                    #-- Warning for < 15 targets in a cloud
-                    if (regSummary$targets["DPInet","Positive"] < 15) {
-                        warning("WARNING: This regulon has less than 15 positive targets. Regulon activity readings may be unreliable.\n")
-                    } else if (regSummary$targets["DPInet","Negative"] < 15) {
-                        warning("WARNING: This regulon has less than 15 negative targets. Regulon activity readings may be unreliable.\n")
-                    }
-                    cat("---\n")
-                }
-            }
-            invisible(allRegulonSummary)
+          }
+          invisible(allRegulonSummary)
         }
     }
 )

@@ -14,7 +14,7 @@ cvfilter=TRUE, verbose=TRUE)
 
 \arguments{
 \item{expData}{
-a gene expression matrix.
+a gene expression matrix or 'SummarizedExperiment' object.
 }
 \item{regulatoryElements}{
 a vector of regulatory elements (e.g. transcription factors).

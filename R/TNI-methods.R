@@ -178,7 +178,7 @@ setMethod(
     if(any(sd.check)){
       if(verbose)cat("--Removing inconsistent data: standard deviation is zero for", sum(sd.check),"gene(s)! \n")
       object@gexp <- object@gexp[!sd.check,]
-      object@rowAnnotation <- object@rowAnnotation[!sd.check,]
+      object@rowAnnotation <- object@rowAnnotation[!sd.check,,drop=FALSE]
     }
     
     #-----check 'regulatoryElements' in gexp

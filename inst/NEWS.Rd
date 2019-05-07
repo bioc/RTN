@@ -2,6 +2,12 @@
 \title{RTN News}
 \encoding{UTF-8}
 
+\section{Version 2.8.0}{
+  \itemize{
+    \item Regular maintenance, stable release.
+  }
+}
+
 \section{Version 2.6.0}{
   \itemize{
     \item Make available GSEA-2T and aREA-3T algorithms for single-sample analysis.

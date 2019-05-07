@@ -616,15 +616,16 @@ tnai.checks <- function(name, para) {
       }
       #check rownames
       if(is.null(rownames(para))){
+        para[,1] <- as.character(para[,1])
         if(any(is.na(para[,1])) || any(para[,1]=="")){
           stop("Col 1 in 'colAnnotation' should have no NA or empty value!",call.=FALSE)
         }
         if(any(duplicated(para[,1])))
           stop("Col 1 in 'colAnnotation' should have unique ids!",call.=FALSE)
         rownames(para) <- para[,1]
-      }else {
+      } else {
         if(!identical(rownames(para),para[,1])){
-          para <- cbind(ID=rownames(para), para)
+          para <- data.frame(ID=rownames(para), para, stringsAsFactors = FALSE)
         }
       }
       return(para)

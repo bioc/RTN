@@ -116,7 +116,7 @@ EScores <- tni.gsea2(rtni)
 
 #parallel version with SNOW package!
 library(snow)
-options(cluster=makeCluster(3, "SOCK"))
+options(cluster=snow::makeCluster(3, "SOCK"))
 EScores <- tni.gsea2(rtni)
 stopCluster(getOption("cluster"))
 

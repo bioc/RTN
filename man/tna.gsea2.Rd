@@ -96,7 +96,7 @@ tna.get(rtna,what="gsea2")
 
 # run parallel version with SNOW package!
 library(snow)
-options(cluster=makeCluster(3, "SOCK"))
+options(cluster=snow::makeCluster(3, "SOCK"))
 rtna <- tna.gsea2(rtna,stepFilter=FALSE)
 stopCluster(getOption("cluster"))
 }

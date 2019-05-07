@@ -137,7 +137,7 @@ avs.plot2(bcavs,"pevse",height=2.5)
 #####################################################
 #--- parallel version for 'step 5' with SNOW package!
 # library(snow)
-# options(cluster=makeCluster(3, "SOCK"))
+# options(cluster=snow::makeCluster(3, "SOCK"))
 # bcavs <- avs.pevse(bcavs, annotation=genemap, glist=glist, 
 #          eqtls=toy_eqtls, maxgap = 250)
 # stopCluster(getOption("cluster"))

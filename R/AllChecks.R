@@ -625,7 +625,10 @@ tnai.checks <- function(name, para) {
         rownames(para) <- para[,1]
       } else {
         if(!identical(rownames(para),para[,1])){
-          para <- data.frame(ID=rownames(para), para, stringsAsFactors = FALSE)
+          if(any(duplicated(para[,1]))){
+            stop("Col 1 in 'colAnnotation' should have unique ids!",call.=FALSE)
+          }
+          rownames(para) <- para[,1]
         }
       }
       return(para)

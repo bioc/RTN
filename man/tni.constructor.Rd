@@ -48,8 +48,8 @@ data(dt4rtn)
 tfs4test <- dt4rtn$tfs[c("PTTG1","E2F2","FOXM1","E2F3","RUNX2")]
 #--- run constructor
 rtni <- tni.constructor(expData=dt4rtn$gexp, 
-                  regulatoryElements=tfs4test, 
-                  rowAnnotation=dt4rtn$gexpIDs)
+                        regulatoryElements=tfs4test, 
+                        rowAnnotation=dt4rtn$gexpIDs)
 }
 
 \keyword{methods}

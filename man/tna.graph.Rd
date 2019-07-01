@@ -67,26 +67,26 @@ tfs4test <- dt4rtn$tfs[c("PTTG1","E2F2","FOXM1","E2F3","RUNX2")]
 
 rtni <- tni.constructor(expData=dt4rtn$gexp, regulatoryElements=tfs4test, 
         rowAnnotation=dt4rtn$gexpIDs)
-rtni<-tni.permutation(rtni)
-rtni<-tni.bootstrap(rtni)
-rtni<-tni.dpi.filter(rtni, eps=0.05)
+rtni <- tni.permutation(rtni)
+rtni <- tni.bootstrap(rtni)
+rtni <- tni.dpi.filter(rtni, eps=0.05)
 
 #run MRA analysis pipeline
-rtna<-tni2tna.preprocess(rtni, phenotype=dt4rtn$pheno, hits=dt4rtn$hits, phenoIDs=dt4rtn$phenoIDs)
+rtna <- tni2tna.preprocess(rtni, phenotype=dt4rtn$pheno, hits=dt4rtn$hits, phenoIDs=dt4rtn$phenoIDs)
 rtna <- tna.mra(rtna)
 
 # compute regulatory maps
-g<-tna.graph(rtna, tnet="dpi", gtype="rmap", tfs=tfs4test)
+g <- tna.graph(rtna, tnet="dpi", gtype="rmap", tfs=tfs4test)
 
 # option: plot the igraph object using RedeR
 #library(RedeR)
-#rdp<-RedPort()
+#rdp <- RedPort()
 #calld(rdp)
 #addGraph(rdp,g)
 #relax(rdp,p1=50,p5=20)
 
 # compute association maps
-g<-tna.graph(rtna, tnet="ref", gtype="amap", tfs=tfs4test)
+g <- tna.graph(rtna, tnet="ref", gtype="amap", tfs=tfs4test)
 
 }
 }

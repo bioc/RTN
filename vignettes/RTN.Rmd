@@ -42,7 +42,8 @@ rtni <- tni.constructor(expData=dt4rtn$gexp, regulatoryElements=tfs, rowAnnotati
 The `tni.permutation` function takes the pre-processed **TNI** object and returns a transcriptional network inferred by mutual information (with multiple hypothesis testing corrections).
 
 ```{r label='Permutation', eval=TRUE, results='hide'}
-rtni <- tni.permutation(rtni, verbose = FALSE)
+# please, set nPermutations >= 1000
+rtni <- tni.permutation(rtni, nPermutations = 100, verbose = FALSE)
 ``` 
 
 In an additional step, unstable interactions can be removed by bootstrap analysis using the `tni.bootstrap` function, which creates a consensus bootstrap network (referred here as `refnet`).

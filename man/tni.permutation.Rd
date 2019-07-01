@@ -12,7 +12,7 @@ This function takes a TNI object and returns a transcriptional network inferred 
 
 \usage{
 tni.permutation(object, pValueCutoff=0.01, pAdjustMethod="BH", globalAdjustment=TRUE,
-        estimator="pearson",nPermutations=1000, pooledNullDistribution=TRUE, 
+        estimator="spearman", nPermutations=1000, pooledNullDistribution=TRUE, 
         parChunks=50, verbose=TRUE)
 }
 
@@ -35,7 +35,7 @@ globalAdjustment=TRUE) or not (when globalAdjustment=FALSE).
 }
 \item{estimator}{
 a character string indicating which estimator to be used for mutual information 
-computation. One of "pearson" (default), "kendall", or "spearman", can be abbreviated.
+computation. One of "pearson", "kendall", or "spearman" (default).
 }
 \item{nPermutations}{
 a single integer value specifying the number of permutations for deriving TF-target 
@@ -78,13 +78,14 @@ tfs4test <- dt4rtn$tfs[c("PTTG1","E2F2","FOXM1","E2F3","RUNX2")]
 \dontrun{
 
 # preprocessing
-rtni <- tni.constructor(expData=dt4rtn$gexp, regulatoryElements=tfs4test, 
+rtni <- tni.constructor(expData=dt4rtn$gexp, 
+        regulatoryElements=tfs4test, 
         rowAnnotation=dt4rtn$gexpIDs)
 
-# linear version!
-rtni<-tni.permutation(rtni)
+# linear version (set nPermutations >= 1000)
+rtni <- tni.permutation(rtni, nPermutations = 100)
 
-# parallel version with SNOW package!
+# parallel version with SNOW package
 library(snow)
 options(cluster=snow::makeCluster(3, "SOCK"))
 rtni<-tni.permutation(rtni)

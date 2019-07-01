@@ -6,12 +6,11 @@ setGeneric("tni.preprocess",
              standardGeneric("tni.preprocess"), package="RTN")
 setGeneric("tni.permutation",
            function(object, pValueCutoff=0.01, pAdjustMethod="BH", globalAdjustment=TRUE, 
-                    estimator="pearson",nPermutations=1000, pooledNullDistribution=TRUE, 
+                    estimator="spearman",nPermutations=1000, pooledNullDistribution=TRUE, 
                     parChunks=50, verbose=TRUE) 
              standardGeneric("tni.permutation"), package="RTN")
 setGeneric("tni.bootstrap",
-           function(object,estimator="pearson", nBootstraps=100, consensus=95, 
-                    parChunks=10, verbose=TRUE)
+           function(object, nBootstraps=100, consensus=95, parChunks=10, verbose=TRUE)
              standardGeneric("tni.bootstrap"), package="RTN")
 setGeneric("tni.dpi.filter",
            function(object, eps=0, verbose=TRUE)

@@ -93,12 +93,14 @@ tfs4test <- dt4rtn$tfs[c("PTTG1","E2F2","FOXM1","E2F3","RUNX2")]
 
 \dontrun{
 
-rtni <- tni.constructor(expData=dt4rtn$gexp, regulatoryElements=tfs4test, 
+rtni <- tni.constructor(expData=dt4rtn$gexp, 
+        regulatoryElements=tfs4test, 
         rowAnnotation=dt4rtn$gexpIDs)
-rtni<-tni.permutation(rtni)
-rtni<-tni.bootstrap(rtni)
-rtni<-tni.dpi.filter(rtni)
-rtna<-tni2tna.preprocess(rtni, phenotype=dt4rtn$pheno, hits=dt4rtn$hits, phenoIDs=dt4rtn$phenoIDs)
+rtni <- tni.permutation(rtni)
+rtni <- tni.bootstrap(rtni)
+rtni <- tni.dpi.filter(rtni)
+rtna <- tni2tna.preprocess(rtni, phenotype=dt4rtn$pheno, 
+        hits=dt4rtn$hits, phenoIDs=dt4rtn$phenoIDs)
 
 # run GSEA2 analysis pipeline
 rtna <- tna.gsea2(rtna, stepFilter=FALSE)

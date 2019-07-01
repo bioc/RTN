@@ -160,7 +160,7 @@ setMethod(
     if(!is.null(colAnnotation)){
       if(verbose)cat("--Mapping 'gexp' to 'colAnnotation'...\n")
       if( any(!colnames(object@gexp)%in%rownames(colAnnotation)) ){
-        stop("NOTE: all colnames in 'expression data' should be available in col1 of 'colAnnotation'!",call.=FALSE)
+        stop("NOTE: all colnames in the expression data matrix should be available in col1 of 'colAnnotation'!",call.=FALSE)
       }
       object@colAnnotation <- colAnnotation[colnames(object@gexp),]
     } else {
@@ -231,7 +231,7 @@ setMethod(
 setMethod(
   "tni.permutation",
   "TNI",
-  function(object, pValueCutoff=0.01, pAdjustMethod="BH", globalAdjustment=TRUE, estimator="pearson",
+  function(object, pValueCutoff=0.01, pAdjustMethod="BH", globalAdjustment=TRUE, estimator="spearman",
            nPermutations=1000, pooledNullDistribution=TRUE, parChunks=50, verbose=TRUE){
     if(object@status["Preprocess"]!="[x]")stop("NOTE: input 'object' needs preprocessing!")
     
@@ -275,7 +275,7 @@ setMethod(
 setMethod(
   "tni.bootstrap",
   "TNI",
-  function(object, estimator="pearson", nBootstraps=100, consensus=95, 
+  function(object, nBootstraps=100, consensus=95, 
            parChunks=10, verbose=TRUE){
     if(object@status["Preprocess"]!="[x]")stop("NOTE: input 'object' needs preprocessing and permutation analysis!")
     if(object@status["Permutation"]!="[x]")stop("NOTE: input 'object' needs permutation analysis!")
@@ -283,19 +283,23 @@ setMethod(
     #---check compatibility
     object <- upgradeTNI(object)
     
-    ##-----check and assign parameters
-    tnai.checks(name="estimator",para=estimator)  
+    #----check parameters
     tnai.checks(name="nBootstraps",para=nBootstraps)    
     tnai.checks(name="consensus",para=consensus)
     tnai.checks(name="parChunks",para=parChunks)
     tnai.checks(name="verbose",para=verbose)
-    object@para$boot<-list(estimator=estimator,nBootstraps=nBootstraps,consensus=consensus)
+    
+    #--- assign same estimator used in the permutation step
+    estimator <- tni.get(object, "para")$perm$estimator
+    object@para$boot<-list(estimator=estimator, nBootstraps=nBootstraps, consensus=consensus)
     object@summary$para$boot[1,]<-unlist(object@para$boot)
-    ##---bootstrap analysis
+    
+    #--- run bootstrap analysis
     object@results$tn.ref<-tni.boot(object,parChunks,verbose)
     object@status["Bootstrap"] <- "[x]"
     if(verbose)cat("-Bootstrap analysis complete! \n\n")
-    ##update summary and return results
+    
+    #--- update summary and return results
     bin<-object@results$tn.ref
     bin[bin!=0]<-1
     object@summary$results$tnet[1,]<-c(ncol(bin),sum(rowSums(bin)>0),sum(bin))
@@ -787,21 +791,21 @@ setMethod(
     if(what=="gexp"){
       query<-object@gexp
       if(!is.null(idkey))
-        query<-translateQuery(query,idkey,object,"matrixAndNames",reportNames)
+        query<-translateQuery(query,idkey,object,"gexpAndNames",reportNames)
     } else if(what=="regulatoryElements"){
       query<-object@regulatoryElements
       if(!is.null(idkey))
-        query[]<-translateQuery(query,idkey,object,"vecAndContent",reportNames)
+        query<-translateQuery(query,idkey,object,"vecAndContent",reportNames)
     } else if(what=="para"){
       query<-object@para
     } else if(what=="refnet"){
       query<-object@results$tn.ref
       if(is.null(query))stop("NOTE: empty slot!",call.=FALSE)
-      if(!is.null(idkey))query<-translateQuery(query,idkey,object,"matrixAndNames",reportNames)
+      if(!is.null(idkey))query<-translateQuery(query,idkey,object,"rtnetAndNames",reportNames)
     } else if(what=="tnet"){
       query<-object@results$tn.dpi
       if(is.null(query))stop("NOTE: empty slot!",call.=FALSE)
-      if(!is.null(idkey))query<-translateQuery(query,idkey,object,"matrixAndNames",reportNames)
+      if(!is.null(idkey))query<-translateQuery(query,idkey,object,"rtnetAndNames",reportNames)
     } else if(what=="refregulons" || what=="refregulons.and.mode"){
       query<-list()
       for(i in object@regulatoryElements){
@@ -1535,12 +1539,14 @@ setMethod(
       }
       return(g)
       
-    } else if(gtype=="rmap"){
+    } else if(gtype=="rmap"){ 
       
       tnet<-tnet[,tfs,drop=FALSE]
       g<-tni.rmap(tnet)
       #add rowAnnotation
-      if(nrow(object@rowAnnotation)>0)g<-att.mapv(g=g,dat=object@rowAnnotation,refcol=1)
+      if(nrow(object@rowAnnotation)>0 & ncol(object@rowAnnotation)>1){
+        g<-att.mapv(g=g,dat=object@rowAnnotation,refcol=1)
+      }
       #set target names if available
       if(!is.null(V(g)$SYMBOL)){
         g<-att.setv(g=g, from="SYMBOL", to='nodeAlias')
@@ -1619,7 +1625,9 @@ setMethod(
       }
       #-------------------
       g<-igraph::graph.adjacency(adjmt, diag=FALSE, mode="undirected", weighted=TRUE)
-      if(nrow(object@rowAnnotation)>0)g<-att.mapv(g=g,dat=object@rowAnnotation,refcol=1)
+      if(nrow(object@rowAnnotation)>0 & ncol(object@rowAnnotation)>1){
+        g<-att.mapv(g=g,dat=object@rowAnnotation,refcol=1)
+      }
       sz<-apply(tnet!=0, 2, sum)
       idx<-match(V(g)$name,tfs)
       V(g)$nodeAlias<-names(tfs)[idx]
@@ -1828,23 +1836,29 @@ translateQuery<-function(query,idkey,object,annottype,reportNames){
     idx<-tfs%in%rownames(rowAnnotation)
     names(tfs)[idx]<-rowAnnotation[tfs[idx],idkey]
   }
-  if(annottype=="matrixAndNames"){
+  if(annottype=="gexpAndNames"){
+    idx<-rownames(query)%in%rownames(rowAnnotation)
+    rownames(query)[idx]<-rowAnnotation[rownames(query)[idx],idkey]
+    query <- query[!is.na(rownames(query)),]
+  } else if(annottype=="rtnetAndNames"){
     idx<-colnames(query)%in%tfs
     colnames(query)[idx]<-names(tfs)[idx]
     idx<-rownames(query)%in%rownames(rowAnnotation)
     rownames(query)[idx]<-rowAnnotation[rownames(query)[idx],idkey]
+    query <- query[!is.na(rownames(query)),]
   } else if(annottype=="listAndNames"){
     idx<-names(query)%in%tfs
     names(query)[idx]<-names(tfs)[idx]
     query<-lapply(query,function(qry){
       idx<-names(qry)%in%rownames(rowAnnotation)
       names(qry)[idx]<-rowAnnotation[names(qry)[idx],idkey]
+      qry<-qry[!is.na(names(qry))]
       qry
     })
   } else if(annottype=="listAndContent"){
     idx<-names(query)%in%tfs
     names(query)[idx]<-names(tfs)[idx]
-    query<-lapply(query,function(qry){
+    query<-lapply(query[1:10],function(qry){
       nms<-names(qry)
       idx<-qry%in%rownames(rowAnnotation)
       qry[idx]<-rowAnnotation[qry[idx],idkey]
@@ -1857,10 +1871,10 @@ translateQuery<-function(query,idkey,object,annottype,reportNames){
     idx<-query%in%rownames(rowAnnotation)
     query[idx]<-rowAnnotation[query[idx],idkey]
     query<-query[!is.na(query)]
-    query <- query[!duplicated(query)]
   } else if(annottype=="vecAndNames"){
     idx<-names(query)%in%rownames(rowAnnotation)
     names(query)[idx]<-rowAnnotation[names(query)[idx],idkey]
+    query<-query[!is.na(names(query))]
   }
   return(query)
 }

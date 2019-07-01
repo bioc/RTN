@@ -50,14 +50,15 @@ tfs4test <- dt4rtn$tfs[c("PTTG1","E2F2","FOXM1","E2F3","RUNX2")]
 \dontrun{
 
 # preprocessing
-rtni <- tni.constructor(expData=dt4rtn$gexp, regulatoryElements=tfs4test, 
+rtni <- tni.constructor(expData=dt4rtn$gexp, 
+        regulatoryElements=tfs4test, 
         rowAnnotation=dt4rtn$gexpIDs)
 
 # permutation analysis (infers the reference/relevance network)
-rtni<-tni.permutation(rtni, nPermutations=100)
+rtni <- tni.permutation(rtni)
 
 # dpi filter (infers the transcriptional network)
-rtni<-tni.dpi.filter(rtni)
+rtni <- tni.dpi.filter(rtni)
 
 }
 }

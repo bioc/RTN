@@ -42,18 +42,15 @@ see 'tn.dpi' option in \code{\link[RTN:tni.get]{tni.get}}.
 
 \examples{
 
-data(dt4rtn)
-
-# select 5 regulatoryElements for a quick demonstration!
-tfs4test <- dt4rtn$tfs[c("PTTG1","E2F2","FOXM1","E2F3","RUNX2")]
+data(tniData)
 
 \dontrun{
 
 # preprocessing
-rtni <- tni.constructor(expData=dt4rtn$gexp, 
-        regulatoryElements=tfs4test, 
-        rowAnnotation=dt4rtn$gexpIDs)
-
+rtni <- tni.constructor(expData=tniData$expData, 
+        regulatoryElements=c("PTTG1","E2F2","FOXM1","E2F3","RUNX2"), 
+        rowAnnotation=tniData$rowAnnotation)
+        
 # permutation analysis (infers the reference/relevance network)
 rtni <- tni.permutation(rtni)
 

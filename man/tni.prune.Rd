@@ -58,16 +58,13 @@ Clarice Groeneveld
 
 \examples{
 
-data(dt4rtn)
-
-# select 5 regulatoryElements for a quick demonstration!
-tfs4test <- dt4rtn$tfs[c("PTTG1","E2F2","FOXM1","E2F3","RUNX2")]
+data(tniData)
 
 \dontrun{
 
-rtni <- tni.constructor(expData=dt4rtn$gexp, 
-        regulatoryElements=tfs4test, 
-        rowAnnotation=dt4rtn$gexpIDs)
+rtni <- tni.constructor(expData=tniData$expData, 
+        regulatoryElements=c("PTTG1","E2F2","FOXM1","E2F3","RUNX2"), 
+        rowAnnotation=tniData$rowAnnotation)
 rtni <- tni.permutation(rtni)
 rtni <- tni.bootstrap(rtni)
 rtni <- tni.dpi.filter(rtni)
@@ -76,10 +73,10 @@ rtni <- tni.dpi.filter(rtni)
 rtni_pruned <- tni.prune(rtni, "PTTG1", tarPriorityMethod = "TC")
 
 #parallel version with SNOW package!
-library(snow)
-options(cluster=makeCluster(3, "SOCK"))
-rtni_pruned <- tni.prune(rtni, c("PTTG1", "E2F2"))
-stopCluster(getOption("cluster"))
+#library(snow)
+#options(cluster=makeCluster(3, "SOCK"))
+#rtni_pruned <- tni.prune(rtni, c("PTTG1", "E2F2"))
+#stopCluster(getOption("cluster"))
 
 }
 }

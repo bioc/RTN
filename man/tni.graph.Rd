@@ -61,39 +61,36 @@ Mauro Castro
 
 \examples{
 
-data(dt4rtn)
-
-# select 5 regulatoryElements for a quick demonstration!
-tfs4test <- dt4rtn$tfs[c("PTTG1","E2F2","FOXM1","E2F3","RUNX2")]
+data(tniData)
 
 \dontrun{
 
-rtni <- tni.constructor(expData=dt4rtn$gexp, 
-        regulatoryElements=tfs4test, 
-        rowAnnotation=dt4rtn$gexpIDs)
+rtni <- tni.constructor(expData=tniData$expData, 
+        regulatoryElements=c("PTTG1","E2F2","FOXM1","E2F3","RUNX2"), 
+        rowAnnotation=tniData$rowAnnotation)
 rtni <- tni.permutation(rtni)
 rtni <- tni.bootstrap(rtni)
 rtni <- tni.dpi.filter(rtni, eps=0)
 
-# compute regulatory maps
-g <- tni.graph(rtni, tnet="dpi", gtype="rmap", tfs=tfs4test)
+# get the regulatory map
+g <- tni.graph(rtni, tnet="dpi", gtype="rmap", tfs=c("PTTG1","E2F2","FOXM1"))
 
 # option: plot the igraph object using RedeR
 library(RedeR)
 rdp <- RedPort()
 calld(rdp)
 addGraph(rdp,g)
-addLegend.shape(rdp,g)
-addLegend.color(rdp,g,type="edge")
-relax(rdp,p1=20,p3=50,p4=50,p5=10,p8=50,ps=TRUE)
+addLegend.shape(rdp, g)
+addLegend.color(rdp, g, type="edge")
+relax(rdp, p1=20, p3=50, p4=50, p5=10, p8=50, ps=TRUE)
 #...it should take some time to relax!
 
-# compute association maps
+# get the association map
 resetd(rdp)
-g <- tni.graph(rtni, tnet="ref", gtype="amap", tfs=tfs4test)
+g <- tni.graph(rtni, tnet="ref", gtype="amap")
 addGraph(rdp,g)
-addLegend.size(rdp,g)
-addLegend.size(rdp,g,type="edge")
+addLegend.size(rdp, g)
+addLegend.size(rdp, g, type="edge")
 
 }
 }

@@ -96,17 +96,14 @@ Castro, M.A.A. et al. \emph{RTN: Reconstruction and Analysis of Transcriptional 
 
 \examples{
 
-data(dt4rtn)
-
-# select 5 regulatoryElements for a quick demonstration!
-tfs4test <- dt4rtn$tfs[c("PTTG1","E2F2","FOXM1","E2F3","RUNX2")]
+data(tniData)
 
 \dontrun{
 
 # preprocessing
-rtni <- tni.constructor(expData=dt4rtn$gexp, 
-        regulatoryElements=tfs4test, 
-        rowAnnotation=dt4rtn$gexpIDs)
+rtni <- tni.constructor(expData=tniData$expData, 
+        regulatoryElements=c("PTTG1","E2F2","FOXM1","E2F3","RUNX2"), 
+        rowAnnotation=tniData$rowAnnotation)
 
 # permutation analysis (infers the reference/relevance network)
 rtni <- tni.permutation(rtni)
@@ -121,10 +118,10 @@ mod4test <- rownames(rtni@gexp)[sample(1:nrow(rtni@gexp),200)]
 rtni <- tni.conditional(rtni, modulators=mod4test, pValueCutoff=1e-3)
 
 #get results
-cdt <- tni.get(rtni,what="cdt")
+cdt <- tni.get(rtni, what="cdt")
 
 #get summary on a graph object
-g <- tni.graph(rtni,gtype="mmap")
+g <- tni.graph(rtni, gtype="mmap")
 
 ###---------------------------------------------
 ### optional: plot the igraph object using RedeR

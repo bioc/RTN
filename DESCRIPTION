@@ -1,15 +1,15 @@
 Package: RTN
 Type: Package
-Title: Reconstruction of transcriptional networks and analysis of master regulators
-Version: 2.9.2
-Author: Mauro Castro, Xin Wang, Michael Fletcher, Florian Markowetz and Kerstin Meyer
+Title: RTN: Reconstruction of Transcriptional regulatory Networks and analysis of regulons
+Version: 2.9.3
+Author: Clarice Groeneveld [ctb], Gordon Robertson [ctb], Xin Wang [aut], Michael Fletcher [aut], Florian Markowetz [aut], Kerstin Meyer [aut], and Mauro Castro [aut]
 Maintainer: Mauro Castro <mauro.a.castro@gmail.com>
-Depends: R (>= 3.3.3), methods
+Depends: R (>= 3.5.0), methods
 Imports: RedeR, minet, viper, mixtools, snow, limma, data.table, IRanges, igraph, S4Vectors, SummarizedExperiment
 Suggests: RUnit, BiocGenerics, BiocStyle, knitr, rmarkdown
-Description: This package provides classes and methods for transcriptional network inference and analysis. Modulators of transcription factor activity are assessed by conditional mutual information, and master regulators are mapped to phenotypes using different strategies, e.g., gene set enrichment, shadow and synergy analyses. Additionally, master regulators can be linked to genetic markers using eQTL/VSE analysis, taking advantage of the haplotype block structure mapped to the human genome in order to explore risk-associated SNPs identified in GWAS studies.
+Description: A transcriptional regulatory network (TRN) consists of a collection of transcription factors (TFs) and the regulated target genes. TFs are regulators that recognize specific DNA sequences and guide the expression of the genome, either activating or repressing the expression the target genes. The set of genes controlled by the same TF forms a regulon. This package provides classes and methods for the reconstruction of TRNs and analysis of regulons.
 License: Artistic-2.0
-biocViews: NetworkInference, NetworkEnrichment, GeneRegulation, GeneExpression, GraphAndNetwork, GeneSetEnrichment, GeneticVariability, SNP
+biocViews: Transcription, Network, NetworkInference, NetworkEnrichment, GeneRegulation, GeneExpression, GraphAndNetwork, GeneSetEnrichment, GeneticVariability
 VignetteBuilder: knitr
 URL: http://dx.doi.org/10.1038/ncomms3464
 Collate:

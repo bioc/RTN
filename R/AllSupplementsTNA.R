@@ -38,11 +38,10 @@ gsea1tna <- function(listOfRegulons, phenotype, exponent=1,
       scores <- gseaScoresBatchParallel4RTN(geneList=phenotype, geneNames.perm=perm.gL,
                                         collectionOfGeneSets=listOfRegulons,exponent=exponent,
                                         nPermutations=nPermutations)
-      sapply(1:nRegulons, function(i){
-        scoresperm[i,]<<-unlist(scores["scoresperm",i])
-        scoresObserved[i]<<-unlist(scores["scoresObserved",i])
-        NULL
-      })
+      for(i in 1:nRegulons){
+        scoresperm[i,]<-unlist(scores["scoresperm",i])
+        scoresObserved[i]<-unlist(scores["scoresObserved",i])
+      }
     } else {
       if(verbose) cat("-Performing gene set enrichment analysis...\n")
       if(verbose) cat("--For", length(listOfRegulons), "regulons...\n")
@@ -83,11 +82,10 @@ gsea2tna <- function(listOfRegulons, phenotype, exponent=1, nPermutations=1000,
       scores <- gseaScoresBatchParallel4RTN(geneList=phenotype, geneNames.perm = perm.gL,
                                             collectionOfGeneSets=listOfRegulons,
                                             exponent=exponent,nPermutations=nPermutations)
-      sapply(1:nRegulons, function(i){
-        scoresperm[i,]<<-unlist(scores["scoresperm",i])
-        scoresObserved[i]<<-unlist(scores["scoresObserved",i])
-        NULL
-      })
+      for(i in 1:nRegulons){
+        scoresperm[i,]<-unlist(scores["scoresperm",i])
+        scoresObserved[i]<-unlist(scores["scoresObserved",i])
+      }
     } else {
       if(verbose1 && verbose2) cat("-Performing two-tailed GSEA analysis...\n")
       if(verbose1 && verbose2) cat("--For", length(listOfRegulons), "regulons...\n")
@@ -144,21 +142,20 @@ pairwiseSynergy <- function(collectionsOfPairs, phenotype, exponent=1,
     if(verbose) pb <- txtProgressBar(style=3)
     permScores<-matrix(rep(0,length(collectionsOfPairs) * nPermutations), ncol=nPermutations)
     #get permutation scores
-    sapply(1:length(collectionsOfPairs), function(i){
+    for(i in 1:length(collectionsOfPairs)){
       gsPair<-collectionsOfPairs[[i]]
       bl1 <- length(gsPair[[2]]) >= 1
       bl2 <- length(gsPair[[2]]) >= minter*length(gsPair[[1]])
       if(bl1 && bl2){
-        permScores[i,]<<-sapply(1:nPermutations, function(j){
+        permScores[i,]<-sapply(1:nPermutations, function(j){
           gseaScores4RTN(geneList=phenotype,exponent=exponent, mode="score", 
                      geneSet=sample(gsPair[[1]],length(gsPair[[2]])) )
         })
       } else {
-        permScores[i,]<<-rep(NA,nPermutations)
+        permScores[i,]<-rep(NA,nPermutations)
       }
       if(verbose) setTxtProgressBar(pb, i/length(collectionsOfPairs))
-      NULL
-    })
+    }
     if(verbose) close(pb)
   }
   rownames(permScores)<-names(collectionsOfPairs)
@@ -211,19 +208,19 @@ pairwiseShadow <- function(collectionsOfPairs, phenotype, exponent=1,
     #get permutation scores
     if(verbose) pb <- txtProgressBar(style=3)
     permScores<-matrix(rep(NA,length(collectionsOfPairs) * nPermutations), ncol=nPermutations)
-    sapply(1:length(collectionsOfPairs), function(i){
+    for(i in 1:length(collectionsOfPairs)){
       gsPair<-collectionsOfPairs[[i]]
       bl1 <- length(gsPair[[1]])-length(gsPair[[2]]) >= 1
       bl2 <- length(gsPair[[1]])-length(gsPair[[2]]) >= minter*length(gsPair[[1]])
       if(bl1 && bl2){
-        permScores[i,]<<-sapply(1:nPermutations, function(j){
+        permScores[i,]<-sapply(1:nPermutations, function(j){
           gseaScores4RTN(geneList=phenotype,exponent=exponent, mode="score", 
                      geneSet=sample(gsPair[[1]],length(gsPair[[2]])) )
         })
       }
       if(verbose) setTxtProgressBar(pb, i/length(collectionsOfPairs))
       NULL
-    })
+    }
     if(verbose) close(pb)
   }
   rownames(permScores)<-names(collectionsOfPairs)
@@ -309,14 +306,13 @@ tna.permutation.pvalues <- function(permScores, dataScores){
 	##at the initial pvalue of 1.
 	##obs. pseudocounts are added to avoid P-values of zero.
 	valid.id <- which(!is.na(dataScores) & dataScores!=0)
-	sapply(valid.id, function(i) {
-	  pval[i]<<-ifelse(
+	for(i in valid.id) {
+	  pval[i]<-ifelse(
 			dataScores[i] > 0,
 			(sum(permScores[i, ] > dataScores[i])+1)/(nPerm+1),
 			(sum(permScores[i, ] < dataScores[i])+1)/(nPerm+1)
 		)
-    NULL
-	})
+	}
 	names(pval)<-names(dataScores)		
 	return(pval)
 }
@@ -350,14 +346,13 @@ tna.permutation.pvalues.shadow <- function(permScores, dataScores){
   ##at the initial pvalue of 1.
   ##obs. pseudocounts are added to avoid P-values of zero.
   valid.id <- which(!is.na(dataScores))
-  sapply(valid.id, function(i) {
-    pval[i]<<-ifelse(
+  for(i in valid.id){
+    pval[i]<-ifelse(
       dataScores[i] > 0,
       (sum(permScores[i, ] <= dataScores[i])+1)/(nPerm+1),
       (sum(permScores[i, ] >= dataScores[i])+1)/(nPerm+1)
     )
-    NULL
-  })
+  }
   names(pval)<-names(dataScores)		
   return(pval)
 }
@@ -433,7 +428,7 @@ tna.hyper <- function(regulon1, universe, regulon2) {
   ##number of hits between regulons		
   k <- length(overlap) 							
   n <- length(regulon2)	
-  HGTresults <- phyper(k-1, m, Nm, n, lower.tail = F)
+  HGTresults <- phyper(k-1, m, Nm, n, lower.tail = FALSE)
   ex <- (n/N)*m
   if(m == 0 | n == 0) HGTresults <- 1
   hyp.vec <- c(N, m, n, ex, k, HGTresults)
@@ -515,7 +510,7 @@ hyperGeoTest4RTN <- function(geneSet, universe, hits) {
   ##number of hits in gene set		
   k <- length(overlap) 							
   n <- length(hits)	
-  HGTresults <- phyper(k-1, m, Nm, n, lower.tail = F)
+  HGTresults <- phyper(k-1, m, Nm, n, lower.tail = FALSE)
   ex <- (n/N)*m
   if(m == 0) HGTresults <- NA
   hyp.vec <- c(N, m, n, ex, k, HGTresults)

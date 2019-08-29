@@ -1,9 +1,10 @@
 # Unit tests fot TNI-class methods
 test_tni <- function(){
-  data(dt4rtn)
-  tfs4test<-dt4rtn$tfs[c("PTTG1","FOXM1")]
-  rtni <- tni.constructor(expData=dt4rtn$gexp, regulatoryElements=tfs4test, 
-                          rowAnnotation=dt4rtn$gexpIDs)
+  data(tniData)
+  tfs4test<-c("PTTG1","FOXM1")
+  rtni <- tni.constructor(expData=tniData$expData, 
+                          regulatoryElements=tfs4test, 
+                          rowAnnotation=tniData$rowAnnotation)
   #tni.permutation
   rtni<-tni.permutation(rtni,nPermutations=10)
   res<-tni.get(rtni,what="refnet")
@@ -29,14 +30,17 @@ test_tni <- function(){
 }
 # Unit tests fot TNA-class methods
 test_tna <- function(){
-  data(dt4rtn)
-  tfs4test<-dt4rtn$tfs[c("PTTG1","E2F2","FOXM1","E2F3","RUNX2")]
-  rtni <- tni.constructor(expData=dt4rtn$gexp, regulatoryElements=tfs4test, 
-                          rowAnnotation=dt4rtn$gexpIDs)
+  data(tniData)
+  data(tnaData)
+  tfs4test<-c("PTTG1","E2F2","FOXM1","E2F3","RUNX2")
+  rtni <- tni.constructor(expData=tniData$expData, 
+                          regulatoryElements=tfs4test, 
+                          rowAnnotation=tniData$rowAnnotation)
   rtni<-tni.permutation(rtni,nPermutations=10)
   rtni<-tni.bootstrap(rtni,nBootstraps=10)
   rtni<-tni.dpi.filter(rtni)
-  rtna<-tni2tna.preprocess(rtni, phenotype=dt4rtn$pheno, hits=dt4rtn$hits, phenoIDs=dt4rtn$phenoIDs)
+  rtna<-tni2tna.preprocess(rtni, phenotype=tnaData$phenotype, hits=tnaData$hits, 
+                           phenoIDs=tnaData$phenoIDs)
   #tna.mra
   rtna <- tna.mra(rtna, minRegulonSize=1)
   res<-tna.get(rtna,what="mra")

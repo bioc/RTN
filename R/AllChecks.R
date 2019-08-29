@@ -1,5 +1,5 @@
 ##This function is used for argument checking
-tnai.checks <- function(name, para) {
+tnai.checks <- function(name, para, supp) {
   if(name=="alpha") {
     if(!(is.integer(para) || is.numeric(para)) || length(para)!=1 || para>1 || para<0)
       stop("'alpha' should be an integer or numeric value <=1 and >=0 !\n",call.=FALSE)
@@ -153,24 +153,21 @@ tnai.checks <- function(name, para) {
     if(sum(is.na(para))>0)
       stop("'referenceNetwork' matrix should have no NAs!",call.=FALSE)
   }  
- else if(name=="gexp") {
+ else if(name=="expData") {
     if( !is.matrix(para) || !is.numeric(para[1,]))
-      stop("'gexp' should be a numeric matrix with genes on rows and samples on cols!",call.=FALSE)
+      stop("'expData' should be a numeric matrix with genes on rows and samples on cols!",call.=FALSE)
     if(  is.null(colnames(para)) || is.null(rownames(para)) || 
          any(duplicated(rownames(para))) || any(duplicated(colnames(para))) )
-      stop("the 'gexp' matrix should be named on rows and cols (unique names)!",call.=FALSE)
+      stop("the 'expData' matrix should be named on rows and cols (unique names)!",call.=FALSE)
   } else if(name=="gxdata") {
     if( !is.matrix(para) || !is.numeric(para[1,]))
       stop("'gxdata' should be a numeric matrix with genes on rows and samples on cols!",call.=FALSE)
     if(  is.null(colnames(para)) || is.null(rownames(para)) || 
          any(duplicated(rownames(para))) || any(duplicated(colnames(para))) )
       stop("the 'gxdata' matrix should be named on rows and cols (unique names)!",call.=FALSE)
-  }
- else if(name=="regulatoryElements") {
+  } else if(name=="regulatoryElements") {
     if(!is.character(para) || any(is.na(para)) || any(para==""))
       stop("'regulatoryElements' should be a character vector, without 'NA' or empty names!",call.=FALSE)
-    para <- para[!duplicated(para)]
-    return(para)
   } else if(name=="samples") {
     if(!is.null(para)){
       if(!all.characterValues(para)){
@@ -392,12 +389,12 @@ tnai.checks <- function(name, para) {
       if( (!is.matrix(para) && !is.data.frame(para) ) || ncol(para)<2 ){
         stop("'phenoIDs' should be a dataframe (or a matrix of characters) with ncol >=2 !",call.=FALSE)
       }
-      junk<-sapply(1:ncol(para),function(i){
+      for(i in 1:ncol(para)){
         tp<-para[,i]
         if(is.list(tp))tp<-unlist(tp)
         if(i<=2 || is.factor(tp))tp<-as.character(tp)
-        para[,i]<<-tp
-      })
+        para[,i]<-tp
+      }
       rownames(para)<-para[,1]
       if( (any(is.na(para[,1])) || any(para[,1]=="") ) ){
         stop("Col 1 in 'phenoIDs' matrix should have no 'NA' or empty values!",call.=FALSE)      
@@ -430,7 +427,7 @@ tnai.checks <- function(name, para) {
     }
     if(ncol(para)==3){
       para$ID<-paste(para$CHROM,para$START,para$END,sep="_")
-    }else {
+    } else {
       para<-para[,1:4]
     }
     idx<-c(which(!colnames(para)%in%cnames),match(cnames,colnames(para)))
@@ -442,13 +439,13 @@ tnai.checks <- function(name, para) {
     }
     colnames(para)[1]<-"ID"
     #---
-    sapply(1:ncol(para),function(i){
+    for(i in 1:ncol(para)){
       tp<-para[,i]
       if( any( is.na(tp) || any(tp=="") ) ){
         stop("'annotation' matrix should have no 'NA' or empty values!",call.=FALSE)      
       }
-      if(is.list(tp))para[,i]<<-unlist(tp)
-    })
+      if(is.list(tp))para[,i]<-unlist(tp)
+    }
     #---
     para$ID<-as.character(para$ID)
     para$CHROM<-as.character(para$CHROM)
@@ -504,13 +501,13 @@ tnai.checks <- function(name, para) {
     }
     colnames(para)[1]<-"ID"
     #---
-    sapply(1:ncol(para),function(i){
+    for(i in 1:ncol(para)){
       tp<-para[,i]
       if( any( is.na(tp) || any(tp=="") ) ){
         stop("'annotation' matrix should have no 'NA' or empty values!",call.=FALSE)      
       }
-      if(is.list(tp))para[,i]<<-unlist(tp)
-    })
+      if(is.list(tp))para[,i]<-unlist(tp)
+    }
     #---
     para$ID<-as.character(para$ID)
     para$CHROM<-as.character(para$CHROM)
@@ -556,17 +553,17 @@ tnai.checks <- function(name, para) {
   } else if(name=="rowAnnotation"){
     if(is.null(para)){
       return(para)
-    }else {
+    } else {
       if( (!is.matrix(para) && !is.data.frame(para) ) || ncol(para)<2){
         stop("'rowAnnotation' should be a data frame (or a matrix of characters) with ncol >=2 !",call.=FALSE)
       }
-      if(is.matrix(para))para<-data.frame(para,stringsAsFactors=FALSE, check.names=FALSE)
-      junk<-sapply(1:ncol(para),function(i){
+      if(is.matrix(para))para <- data.frame(para,stringsAsFactors=FALSE, check.names=FALSE)
+      for(i in 1:ncol(para)){
         tp<-para[,i]
         if(is.list(tp))tp<-unlist(tp)
-        tp<-as.character(tp)
-        para[,i]<<-tp
-      })
+        if(is.factor(tp))tp<-as.character(tp)
+        para[,i]<-tp
+      }
       #check colnames
       if(is.null(colnames(para))){
         stop("'rowAnnotation' must have colnames!")
@@ -575,34 +572,34 @@ tnai.checks <- function(name, para) {
       if(any(duplicated(colnames(para)))){
         stop("'rowAnnotation' should have unique colnames (not case sensitive)!")
       }
-      #check rownames
-      if(is.null(rownames(para))){
+      #check rownames ('supp' is gexp's rownames)
+      n1 <- sum(supp%in%para[,1])
+      n2 <- sum(supp%in%rownames(para))
+      if(n1>=n2){
         if(any(is.na(para[,1])) || any(para[,1]=="")){
           stop("Col 1 in 'rowAnnotation' should have no NA or empty value!",call.=FALSE)
         }
         if(any(duplicated(para[,1])))
           stop("Col 1 in 'rowAnnotation' should have unique ids!",call.=FALSE)
         rownames(para) <- para[,1]
-      }else {
-        if(!identical(rownames(para),para[,1])){
-          para <- cbind(ID=rownames(para), para)
-        }
+      } else {
+        para <- cbind(ID=rownames(para), para)
       }
       return(para)
     }
   } else if(name=="colAnnotation"){
     if(is.null(para)){
       return(para)
-    }else {
+    } else {
       if((!is.matrix(para) && !is.data.frame(para)) || ncol(para)<2){
         stop("'colAnnotation' should be a data frame (or a matrix of characters) with ncol >=2 !",call.=FALSE)
       }
-      if(is.matrix(para)) {
+      if(is.matrix(para)){
         para <- data.frame(para,stringsAsFactors=FALSE, check.names=FALSE)
       }
-      for (i in 1:ncol(para)) {
+      for(i in 1:ncol(para)){
         column <- para[,i]
-        if (is.list(column)) {
+        if(is.list(column)){
           column <- sapply(column, paste, collapse = ", ")
           para[,i] <- column
         }
@@ -612,10 +609,12 @@ tnai.checks <- function(name, para) {
         stop("'colAnnotation' must have colnames!")
       }
       if(any(duplicated(colnames(para)))){
-        stop("'colAnnotation' should have unique col names!")
+        stop("'colAnnotation' should have unique colnames!")
       }
       #check rownames
-      if(is.null(rownames(para))){
+      n1 <- sum(supp%in%para[,1])
+      n2 <- sum(supp%in%rownames(para))
+      if(n1>=n2){
         para[,1] <- as.character(para[,1])
         if(any(is.na(para[,1])) || any(para[,1]=="")){
           stop("Col 1 in 'colAnnotation' should have no NA or empty value!",call.=FALSE)
@@ -624,12 +623,7 @@ tnai.checks <- function(name, para) {
           stop("Col 1 in 'colAnnotation' should have unique ids!",call.=FALSE)
         rownames(para) <- para[,1]
       } else {
-        if(!identical(rownames(para),para[,1])){
-          if(any(duplicated(para[,1]))){
-            stop("Col 1 in 'colAnnotation' should have unique ids!",call.=FALSE)
-          }
-          rownames(para) <- para[,1]
-        }
+        para <- cbind(ID=rownames(para), para)
       }
       return(para)
     }
@@ -743,3 +737,64 @@ is.color <- function(x){
   res <- try(col2rgb(x),silent=TRUE)
   return(!"try-error"%in%class(res))
 }
+##------------------------------------------------------------------------------
+.expDataChecks <- function(expData, rowAnnotation=NULL, colAnnotation=NULL,
+                           verbose=TRUE){
+  
+  ##-----check input arguments
+  tnai.checks(name="expData",expData)
+  rowAnnotation <- tnai.checks(name="rowAnnotation",rowAnnotation,rownames(expData))
+  colAnnotation <- tnai.checks(name="colAnnotation",colAnnotation,colnames(expData))
+  
+  #----check NAs and NaNs in gexp
+  na.check <- sum( is.na(expData) | is.nan(expData) )
+  if(na.check>0){
+    stop("--NOTE: 'expression data' should be a positive numeric matrix, without NAs or NaNs! \n")
+  }
+  
+  ##-----check rowAnnotation if available
+  if(!is.null(rowAnnotation)){
+    if(verbose)cat("--Mapping 'expData' to 'rowAnnotation'...\n")
+    if( any(!rownames(expData)%in%rownames(rowAnnotation)) ){
+      stop("NOTE: all rownames in the expression data matrix should be available
+           either in rownames or col1 of the row annotation!",
+           call.=FALSE)
+    }
+    rowAnnotation <- rowAnnotation[rownames(expData),]
+    idx<-toupper(colnames(rowAnnotation))=="SYMBOL"
+    if(any(idx)){
+      idx<-which(idx)[1]
+      colnames(rowAnnotation)[idx]<-"SYMBOL"
+      rowAnnotation$SYMBOL<-as.character(rowAnnotation$SYMBOL)
+      idx<-is.na(rowAnnotation$SYMBOL)
+      rowAnnotation$SYMBOL[idx]<-rownames(rowAnnotation)[idx]
+      idx<-rowAnnotation$SYMBOL==""|rowAnnotation$SYMBOL=="NA"
+      rowAnnotation$SYMBOL[idx]<-rownames(rowAnnotation)[idx]
+    } else {
+      tp1<-paste("NOTE: to get better gene summary across the pipelines, 'rowAnnotation'\n")
+      tp2<-paste("should provide an extra column named SYMBOL!", sep="")       
+      if(verbose)warning(tp1,tp2,call.=FALSE)
+    }
+  } else {
+    tp <- rownames(expData)
+    rowAnnotation <- data.frame(ID=tp, row.names=tp, stringsAsFactors = FALSE)
+  }
+  
+  ##-----check colAnnotation if available
+  if(!is.null(colAnnotation)){
+    if(verbose)cat("--Mapping 'expData' to 'colAnnotation'...\n")
+    if( any(!colnames(expData)%in%rownames(colAnnotation)) ){
+      stop("NOTE: all colnames in the expression data matrix should be available
+           either in colnames or col1 of 'colAnnotation'!",
+           call.=FALSE)
+    }
+    colAnnotation <- colAnnotation[colnames(expData),]
+  } else {
+    tp <- colnames(expData)
+    colAnnotation <- data.frame(ID=tp, row.names=tp, stringsAsFactors = FALSE)
+  }
+  
+  return(list(expData=expData,rowAnnotation=rowAnnotation,
+              colAnnotation=colAnnotation))
+  
+  }

@@ -4,39 +4,39 @@
 
 ##------------------------------------------------------------------------------
 ## Constructor of TNI Class objects
-## Entry point for the all TNI/TNA pipelines, including pre-processing
+## Entry point for all TNI/TNA pipelines, including pre-processing
 tni.constructor <- function(expData, regulatoryElements, rowAnnotation=NULL, 
-                            colAnnotation=NULL, cvfilter=TRUE, verbose=TRUE){
-    
-    #--- summarizedExperiment (with expData)
-    if (class(expData) == "SummarizedExperiment" || 
-        class(expData) == "RangedSummarizedExperiment") {
-        if (length(assays(expData)) > 1) {
-            stop("NOTE: please input a SummarizedExperiment with only one assay")
-        }
-        rowAnnotation <- as.data.frame(rowData(expData))
-        colAnnotation <- as.data.frame(colData(expData))
-        expData <- assays(expData)[[1]]
+                            colAnnotation=NULL, cvfilter=FALSE, verbose=TRUE){
+  if(missing(expData))
+    stop("NOTE: 'expData' is missing!",call.=FALSE)    
+  if(missing(regulatoryElements))
+    stop("NOTE: 'regulatoryElements' is missing!",call.=FALSE) 
+  if(class(expData) == "SummarizedExperiment" || 
+     class(expData) == "RangedSummarizedExperiment"){
+    if( !is.null(rowAnnotation) || !is.null(colAnnotation) ){
+      tp1 <- "NOTE: when using a 'SummarizedExperiment' container, "
+      tp2 <- "row and col annotations are used from that object!"
+      warning(tp1,tp2,call.=FALSE)
     }
-  
-    object <- new("TNI", gexp=expData, regulatoryElements=regulatoryElements)
-    object <- tni.preprocess(object, rowAnnotation, colAnnotation, cvfilter, verbose)
-    return(object)
+    if (length(assays(expData)) > 1) {
+      stop("NOTE: please input a SummarizedExperiment with only one assay")
+    }
+    rowAnnotation <- as.data.frame(rowData(expData))
+    colAnnotation <- as.data.frame(colData(expData))
+    expData <- assays(expData)[[1]]
+  }
+  object <- new("TNI", expData=expData, regulatoryElements=regulatoryElements)
+  object <- tni.preprocess(object, rowAnnotation, colAnnotation, cvfilter, verbose)
+  return(object)
 }
 
 ##------------------------------------------------------------------------------
-##initialization method
+##Main initialization method
 setMethod("initialize",
           "TNI",
-          function(.Object, gexp, regulatoryElements) {
-            
-            ##-----checks of required objects
-            if(missing(gexp))stop("NOTE: 'gexp' is missing!",call.=FALSE)    
-            if(missing(regulatoryElements))stop("NOTE: 'regulatoryElements' is missing!",call.=FALSE)            
-            tnai.checks(name="gexp",gexp)
-            regulatoryElements <- tnai.checks(name="regulatoryElements",regulatoryElements)
+          function(.Object, expData, regulatoryElements) {
             ##-----initialization
-            .Object@gexp <- gexp
+            .Object@gexp <- expData
             .Object@regulatoryElements <- regulatoryElements
             .Object@modulators <- character()
             ##-----result slot
@@ -80,95 +80,55 @@ setMethod("initialize",
 setMethod(
   "tni.preprocess",
   "TNI",
-  function(object, rowAnnotation=NULL, colAnnotation=NULL, cvfilter=TRUE, 
+  function(object, rowAnnotation=NULL, colAnnotation=NULL, cvfilter=FALSE, 
            verbose=TRUE){
     
-    #---check compatibility
+    ##----check compatibility
     object <- upgradeTNI(object)
     
-    ##-----check input arguments
-    rowAnnotation <- tnai.checks(name="rowAnnotation",rowAnnotation)
-    colAnnotation <- tnai.checks(name="colAnnotation",colAnnotation)
-    tnai.checks(name="cvfilter",para=cvfilter)
-    tnai.checks(name="verbose",para=verbose)
-    ##-----preprocessing
+    ##----start preprocessing
     if(verbose)cat("-Preprocessing for input data...\n")
     
-    #----check NAs and NaNs in gexp
-    na.check <- sum( is.na(object@gexp) | is.nan(object@gexp) )
-    if(na.check>0){
-      stop("--NOTE: 'expression data' should be a positive numeric matrix, without NAs or NaNs! \n")
+    ##----check arguments
+    tnai.checks(name="cvfilter",para=cvfilter)
+    tnai.checks(name="verbose",para=verbose)
+    
+    ##----initial checks for the main arguments
+    tnai.checks(name="regulatoryElements",para=object@regulatoryElements)
+    tmp <- .expDataChecks(object@gexp, rowAnnotation, colAnnotation)
+    object@gexp <- tmp$expData
+    rowAnnotation <- tmp$rowAnnotation
+    colAnnotation <- tmp$colAnnotation
+    
+    ##----add rowAnnotation
+    if(cvfilter && ncol(rowAnnotation)>1){
+      #apply cvfilter if rowAnnotation is available
+      if(verbose)cat("--Removing duplicated genes (keep max coefficient of variation!)...\n")
+      #e.g. col1=id, col2=symbol (collapse cv by col2)
+      cvres <- cv.filter(object@gexp, rowAnnotation)
+      object@gexp <- cvres$gexp
+      object@rowAnnotation <- cvres$ids
+    } else {
+      object@rowAnnotation <- rowAnnotation[rownames(object@gexp),,drop=FALSE]
     }
+    
+    ##----add colAnnotation
+    object@colAnnotation <- colAnnotation[colnames(object@gexp),,drop=FALSE]
+    
+    ##----update regulatoryElements
     object@summary$regulatoryElements[,"input"] <- length(object@regulatoryElements)
-    
-    ##-----check rowAnnotation if available
-    if(!is.null(rowAnnotation)){
-      if(verbose)cat("--Mapping 'gexp' to 'rowAnnotation'...\n")
-      if( any(!rownames(object@gexp)%in%rownames(rowAnnotation)) ){
-        stop("NOTE: all rownames in 'expression data' should be available in col1 of 'rowAnnotation'!",
-             call.=FALSE)
-      }
-      
-      #--- check 'regulatoryElements' in rowAnnotation
-      #--- if not in col1, then update ids
-      col1 <- sapply(1:ncol(rowAnnotation),function(i){
-        sum(object@regulatoryElements%in%rowAnnotation[,i],na.rm=TRUE)
-      })
-      col1 <- which(col1==max(col1))[1]
-      if(col1!=1){
-        idx <- rowAnnotation[[col1]] %in% object@regulatoryElements
-        object@regulatoryElements <- rownames(rowAnnotation)[idx]
-      }
-      
-      #--- cvfilter
-      if(cvfilter){
-        if(verbose)cat("--Removing duplicated genes (keep max coefficient of variation!)...\n")
-        #i.e. col1=probe, col2=gene (collapse cv by col2)
-        cvres<-cv.filter(object@gexp, rowAnnotation)
-        object@gexp<-cvres$gexp
-        object@rowAnnotation<-cvres$ids
-      } else {
-        #or leave by the user!!!
-        object@rowAnnotation<-rowAnnotation[rownames(object@gexp),]
-        tp1<-paste("by setting 'cvfilter=FALSE', please note that both 'expression data' and 'rowAnnotation'\n")
-        tp2<-paste("should be provided with unique and matched probe-to-gene identifiers!", sep="")          
-        if(verbose)warning(tp1,tp2,call.=FALSE)
-      }
-      #check 'symbol' col in rowAnnotation
-      #ps. rowAnnotation is already checked for duplicated colnames!
-      idx<-toupper(colnames(object@rowAnnotation))=="SYMBOL"
-      if(any(idx)){
-        idx<-which(idx)[1]
-        colnames(object@rowAnnotation)[idx]<-"SYMBOL"
-        #..remove any empty space or NA from SYMBOL!!!
-        object@rowAnnotation$SYMBOL<-as.character(object@rowAnnotation$SYMBOL)
-        idx<-is.na(object@rowAnnotation$SYMBOL)
-        object@rowAnnotation$SYMBOL[idx]<-rownames(object@rowAnnotation)[idx]
-        idx<-object@rowAnnotation$SYMBOL==""|object@rowAnnotation$SYMBOL=="NA"
-        object@rowAnnotation$SYMBOL[idx]<-rownames(object@rowAnnotation)[idx]
-      } else {
-        tp1<-paste("NOTE: to get better gene summary across the pipelines, 'rowAnnotation'\n")
-        tp2<-paste("should provide an extra column named SYMBOL!", sep="")       
-        if(verbose)warning(tp1,tp2,call.=FALSE)
-      }
-    } else {
-      tp <- rownames(object@gexp)
-      object@rowAnnotation <- data.frame(ID=tp, row.names=tp, stringsAsFactors = FALSE)
+    if(verbose) cat("--Checking 'regulatoryElements' in 'rowAnnotation'...\n")
+    col1 <- sapply(1:ncol(rowAnnotation),function(i){
+      sum(object@regulatoryElements%in%object@rowAnnotation[,i],na.rm=TRUE)
+    })
+    col1 <- which(col1==max(col1))[1]
+    if(col1!=1){
+      idx <- object@rowAnnotation[[col1]] %in% object@regulatoryElements
+      object@regulatoryElements <- rownames(object@rowAnnotation)[idx]
     }
     
-    ##-----check colAnnotation if available
-    if(!is.null(colAnnotation)){
-      if(verbose)cat("--Mapping 'gexp' to 'colAnnotation'...\n")
-      if( any(!colnames(object@gexp)%in%rownames(colAnnotation)) ){
-        stop("NOTE: all colnames in the expression data matrix should be available in col1 of 'colAnnotation'!",call.=FALSE)
-      }
-      object@colAnnotation <- colAnnotation[colnames(object@gexp),]
-    } else {
-      tp <- colnames(object@gexp)
-      object@colAnnotation <- data.frame(ID=tp, row.names=tp, stringsAsFactors = FALSE)
-    }
-    
-    #----check sd in gexp
+    ##----check sd in expData
+    if(verbose) cat("--Checking 'expData'...\n")
     sd.check <- apply(object@gexp,1,sd)
     if(any(is.na(sd.check))){
       stop("NOTE: unpredicted exception found in the input data matrix! 
@@ -176,19 +136,20 @@ setMethod(
     }
     sd.check <- sd.check==0
     if(any(sd.check)){
-      if(verbose)cat("--Removing inconsistent data: standard deviation is zero for", sum(sd.check),"gene(s)! \n")
-      object@gexp <- object@gexp[!sd.check,]
+      if(verbose)cat("--Removing inconsistent data: standard deviation is zero for", 
+                     sum(sd.check),"gene(s)! \n")
+      object@gexp <- object@gexp[!sd.check,,drop=FALSE]
       object@rowAnnotation <- object@rowAnnotation[!sd.check,,drop=FALSE]
     }
     
-    #-----check 'regulatoryElements' in gexp
-    if(verbose) cat("--Checking 'regulatoryElements' in 'gexp'...\n")
+    ##----check regulatoryElements
+    if(verbose) cat("--Checking 'regulatoryElements' in 'expData'...\n")
     idx <- object@regulatoryElements%in%rownames(object@gexp)
     object@regulatoryElements <- object@regulatoryElements[idx]
-    if(length(object@regulatoryElements)==0)stop("NOTE: input 'regulatoryElements' contains no useful data!\n",call.=FALSE)
+    if(length(object@regulatoryElements)==0)
+      stop("NOTE: input 'regulatoryElements' contains no useful data!\n", call.=FALSE)
     object@summary$regulatoryElements[,"valid"] <- length(object@regulatoryElements)
-    
-    ##-----make sure 'regulatoryElements' is named
+    #make sure regulatoryElements is named
     if(is.null(names(object@regulatoryElements))){
       #..if null names, add available ones
       if(!is.null(object@rowAnnotation$SYMBOL)){
@@ -212,8 +173,7 @@ setMethod(
         names(object@regulatoryElements)[idx]<-object@regulatoryElements[idx]
       }
     }
-    
-    ##-----sort by names
+    #sort regulatoryElements by names
     idx <- sort.list(names(object@regulatoryElements))
     object@regulatoryElements <- object@regulatoryElements[idx]
     
@@ -511,9 +471,9 @@ setMethod(
           alternative=alternative
         )
       })
-      regulonActivity$pos <- t(sapply(res, function(r) r$pos))
-      regulonActivity$neg <- t(sapply(res, function(r) r$neg))
-      regulonActivity$dif <- t(sapply(res, function(r) r$dif))
+      regulonActivity$differential <- t(sapply(res, function(r) r$differential))
+      regulonActivity$positive <- t(sapply(res, function(r) r$positive))
+      regulonActivity$negative <- t(sapply(res, function(r) r$negative))
     } else {
       if(verbose)cat("-Performing two-tailed GSEA...\n")
       if(verbose)cat("--For", length(listOfRegulonsAndMode), "regulon(s) and",
@@ -528,16 +488,16 @@ setMethod(
           exponent=exponent,
           alternative=alternative
         )
-        regulonActivity$pos<-rbind(regulonActivity$pos,res$positive[tfs])
-        regulonActivity$neg<-rbind(regulonActivity$neg,res$negative[tfs])
-        regulonActivity$dif<-rbind(regulonActivity$dif,res$differential[tfs])
+        regulonActivity$differential<-rbind(regulonActivity$differential,res$differential[tfs])
+        regulonActivity$positive<-rbind(regulonActivity$positive,res$positive[tfs])
+        regulonActivity$negative<-rbind(regulonActivity$negative,res$negative[tfs])
         if(verbose) setTxtProgressBar(pb, i/length(samples))
       }
       if(verbose) close(pb)
     }
-    rownames(regulonActivity$pos)<-samples
-    rownames(regulonActivity$neg)<-samples
-    rownames(regulonActivity$dif)<-samples
+    rownames(regulonActivity$differential)<-samples
+    rownames(regulonActivity$positive)<-samples
+    rownames(regulonActivity$negative)<-samples
     regulonActivity <- .tni.stratification.gsea2(regulonActivity)
     if(targetContribution){
       tc <- .target.contribution(listOfRegulonsAndMode, regulonActivity, 
@@ -554,9 +514,9 @@ setMethod(
       regulonActivity$data$exponent <- exponent
       regulonActivity$data$alternative <- alternative
     } else {
-      colnames(regulonActivity$pos)<-names(tfs)
-      colnames(regulonActivity$neg)<-names(tfs)
-      colnames(regulonActivity$dif)<-names(tfs)
+      colnames(regulonActivity$differential)<-names(tfs)
+      colnames(regulonActivity$positive)<-names(tfs)
+      colnames(regulonActivity$negative)<-names(tfs)
     }
     return(regulonActivity)
   }
@@ -926,7 +886,7 @@ setMethod(
         tp<-intersect(tp,rownames(getqs(object@results$GSEA2.results$positive)))
         tp<-intersect(tp,rownames(getqs(object@results$GSEA2.results$negative)))
         dft<-getqs(object@results$GSEA2.results$differential,order,reportNames)
-        dft<-dft[rownames(dft)%in%tp,]
+        dft<-dft[rownames(dft)%in%tp,,drop=FALSE]
         query$differential<-dft
         query$positive<-object@results$GSEA2.results$positive[rownames(dft),,drop=FALSE]
         query$negative<-object@results$GSEA2.results$negative[rownames(dft),,drop=FALSE]
@@ -1114,7 +1074,7 @@ setMethod(
     #----power transformation
     if(pwtransform){
       if(verbose)cat("--Applying power transformation...\n")
-      junk<-sapply(tfs,function(tf){
+      for(tf in tfs){
         x<-gxtemp[tf,]
         if(shapiro.test(x)$p.value<0.05){
           if(any(x<=0))x<-x+1-min(x)
@@ -1122,10 +1082,9 @@ setMethod(
           # x <- bcPower(x,l, jacobian.adjusted=TRUE)
           l <- round(.estimate.bcpower(x),digits=5)
           x <- .bcpower(x,l, jacobian.adjusted=TRUE)
-          gxtemp[tf,]<<-x
+          gxtemp[tf,]<-x
         }
-        NULL
-      }) 
+      }
     }
     
     ##-----estimate mutual information threshold
@@ -1431,7 +1390,6 @@ setMethod(
     object <- upgradeTNI(object)
     
     ##-----check input arguments
-    if(object@status["Preprocess"]!="[x]")stop("NOTE: input 'object' needs preprocessing!")
     if(object@status["DPI.filter"]!="[x]")stop("NOTE: input 'object' needs dpi analysis!")
     tnai.checks(name="tnet",para=tnet)
     tnai.checks(name="tni.gtype",para=gtype)
@@ -1498,17 +1456,15 @@ setMethod(
       #get adjmt
       tnet<-tnet[unique(c(testedtfs,setdiff(modulators,testedtfs))),testedtfs,drop=FALSE]
       mnet<-tnet;mnet[,]=0
-      junk<-sapply(colnames(mnet),function(i){
+      for(i in colnames(mnet)){
         tp<-cdt[[i]]
-        mnet[rownames(tp),i]<<-tp$Mode
-        NULL
-      })
+        mnet[rownames(tp),i]<-tp$Mode
+      }
       pvnet<-tnet;pvnet[,]=1
-      junk<-sapply(colnames(mnet),function(i){
+      for(i in colnames(mnet)){
         tp<-cdt[[i]]
-        pvnet[rownames(tp),i]<<-tp$PvKS
-        NULL
-      })
+        pvnet[rownames(tp),i]<-tp$PvKS
+      }
       #---
       if(gtype=="mmapDetailed"){
         #---experimental!!!
@@ -1533,8 +1489,6 @@ setMethod(
         }
         g<-tni.mmap.detailed(object,mnet,testedtfs, mds, ntop=ntop, nbottom=nbottom)
       } else {
-        #get mmap
-        #tnet[,]<-0
         g<-tni.mmap(object,mnet,tnet,pvnet,othertfs,testedtfs,modulators)
       }
       return(g)
@@ -1560,7 +1514,8 @@ setMethod(
       V(g)$nodeColor<-"black"
       V(g)$nodeLineColor<-"black"
       g<-att.setv(g=g, from="tfs", to='nodeShape',title="")
-      g$legNodeShape$legend<-c("nTF","TF")
+      g$legNodeShape$shape <- rev(g$legNodeShape$shape)
+      g$legNodeShape$legend<-c("Regulator","Target")
       g<-att.setv(g=g, from="tfs", to='nodeSize', xlim=c(20,50,1))
       g<-att.setv(g=g, from="tfs", to='nodeFontSize',xlim=c(10,32,1))
       #remove non-usefull legends
@@ -1569,8 +1524,8 @@ setMethod(
       if(ecount(g)>0){
         #set edge attr
         g<-att.sete(g=g, from="modeOfAction", to='edgeColor',cols=c("#96D1FF","grey80","#FF8E91"), 
-                    title="ModeOfAction",categvec=-1:1)
-        g$legEdgeColor$legend<-c("Down","NA","Up")
+                    title="Interaction",categvec=-1:1)
+        g$legEdgeColor$legend<-c("(-)","NA","(+)")
         E(g)$edgeWidth<-1.5
         #map modeOfAction to node attribute (compute the average of the interactions)
         el<-data.frame(get.edgelist(g),E(g)$modeOfAction,stringsAsFactors=FALSE)
@@ -1785,6 +1740,115 @@ setMethod(
     }
 )
 
+#-------------------------------------------------------------------------------
+setMethod(
+  "tni.replace.samples",
+  "TNI",
+  function(object, expData, rowAnnotation = NULL, colAnnotation = NULL,
+           verbose = TRUE){
+    
+    #--- check compatibility
+    object <- upgradeTNI(object)
+    
+    #--- check arguments
+    if(object@status["Preprocess"]!="[x]")
+      stop("NOTE: input 'object' needs preprocessing!")
+    tnai.checks("verbose",verbose)
+    
+    #--- check if expData is a summarizedExperiment
+    if (class(expData) == "SummarizedExperiment" || 
+        class(expData) == "RangedSummarizedExperiment") {
+      if( !is.null(rowAnnotation) || !is.null(colAnnotation) ){
+        tp1 <- "NOTE: when using a 'SummarizedExperiment' container, "
+        tp2 <- "row and col annotations are used from that object!"
+        warning(tp1,tp2,call.=FALSE)
+      }
+      if (length(assays(expData)) > 1) {
+        stop("NOTE: please input a SummarizedExperiment with only one assay")
+      }
+      rowAnnotation <- as.data.frame(rowData(expData))
+      colAnnotation <- as.data.frame(colData(expData))
+      expData <- assays(expData)[[1]]
+    }
+    
+    #--- check main arguments
+    if(verbose)cat("--Mapping 'expData' to 'rowAnnotation' and 'colAnnotation'...\n")
+    tmp <- .expDataChecks(expData, rowAnnotation, colAnnotation, verbose=FALSE)
+    new_expData <- tmp$expData
+    new_rowAnnotation <- tmp$rowAnnotation
+    new_colAnnotation <- tmp$colAnnotation
+    
+    #--- match annotation
+    if(verbose)cat("--Checking new and old 'rowAnnotation'...")
+    old_rowAnnotation <- tni.get(object, "rowAnnotation")
+    ijcol <- sapply(1:ncol(old_rowAnnotation),function(i){
+      sapply(1:ncol(new_rowAnnotation),function(j){
+        sum(old_rowAnnotation[,i]%in%new_rowAnnotation[,j])
+      })
+    })
+    ijcol <- which(ijcol==max(ijcol), arr.ind = TRUE)[1,]
+    checkmatch <- old_rowAnnotation[[ijcol[2]]]%in%new_rowAnnotation[[ijcol[1]]]
+    checkmatch <- round(sum(checkmatch)/nrow(old_rowAnnotation)*100)
+    if(checkmatch>75){
+      if(verbose)cat(paste0(round(checkmatch,1),"% agreement! \n"))
+    } else if(checkmatch >= 50 && checkmatch < 75){
+      warning("NOTE: ",100-checkmatch,"% of the TNI is not represented in new 'rowAnnotation'!")
+    } else if(checkmatch < 50){
+      stop("NOTE: ",100-checkmatch,"% of the TNI is not represented in the new 'rowAnnotation'!")
+    }
+    
+    #--- Simplify new_rowAnnotation
+    #--- keep only what will be used to match the datasets
+    idx <- new_rowAnnotation[[ijcol[1]]] %in% old_rowAnnotation[[ijcol[2]]]
+    new_rowAnnotation <- new_rowAnnotation[idx,,drop=FALSE]
+    new_expData <- new_expData[rownames(new_rowAnnotation),,drop=FALSE]
+    new_rowAnnotation <- data.frame(ID1_NEW=rownames(new_rowAnnotation),
+                                    ID2_NEW=new_rowAnnotation[[ijcol[1]]], 
+                                    row.names = rownames(new_rowAnnotation),
+                                    stringsAsFactors = FALSE)
+    
+    #--- Remove duplications in the key
+    if(any(duplicated(new_rowAnnotation$ID2_NEW))){
+      if(verbose)cat("--Removing duplicated genes (keep max coefficient of variation!)...\n")
+      #e.g. col1=id, col2=symbol (collapse cv by col2)
+      cvres <- cv.filter(new_expData, new_rowAnnotation)
+      new_expData <- cvres$gexp
+      new_rowAnnotation <- cvres$ids
+    }
+    
+    #--- Final check
+    idx <- match(new_rowAnnotation$ID2_NEW, old_rowAnnotation[[ijcol[2]]])
+    check <- all(new_rowAnnotation$ID2_NEW==old_rowAnnotation[[ijcol[2]]][idx])
+    if(!check){
+      stop("NOTE: unpredicted exception found in the input data! 
+           ...a possible cause is annotation mismatch!")
+    }
+    
+    if(verbose)cat("--Replacing samples and annotation...")
+    
+    #--- Combine keys
+    new_rowAnnotation <- cbind(new_rowAnnotation, old_rowAnnotation[idx,,drop=FALSE])
+    rownames(new_rowAnnotation) <- rownames(old_rowAnnotation)[idx]
+    
+    #--- Align regulons using old key
+    object@results$tn.ref <- object@results$tn.ref[rownames(new_rowAnnotation),,drop=FALSE]
+    object@results$tn.dpi <- object@results$tn.dpi[rownames(new_rowAnnotation),,drop=FALSE]
+    
+    #--- Update TNI with new samples and annotation
+    object@gexp <- new_expData
+    object@rowAnnotation <- new_rowAnnotation
+    object@colAnnotation <- new_colAnnotation
+    
+    #--- Update TNI with new keys
+    rownames(object@gexp) <- new_rowAnnotation$ID1_NEW
+    rownames(object@rowAnnotation) <- new_rowAnnotation$ID1_NEW
+    rownames(object@results$tn.ref) <- new_rowAnnotation$ID1_NEW
+    rownames(object@results$tn.dpi) <- new_rowAnnotation$ID1_NEW
+    
+    return(object)
+  }
+)
+
 ##------------------------------------------------------------------------------
 ##------------------------------------------------------------------------------
 ##-------------------------TNI INTERNAL FUNCTIONS-------------------------------
@@ -1839,13 +1903,13 @@ translateQuery<-function(query,idkey,object,annottype,reportNames){
   if(annottype=="gexpAndNames"){
     idx<-rownames(query)%in%rownames(rowAnnotation)
     rownames(query)[idx]<-rowAnnotation[rownames(query)[idx],idkey]
-    query <- query[!is.na(rownames(query)),]
+    query <- query[!is.na(rownames(query)),,drop=FALSE]
   } else if(annottype=="rtnetAndNames"){
     idx<-colnames(query)%in%tfs
     colnames(query)[idx]<-names(tfs)[idx]
     idx<-rownames(query)%in%rownames(rowAnnotation)
     rownames(query)[idx]<-rowAnnotation[rownames(query)[idx],idkey]
-    query <- query[!is.na(rownames(query)),]
+    query <- query[!is.na(rownames(query)),,drop=FALSE]
   } else if(annottype=="listAndNames"){
     idx<-names(query)%in%tfs
     names(query)[idx]<-names(tfs)[idx]
@@ -1858,7 +1922,7 @@ translateQuery<-function(query,idkey,object,annottype,reportNames){
   } else if(annottype=="listAndContent"){
     idx<-names(query)%in%tfs
     names(query)[idx]<-names(tfs)[idx]
-    query<-lapply(query[1:10],function(qry){
+    query<-lapply(query,function(qry){
       nms<-names(qry)
       idx<-qry%in%rownames(rowAnnotation)
       qry[idx]<-rowAnnotation[qry[idx],idkey]

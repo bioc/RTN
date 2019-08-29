@@ -20,7 +20,7 @@ setMethod("initialize",
 			tnai.checks(name="referenceNetwork",referenceNetwork)
 			tnai.checks(name="phenotype",phenotype)
 			tnai.checks(name="hits",hits)
-			regulatoryElements <- tnai.checks(name="regulatoryElements",regulatoryElements)    
+			tnai.checks(name="regulatoryElements",regulatoryElements)    
       if(is.null(phenotype) && is.null(hits)){
        stop("NOTE: either 'phenotype' or 'hits' should be available!",call.=FALSE)
       }
@@ -138,13 +138,13 @@ setMethod(
       query<-object@listOfRegulons
       if( what=="regulons.and.pheno" && !is.null(object@phenotype) ){
         pheno<-object@phenotype
-        jk<-lapply(names(query),function(rg){
+        for(rg in names(query)){
           tp<-query[[rg]]
           idx<-match(tp,names(pheno))
           idx<-idx[!is.na(idx)]
           tpp<-pheno[idx]
-          query[[rg]]<<-tpp
-        })
+          query[[rg]]<-tpp
+        }
         if(!is.null(idkey))query<-translateQuery(query,idkey,object,"listAndNames",reportNames)
       } else {
         if(!is.null(idkey))query<-translateQuery(query,idkey,object,"listAndContent",reportNames)
@@ -153,13 +153,13 @@ setMethod(
       query<-object@listOfReferenceRegulons
       if( what=="refregulons.and.pheno" && !is.null(object@phenotype) ){
         pheno<-object@phenotype
-        jk<-lapply(names(query),function(rg){
+        for(rg in names(query)){
           tp<-query[[rg]]
           idx<-match(tp,names(pheno))
           idx<-idx[!is.na(idx)]
           tpp<-pheno[idx]
-          query[[rg]]<<-tpp
-        })
+          query[[rg]]<-tpp
+        }
         if(!is.null(idkey))query<-translateQuery(query,idkey,object,"listAndNames",reportNames)
       } else {
         if(!is.null(idkey))query<-translateQuery(query,idkey,object,"listAndContent",reportNames)
@@ -228,7 +228,7 @@ setMethod(
       if(is.null(ntop)){
         tp<-rownames(getqs(object@results$GSEA2.results$differential))
         dft<-getqs(object@results$GSEA2.results$differential,order,reportNames)
-        dft<-dft[rownames(dft)%in%tp,]
+        dft<-dft[rownames(dft)%in%tp,,drop=FALSE]
         query$differential<-dft
         query$positive<-object@results$GSEA2.results$positive[rownames(dft),,drop=FALSE]
         query$negative<-object@results$GSEA2.results$negative[rownames(dft),,drop=FALSE]
@@ -263,7 +263,7 @@ setMethod(
       query<-object@results$synergy.results
       if(is.data.frame(query) && nrow(query)>0 ){
         idx<-!is.na(query[,"Adjusted.Pvalue"])
-        query<-query[idx,]
+        query<-query[idx,,drop=FALSE]
         if(is.null(ntop)){
           query<-query[query[,"Adjusted.Pvalue"] <= object@para$synergy$pValueCutoff,,drop=FALSE]
           if(order && nrow(query)>1) query<-query[order(query[,"EffectSize"],decreasing=TRUE),,drop=FALSE]
@@ -286,7 +286,7 @@ setMethod(
       query<-object@results$shadow.results$results
       if(is.data.frame(query) && nrow(query)>0){
         idx<-!is.na(query[,"Adjusted.Pvalue"])
-        query<-query[idx,]
+        query<-query[idx,,drop=FALSE]
         if(is.null(ntop)){
           query<-query[query[,"Adjusted.Pvalue"] <= object@para$shadow$pValueCutoff,,drop=FALSE]
           if(order && nrow(query)>1) query<-query[order(query[,"Pvalue"]),,drop=FALSE]
@@ -1384,7 +1384,7 @@ data.integration<-function(object, verbose){
       }
       uninames<-unique(object@rowAnnotation[,1])
       idx<-match(uninames,object@rowAnnotation[,1])
-      object@rowAnnotation<-object@rowAnnotation[idx,]
+      object@rowAnnotation<-object@rowAnnotation[idx,,drop=FALSE]
       rownames(object@rowAnnotation)<-object@rowAnnotation[,1]
       object@rowAnnotation<-object@rowAnnotation[,-col0,drop=FALSE] #agora da pra tirar!
       ##-----check ordering
@@ -1394,8 +1394,8 @@ data.integration<-function(object, verbose){
       b1<-all(tp1%in%tp2) & all(tp1%in%tp3)
       b2<-length(tp1)==length(tp2) && length(tp1)==length(tp3)
       if(b1 && b2){
-        object@transcriptionalNetwork<-object@transcriptionalNetwork[rownames(object@rowAnnotation),]
-        object@referenceNetwork<-object@referenceNetwork[rownames(object@rowAnnotation),]
+        object@transcriptionalNetwork<-object@transcriptionalNetwork[rownames(object@rowAnnotation),,drop=FALSE]
+        object@referenceNetwork<-object@referenceNetwork[rownames(object@rowAnnotation),,drop=FALSE]
       } else {
         warning("NOTE: possible mismatched names between 'transcriptionalNetwork' and 'rowAnnotation'!",call.=FALSE)
       }

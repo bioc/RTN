@@ -37,6 +37,7 @@ LazyLoad: \tab yes\cr
 \link[RTN:tni.get]{tni.get}: \tab get information from individual slots in a TNI object.\cr
 \link[RTN:tni.graph]{tni.graph}: \tab compute a graph from TNI objects.\cr
 \link[RTN:tni.regulon.summary]{tni.regulon.summary}: \tab return a summary of network and regulons. \cr
+\link[RTN:tni.replace.samples]{tni.replace.samples}: \tab replace samples of an existing TNI-class objects. \cr
 \link[RTN:tni2tna.preprocess]{tni2tna.preprocess}: \tab a preprocessing method for objects of class TNI.\cr
 \link[RTN:TNA-class]{TNA-class}: \tab an S4 class for Transcriptional Network Analysis.\cr
 \link[RTN:tna.mra]{tna.mra}: \tab master regulator analysis (MRA) over a list of regulons.\cr

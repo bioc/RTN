@@ -14,6 +14,9 @@ exportMethods(
   "tni.conditional",
   "tni.gsea2",
   "tni.area3",
+  "tni.regulon.summary",
+  "tni.prune",
+  "tni.replace.samples",
   "tni2tna.preprocess",
   "tna.mra",
   "tna.gsea1",
@@ -26,9 +29,7 @@ exportMethods(
   "avs.vse",
   "avs.evse",
   "avs.pevse",
-  "avs.get",
-  "tni.regulon.summary",
-  "tni.prune"
+  "avs.get"
 )
 
 export(

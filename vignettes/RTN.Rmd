@@ -1,142 +1,462 @@
 ---
-title: "RTN: reconstruction of transcriptional networks and analysis of master regulators."
-author: "Mauro AA Castro, Xin Wang, Michael NC Fletcher, Florian Markowetz and Kerstin B Meyer."
+title: "RTN: Reconstruction of Transcriptional regulatory Networks and analysis of regulons."
+author: "Clarice Groeneveld [ctb], Gordon Robertson [ctb], Xin Wang [aut], Michael Fletcher [aut], Florian Markowetz [aut], Kerstin Meyer [aut], and Mauro Castro [aut]."
 date: "`r BiocStyle::doc_date()`"
 package: "`r BiocStyle::pkg_ver('RTN')`"
 bibliography: bibliography.bib
-abstract: <p>This package provides classes and methods for transcriptional network inference and analysis. Modulators of transcription factor activity are assessed by conditional mutual information, and master regulators are mapped to phenotypes using different strategies, e.g., gene set enrichment, shadow and synergy analyses. Additionally, new frameworks are provided at the derivative packages [RTNduals](http://bioconductor.org/packages/RTNduals/) and [RTNsurvival](http://bioconductor.org/packages/RTNsurvival/).</p>
-output: 
+citation_package: natbib
+abstract: <p>A transcriptional regulatory network (TRN) consists of a collection of regulated target genes and transcription factors (TFs), which recognize specific DNA sequences and guide the expression of the genome, either activating or repressing the expression the target genes. The set of genes controlled by the same TF forms a *regulon*. This package provides classes and methods for the reconstruction of TRNs and analysis of regulons. New computational frameworks are also available from the RTN's derivative packages,  [RTNduals](http://bioconductor.org/packages/RTNduals/) and [RTNsurvival](http://bioconductor.org/packages/RTNsurvival/).</p>
+output:
   BiocStyle::html_document:
     css: custom.css
 vignette: >
-  %\VignetteIndexEntry{"RTN: reconstruction of transcriptional networks and analysis of master regulators.""}
+  %\VignetteIndexEntry{"RTN: reconstruction of transcriptional regulatory networks and analysis of regulons.""}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
 
+
 # Overview
 
-The package **RTN**  is designed for reconstruction and analysis of transcriptional networks (TN) using mutual information [@Margolin2006a]. It is implemented by S4 classes in **R** [@Rcore] and extends several methods previously validated for assessing transcriptional regulatory units, or regulons, e.g., MRA [@Carro2010], GSEA [@Subramanian2005], synergy and shadow [@Lefebvre2010]. The package computes mutual information (MI) between annotated transcription factors (TFs) and all potential targets using gene expression data. It is tuned to deal with large gene expression datasets in order to build genome-wide transcriptional networks centered on TFs and regulons. Using a robust statistical pipeline, **RTN** allows user to set the stringency of the analysis in a stepwise process, including a boostrep routine designed to remove unstable associations. Parallel computing is available for critical steps demanding high-performance.
+The **RTN** package is designed for the reconstruction of TRNs and analysis of regulons using mutual information (MI) [@Fletcher2013]. It is implemented by S4 classes in *R* [@Rcore] and extends several methods previously validated for assessing regulons, *e.g.*, MRA [@Carro2010], GSEA [@Subramanian2005], and EVSE [@Castro2016]. The package tests the association between a given TF and all potential targets using transcriptomes (either from RNA-Seq or microarray studies). It is tuned to deal with large gene expression datasets in order to build transcriptional regulatory units centered on TFs. **RTN** allows user to set the stringency of the analysis in a stepwise process, including a boostrep routine designed to remove unstable associations. Parallel data processing is available for critical steps demanding high-performance computing.
+
 
 # Quick Start
 
-## Transcriptional network inference
 
-The **dt4rtn** dataset consists of a list with 6 objects used for demonstration purposes only. It was extracted, pre-processed and size-reduced from @Fletcher2013 and @Curtis2012 and contains a named gene expression matrix (**gexp**), a data frame with **gexp** annotation (**gexpIDs**), a named numeric vector with differential gene expression data (**pheno**), a data frame with **pheno** annotation  (**phenoIDs**), a character vector with genes differentially expressed (**hits**), and a named vector with transcriptions factors (**tfs**).
+## Transcriptional Network Inference (TNI)
+
+The **TNI** pipeline starts with the generic function `tni.constructor` and creates a `TNI-class` object, which provides methods for TRN inference from high-throughput gene expression data. The `tni.constructor` takes in a matrix of gene expression and the corresponding gene and sample annotation, as well as a list of regulators to be evaluated. Here, the gene expression matrix and annotation are available in the `tniData` dataset, which was extracted, pre-processed and size-reduced from @Fletcher2013 and @Curtis2012. This dataset consists of a list with 3 objects: a named gene expression matrix (`tniData$expData`), a data frame with gene annotation (`tniData$rowAnnotation`), and a data frame with sample annotation (`tniData$colAnnotation`). We will use this dataset to demonstrate the construction of a small TRN, with 5 regulons (we recommend building regulons for all TFs annotated for a given species; please see the *case study* section for additional examples).
+
+The `tni.constructor` method will check the consistency of all the given arguments. The **TNI** pipeline is then executed in three subsequent steps: (i) compute MI between a regulator and all potential targets, removing non-significant associations by permutation analysis, (ii) remove unstable interactions by bootstrapping, and (iii) apply the ARACNe algorithm (additional comments are provided throughout the examples).
 
 ```{r label= 'Load a sample dataset', eval=TRUE}
 library(RTN)
-data(dt4rtn)
+data(tniData)
 ``` 
-
-Objects of class **TNI** provide a series of methods to do transcriptional network inference from high-throughput gene expression data. In this 1st step, the generic function `tni.preprocess` is used to run several checks on the input data.
 
 ```{r label='Create a new TNI object', eval=TRUE, results='hide'}
-#Input 1: 'expData', a named gene expression matrix (samples on cols)
-#Input 2: 'regulatoryElements', a named vector with TF ids
+#Input 1: 'expData', a named gene expression matrix (genes on rows, samples on cols); 
+#Input 2: 'regulatoryElements', a vector listing genes regarded as TFs
 #Input 3: 'rowAnnotation', an optional data frame with gene annotation
-tfs <- dt4rtn$tfs[c("PTTG1","E2F2","FOXM1","E2F3","RUNX2")]
-rtni <- tni.constructor(expData=dt4rtn$gexp, regulatoryElements=tfs, rowAnnotation=dt4rtn$gexpIDs)
+#Input 4: 'colAnnotation', an optional data frame with sample annotation
+tfs <- c("PTTG1","E2F2","FOXM1","E2F3","RUNX2")
+rtni <- tni.constructor(expData = tniData$expData, 
+                        regulatoryElements = tfs, 
+                        rowAnnotation = tniData$rowAnnotation, 
+                        colAnnotation = tniData$colAnnotation)
+#p.s. alternativelly, 'expData' can be a 'SummarizedExperiment' object
 ``` 
 
-The `tni.permutation` function takes the pre-processed **TNI** object and returns a transcriptional network inferred by mutual information (with multiple hypothesis testing corrections).
+Then the `tni.permutation` function takes the pre-processed `TNI-class` object and returns a TRN inferred by permutation analysis (with multiple hypothesis testing corrections).
 
 ```{r label='Permutation', eval=TRUE, results='hide'}
-# please, set nPermutations >= 1000
-rtni <- tni.permutation(rtni, nPermutations = 100, verbose = FALSE)
+#Please, set nPermutations >= 1000
+rtni <- tni.permutation(rtni, nPermutations = 100)
 ``` 
 
-In an additional step, unstable interactions can be removed by bootstrap analysis using the `tni.bootstrap` function, which creates a consensus bootstrap network (referred here as `refnet`).
+Unstable interactions are subsequently removed by bootstrap analysis using the `tni.bootstrap` function, which creates a consensus bootstrap network, referred here as `refnet` (reference network).
 
 ```{r label='Bootstrap', eval=TRUE, results='hide'}
-rtni <- tni.bootstrap(rtni) 
+rtni <- tni.bootstrap(rtni)
 ``` 
 
-In the TN each target can be linked to multiple TFs and regulation can occur as a result of both direct (TF-target) and indirect interactions (TF-TF-target). The Data Processing Inequality (DPI) algorithm [@Meyer2008] is used to remove the weakest interaction in any triangle of two TFs and a common target gene, thus preserving the dominant TF-target pairs, resulting in the filtered transcriptional network (referred here as `tnet`). The filtered TN has less complexity and highlights the most significant interactions.
+At this stage each target in the TRN can be linked to multiple TFs. As regulation can occur by both direct (TF-target) and indirect interactions (TF-TF-target), next the pipeline applies the ARACNe algorithm [@Margolin2006a] to remove the weakest interaction in any triplet formed by two TFs and a common target gene, preserving the dominant TF-target pair [@Meyer2008]. The ARACNe algorithm uses the data processing inequality (DPI) theorem to enrich the regulons with direct TF-target interactions, creating a DPI-filtered TRN, referred here as `tnet` (for additional details, please refer to @Margolin2006b and @Fletcher2013). Briefly, consider three random variables, `X`, `Y` and `Z` that form a network triplet, with `X` interacting with `Z` only through `Y` (*i.e.*, the interaction network is `X->Y->Z`), and no alternative path exists between `X` and `Z`). The DPI theorem states that the information transferred between `Y` and `Z` is always larger than the information transferred between `X` and `Z`. Based on this assumption, the ARACNe algorithm scans all triplets formed by two regulators and one target and removes the edge with the smallest MI value of each triplet, which is regarded as a redundant association.
 
 ```{r label='Run DPI filter', eval=TRUE, results='hide'}
-rtni <- tni.dpi.filter(rtni) 
+rtni <- tni.dpi.filter(rtni)
 ``` 
 
-All results available in the **TNI** object can be retrieved using the `tni.get` function:
+For a summary of the resulting regulatory network we recommend using the `tni.regulon.summary` function. From the summary below, we can see the number of regulons, the number of inferred targets and the regulon size distribution.
 
-```{r label='Check summary', eval=TRUE, results='hide'}
-tni.get(rtni, what="summary")
-refnet <- tni.get(rtni, what="refnet")
-tnet <- tni.get(rtni, what="tnet")
+```{r label='Check overall summary', eval=TRUE, collapse=TRUE}
+tni.regulon.summary(rtni)
 ``` 
 
-The inferred transcriptional network can also be retrieved as an **igraph** object (@igraph) using the `tni.graph` function. The graph object includes some basic network attributes pre-formatted for visualization in the R package **RedeR** [@Castro2012].
+The `tni.regulon.summary` function also lets us get detailed information about a specific regulon, including the number of positive and negative targets. Please use this information as an initial guide to help the description of the regulons. Usually small regulons (<15 targets) are not usufull for most downstream methods, and highly unbalanced regulons (*e.g.* only positive targets) provide unstable activity readouts.
+
+```{r label='Check summary of a regulon', eval=TRUE, collapse=TRUE}
+tni.regulon.summary(rtni, regulatoryElements = "PTTG1")
+``` 
+
+All results available in the `TNI-class` object can be retrieved using the `tni.get` accessory function. For example, setting `what = 'regulons.and.mode'` will return a list with regulons, including the weight assigned for each interaction.
+
+```{r label='Check results', eval=TRUE, collapse=TRUE}
+regulons <- tni.get(rtni, what = "regulons.and.mode", idkey = "SYMBOL")
+head(regulons$PTTG1)
+``` 
+
+The absolute weight represents the MI value, while the signal (+/-) indicates the predicted mode of action based on the Pearson's correlation between the regulator and its targets. We can also retrieve the inferred regulons into an `igraph-class` object [@igraph2] using the `tni.graph` function, which sets some basic graph attributes for visualization in the **RedeR** R package [@Castro2012].
 
 ```{r label='Get graph', eval=TRUE}
-g <- tni.graph(rtni)
+g <- tni.graph(rtni, tfs = c("PTTG1","E2F2","FOXM1"))
 ``` 
 
+The next chunk shows how to plot the `igraph-class` object using **RedeR** (**Figure 1**).
 
-## Transcriptional network analysis
-
-Objects of class **TNA** provide a series of methods to do enrichment analysis on transcriptional networks. In this 1st step, the generic function `tni2tna.preprocess` is used to convert the pre-processed **TNI** object to **TNA**, also running several checks on the input data.
-
-```{r label='Create a new TNA object (preprocess TNI-to-TNA)', eval=TRUE, results='hide'}
-#Input 1: 'object', a TNI object with a pre-processed transcripional network
-#Input 2: 'phenotype', a named numeric vector, usually with log2 differential expression values
-#Input 3: 'hits', a character vector of gene ids considered as hits
-#Input 4: 'phenoIDs', an optional data frame with anottation used to aggregate genes in the phenotype
-rtna <- tni2tna.preprocess(object=rtni, 
-                         phenotype=dt4rtn$pheno, 
-                         hits=dt4rtn$hits, 
-                         phenoIDs=dt4rtn$phenoIDs
-                         )
-``` 
-
-The `tna.mra` function takes the **TNA** object and returns the results of the Master Regulator Analysis (RMA) [@Carro2010] over a list of regulons from a transcriptional network (with multiple hypothesis testing corrections). The MRA computes the overlap between the transcriptional regulatory unities (regulons) and the input signature genes using the hypergeometric distribution (with multiple hypothesis testing corrections).
-
-```{r label='Run MRA analysis pipeline', eval=TRUE, results='hide'}
-rtna <- tna.mra(rtna)
-``` 
-
-A simple overlap among all regulons can also be tested using the `tna.overlap` function:
-
-```{r label='Run overlap analysis pipeline', eval=TRUE, results='hide'}
-rtna <- tna.overlap(rtna)
-``` 
-Alternatively, the gene set enrichment analysis (GSEA) can be used to assess if a given transcriptional regulatory unit is enriched for genes that are differentially expressed among 2 classes of microarrays (i.e., a differentially expressed phenotype). The GSEA uses a rank-based scoring metric in order to test the association between gene sets and the ranked phenotypic difference. Here regulons are treated as gene sets, an extension of the GSEA statistics as previously described [@Subramanian2005].
-
-```{r label='Run GSEA analysis pipeline pt. 1', eval=TRUE, results='hide'}
-rtna <- tna.gsea1(rtna, stepFilter=FALSE, nPermutations=100)
-# ps. default 'nPermutations' is 1000.
-``` 
-
-The two-tailed GSEA tests whether positive or negative targets for a TF are enriched at each extreme of a particular response (e.g., differentially expressed genes). The pipeline splits the regulon into a group of activated and a group of repressed genes, based on the Pearson's correlation, and then asks how the two sets are distributed in the ranked list of genes (please refer to @Campbell2016 and @Castro2016 for more details).
-
-```{r label='Run GSEA analysis pipeline pt. 2', eval=TRUE, results='hide'}
-rtna <- tna.gsea2(rtna, tfs="PTTG1", nPermutations=100)
-# ps. default 'nPermutations' is 1000.
-``` 
-
-All results available in the **TNA** object can be retrieved using the `tna.get` function:
-
-```{r label='Get results', eval=TRUE, results='hide'}
-tna.get(rtna, what="summary")
-tna.get(rtna, what="mra")
-tna.get(rtna, what="overlap")
-tna.get(rtna, what="gsea1")
-tna.get(rtna, what="gsea2")
-``` 
-
-To visualize the GSEA distributions, the user can apply the `tna.plot.gsea1` and `tna.plot.gsea2` functions that plot the one-tailed and two-tailed GSEA results, respectively:
-
-```{r label='Plot GSEA', eval=FALSE, results='hide'}
-tna.plot.gsea1(rtna, file="tna_gsea1", labPheno="abs(log2) diff. expression") 
-tna.plot.gsea2(rtna, file="tna_gsea2", labPheno="log2 diff. expression") 
+```{r label='Plot graph', eval=FALSE}
+library(RedeR)
+rdp <- RedPort()
+calld(rdp)
+addGraph(rdp, g, layout=NULL)
+addLegend.color(rdp, g, type="edge")
+addLegend.shape(rdp, g)
+relax(rdp, ps = TRUE)
 ``` 
 
 ![title](fig1.png)
-<b>Figure 1.</b> GSEA analysis showing genes in each regulon (as hits) ranked by their differential expression (as phenotype). This toy example illustrates the output from the **TNA** pipeline evaluated by the `tna.gsea1` method.
+<b>Figure 1.</b> Graph representation of three regulons inferred by the <b>RTN</b> package.
 
+
+## Transcriptional Network Analysis (TNA)
+
+The **TNA** pipeline starts with the generic function `tni2tna.preprocess`, which converts the `TNI-class` into a `TNA-class` object. Objects of class TNA provide methods for enrichment analysis over a list of regulons, testing the association between regulons and a given gene expression signature, which is provided here in the `tnaData` dataset. This dataset should be used for demonstration purposes only and consists of a list with 3 objects: a named numeric vector with log2 fold changes from a differential gene expression analysis, called here as phenotype (`tnaData$phenotype`), a character vector listing the differentially expressed genes (`tnaData$hits`), and a data frame with gene annotation mapped to the phenotype (`tnaData$phenoIDs`).
+
+```{r label='Create a new TNA object (preprocess TNI-to-TNA)', eval=TRUE, results='hide'}
+#Input 1: 'object', a TNI object with regulons
+#Input 2: 'phenotype', a named numeric vector, usually log2 differential expression levels
+#Input 3: 'hits', a character vector, usually a set of differentially expressed genes
+#Input 4: 'phenoIDs', an optional data frame with gene anottation mapped to the phenotype
+data(tnaData)
+rtna <- tni2tna.preprocess(object = rtni, 
+                           phenotype = tnaData$phenotype, 
+                           hits = tnaData$hits, 
+                           phenoIDs = tnaData$phenoIDs)
+``` 
+
+The `tna.mra` function takes the `TNA-class` object and runs the Master Regulator Analysis (MRA) [@Carro2010] over a list of regulons (with multiple hypothesis testing corrections). The MRA assesses the overlap between each regulon and the genes listed as 'hits'.
+
+```{r label='Run the MRA method', eval=TRUE, results='hide'}
+#Run the MRA method
+rtna <- tna.mra(rtna)
+``` 
+
+All results available in the `TNA-class` object can be retrieved using the `tna.get` accessory function; setting `what = 'mra'` will return a data frame listing the total number of genes in the TRN (`Universe.Size`), the number of targets in each regulon (`Regulon.Size`), the number of genes listed as 'hits' (`Total.Hits`), the expected overlap between a given regulon and the 'hits' (`Expected.Hits`), the observed overlap between a given regulon and the 'hits' (`Observed.Hits`), the statistical significance of the observed overlap assessed by the `phyper` function (`Pvalue`), and the adjusted P-value (`Adjusted.Pvalue`).
+
+```{r label='Get MRA results', eval=TRUE, collapse=TRUE}
+#Get MRA results;
+#..setting 'ntop = -1' will return all results, regardless of a threshold
+mra <- tna.get(rtna, what="mra", ntop = -1)
+head(mra)
+``` 
+
+As a complementary approach, the `tna.gsea1` function runs the one-tailed gene set enrichment analysis (GSEA-1T) to find regulons associated with a particular response, represented by a ranked list of genes generated from a differential gene expression signature (*i.e.* the 'phenotype' included in the TNI-to-TNA preprocessing step). Here the regulon's targets are considered a gene set, which is evaluated against the phenotype. The GSEA-1T uses a rank-based scoring metric in order to test the association between the gene set and the phenotype [@Subramanian2005].
+
+```{r label='Run GSEA method', eval=TRUE, results='hide'}
+#Run the GSEA method
+#Please, set nPermutations >= 1000
+rtna <- tna.gsea1(rtna, stepFilter=FALSE, nPermutations=100)
+``` 
+
+Setting `what = 'gsea1'` in the `tna.get` accessory function will retrive a data frame listing the GSEA statistics, and the corresponding GSEA plots can be generated using the `tna.plot.gsea1` function (**Figure 2**).
+
+```{r label='Get GSEA results', eval=TRUE, collapse=TRUE}
+#Get GSEA results
+gsea1 <- tna.get(rtna, what="gsea1", ntop = -1)
+head(gsea1)
+``` 
+
+```{r label='Plot GSEA results', eval=FALSE}
+#Plot GSEA results
+tna.plot.gsea1(rtna, labPheno="abs(log2 fold changes)", ntop = -1)
+``` 
 
 ![title](fig2.png)
-<b>Figure 2.</b>  Two-tailed GSEA analysis showing positive or negative targets for a TF (as hits) ranked by their differential expression (as phenotype). This toy example illustrates the output from the **TNA** pipeline evaluated by the `tna.gsea2` method (for detailed interpretation of results from this method, please refer to @Campbell2016 and @Castro2016).
+<b>Figure 2.</b> GSEA analysis showing genes in each regulon (vertical bars) ranked by differential gene expression analysis (phenotype). This toy example illustrates the output from the **TNA** pipeline evaluated by the `tna.gsea1` function.
+
+The GSEA-1T, however, does not indicate the direction of the association. Next the **TNA** pipeline uses the two-tailed GSEA (GSEA-2T) approach to test whether the regulon is positively or negatively associated with the phenotype. The `tna.gsea2` function splits the regulon into positive and negative targets (based on Pearson's correlation between the TF and its targets), and then assesses the distribution of the targets in the ranked list of genes. 
+
+```{r label='Run the GSEA-2T method', eval=TRUE, results='hide'}
+#Run the GSEA-2T method
+#Please, set nPermutations >= 1000
+rtna <- tna.gsea2(rtna, stepFilter = FALSE, nPermutations = 100)
+``` 
+
+Setting `what = 'gsea2'` in the `tna.get` accessory function will retrive a data frame listing the GSEA-2T statistics, and the corresponding GSEA plots can be generated using the `tna.plot.gsea2` function.
+
+```{r label='Get GSEA-2T results', eval=TRUE, collapse=TRUE}
+#Get GSEA-2T results
+gsea2 <- tna.get(rtna, what = "gsea2", ntop = -1)
+head(gsea2$differential)
+``` 
+
+In GSEA-2T (**Figure 3**), a regulon’s positive and negative targets are each considered separate as *pos* and *neg* gene sets, which are then evaluated against the phenotype. For each gene set (*pos* and *neg*) a walk down the ranked list is performed, stepwise. When a gene in the gene set is found, its position is marked in the ranked list. A running sum, shown as the pink and blue (*pos* and *neg* gene sets, respectively) lines, increases when the gene at that position belongs to the gene set and decreases when it doesn’t. The maximum distance of each running sum from the x-axis represents the enrichment score. GSEA-2T produces two per-phenotype enrichment scores (ES), whose difference (dES = ES*pos* - ES*neg*) represents the regulon activity. The goal is to assess whether the target genes are overrepresented among the genes that are more positively or negatively differentially expressed. A large positive dES indicates an induced (activated) regulon, while a large negative dES indicates a repressed regulon (please refer to @Campbell2016 and @Campbell2018 for cases illustrating the use of this approach; an extension of the GSEA-2T to single samples was implemented by @Castro2016 and @Groeneveld2019).
+
+```{r label='Plot GSEA-2T results', eval=FALSE}
+#Plot GSEA-2T results
+tna.plot.gsea2(rtna, labPheno="log2 fold changes", tfs="PTTG1")
+``` 
+
+
+![title](fig3.png)
+<b>Figure 3.</b>  Two-tailed GSEA analysis showing regulon's positive or negative targets (red/blue vertical bars) ranked by differential gene expression analysis (phenotype). This toy example illustrates the output from the **TNA** pipeline evaluated by the `tna.gsea2` function (@Campbell2016 and @Campbell2018 provide examples on how to interpret results from this method).
+
+
+# TCGA-BRCA case study
+
+
+## Context
+
+Here we show how to prepare input data for the **RTN** package using publicly available mRNA-seq data, and clinical/molecular data for the TCGA-BRCA cohort. We show how to download harmonized GRCh38/hg38 data from the Genomic Data Commons (GDC) using the *TCGAbiolinks* package [@Colaprico2016]. The preprocessing will generate a `SummarizedExperiment` object that contains gene expression data, which we will then use to compute BRCA-specific regulons.
+
+
+## Package and data requirements
+
+Please ensure you have installed all libraries before proceeding.
+
+```{r eval=FALSE}
+library(RTN)
+library(TCGAbiolinks)
+library(SummarizedExperiment)
+library(TxDb.Hsapiens.UCSC.hg38.knownGene)
+library(snow)
+```
+
+
+## Data preprocessing
+
+We'll use the Bioconductor package `TCGAbiolinks` to query and download from the GDC. We are looking for the harmonized, normalized RNA-seq data for the TCGA-BRCA cohort. `TCGAbiolinks` will create a directory called GDCdata in your working directory and will save into it the files downloaded from the GDC. The files for each patient will be downloaded in a separate file, and we will use a subset of 500 cases for demonstration purposes only. As a large number of mRNA-seq text files will be downloaded, totaling 140 MB, this can take a while. Then, the `GDCprepare` function will compile the files into an R object of class `RangedSummarizedExperiment`. The `RangedSummarizedExperiment` has 6 slots. The most important are `rowRanges` (gene annotation), `colData` (sample annotation), and `assays`, which contains the gene expression matrix.
+
+```{r eval=FALSE}
+# Get gene expression aligned against hg38
+query <- GDCquery(project = "TCGA-BRCA",
+                  data.category = "Transcriptome Profiling",
+                  data.type = "Gene Expression Quantification", 
+                  workflow.type = "HTSeq - FPKM-UQ",
+                  sample.type = c("Primary solid Tumor"))
+
+# Get a subset from TCGA-BRCA for demonstration (n=500)
+cases <- getResults(query, cols = "cases")
+cases <- sample(cases, size = 500)
+query <- GDCquery(project = "TCGA-BRCA",
+                  data.category = "Transcriptome Profiling",
+                  data.type = "Gene Expression Quantification", 
+                  workflow.type = "HTSeq - FPKM-UQ",
+                  sample.type = c("Primary solid Tumor"),
+                  barcode = cases)
+GDCdownload(query)
+tcgaBRCA_mRNA_data <- GDCprepare(query)
+```
+
+The object downloaded from the GDC contains gene-level expression data that includes both coding and noncoding genes (*e.g.* lncRNAs). We will filter these, retaining only genes annotated in the UCSC hg38 known gene list (~30,000 genes).
+
+```{r eval=FALSE}
+#-- Subset by known gene locations
+geneRanges <- genes(TxDb.Hsapiens.UCSC.hg38.knownGene)
+tcgaBRCA_mRNA_data <- subsetByOverlaps(tcgaBRCA_mRNA_data, geneRanges)
+```
+
+```{r eval=FALSE}
+nrow(rowData(tcgaBRCA_mRNA_data))
+## [1] ~30,000
+```
+
+Finally, we'll simplify names in the cohort annotation for better summarizations in the subsequent RTN functions. When this step has been run, the `tcgaBRCA_mRNA_data` object is ready for the *TNI* pipeline. Please ensure the `tcgaBRCA_mRNA_data` object is saved in an appropriated folder.
+
+```{r eval=FALSE}
+#-- Change column names in gene annotation for better summarizations
+colnames(rowData(tcgaBRCA_mRNA_data)) <- c("ENSEMBL", "SYMBOL", "OG_ENSEMBL")
+```
+
+```{r eval=FALSE}
+#-- Save the preprocessed data for subsequent analyses
+save(tcgaBRCA_mRNA_data, file = "tcgaBRCA_mRNA_data_preprocessed.RData")
+```
+
+
+## Inferring the transcriptional regulatory network
+
+Next we will generate regulons for the TCGA-BRCA cohort following the same steps described in the *Quick Start* section. For the regulon reconstruction, we will use a comprehensive list of regulators available in the `tfsData` dataset, comprising 1612 TFs compiled from @Lambert2018.
+
+```{r eval=FALSE}
+#-- Load TF annotation
+data("tfsData")
+```
+
+```{r eval=FALSE}
+#-- Check TF annotation:
+#-- Intersect TFs from Lambert et al. (2018) with gene annotation 
+#-- from the TCGA-BRCA cohort
+geneannot <- rowData(tcgaBRCA_mRNA_data)
+regulatoryElements <- intersect(tfsData$Lambert2018$SYMBOL, geneannot$SYMBOL)
+```
+
+```{r eval=FALSE}
+#-- Run the TNI constructor
+rtni_tcgaBRCA <- tni.constructor(expData = tcgaBRCA_mRNA_data, 
+                                 regulatoryElements = regulatoryElements)
+```
+
+To compute a large regulatory network we recommend using a multithreaded mode with the **snow** package. As minimum computational resources, we suggest a processor with >= 4 cores and RAM >= 8 GB per core (specific routines should be adjusted for the available resources). The `makeCluster` function will set the number of nodes to create on the local machine, making a `cluster` object available for the `TNI-class` methods. For example, it should take ~2h to conclude the reconstruction of 1000 regulons from a gene expression matrix with ~30,000 genes and 500 samples when running in a 2.9 GHz Core i9-8950H workstation with 32GB DDR4 RAM (you might add something for the current calculation with ~1600 TFs). Please note that running large datasets in parallel can quickly run the system out of memory. We recommend monitoring the parallelization to avoid working too close to the memory ceiling; the `parChunks` argument available in the `tni.permutation` and `tni.bootstrap` functions can be used to adjust the job size sent for parallelization. For RNA-seq data we recommend using the non-parametric estimator of mutual information (default option of the `tni.permutation` function).
+
+```{r eval=FALSE}
+#-- Compute the reference regulatory network by permutation and bootstrap analyses.
+#-- Please, set 'spec' according to the available resources in your hardware
+options(cluster=snow::makeCluster(spec=5, "SOCK"))
+rtni_tcgaBRCA <- tni.permutation(rtni_tcgaBRCA, pValueCutoff = 10^-6)
+rtni_tcgaBRCA <- tni.bootstrap(rtni_tcgaBRCA, nBootstraps = 200)
+stopCluster(getOption("cluster"))
+```
+
+Next we run the ARACNe algorithm with `eps = 0`, which sets the threshold for removing the edge with the smallest MI value in each triplet (see comments above and the `aracne` function documentation). Zero is the most stringent MI threshold. A less stringent approach sets `eps = NA`, which estimates a MI threshold from the empirical null distribution computed in the permutation and bootstrap steps.
+
+```{r eval=FALSE}
+#-- Compute the DPI-filtered regulatory network
+rtni_tcgaBRCA <- tni.dpi.filter(rtni_tcgaBRCA, eps = 0)
+```
+
+```{r eval=FALSE}
+#-- Save the TNI object for subsequent analyses
+save(rtni_tcgaBRCA, file="rtni_tcgaBRCA.RData")
+```
+
+* Note1: Some level of missing annotation is expected, as not all gene symbols listed in the `regulatoryElements` might be available in the TCGA-BRCA preprocessed data. Also, data that are inconsistent with the calculation may be removed in the `tni.constructor` preprocess; for example, if a gene's expression does not vary across a cohort, it is not possible to associate this gene's expression with the expression of other genes in the cohort. As an extreme case, genes that exhibit no variability (*e.g.* that are not expressed in all samples) are excluded from the analysis. For a summary of the resulting regulatory network we recommend using the `tni.regulon.summary` function (see the *Quick Start* section).
+
+* Note2: The MI metric is based on a gene's expression varying across a cohort. Large cohorts of tumour samples typically contain multiple molecular subtypes, and typically provide good expression variability for building regulons. In contrast, sample sets that are more homogeneous may be more challenging to explore with regulons, and this may be the case with sets of normal, non-cancerous samples. We do not recommend computing regulons for sample sets of low variability.
+
+
+# METABRIC case study
+
+
+## Context
+
+@Fletcher2013 reconstructed regulons for 809 transcription factors (TFs) using microarray transcriptomic data from the METABRIC breast cancer cohort [@Curtis2012]. @Castro2016 found that 36 of these TF regulons were associated with genetic risk of breast cancer. The risk TFs were in two distinct clusters. The "cluster 1" risk TFs were associated with estrogen receptor-positive (ER+) breast cancer risk and comprise TFs such as ESR1, FOXA1, and GATA3, whereas the "cluster 2" risk TFs were associated with estrogen receptor-negative (ER-), basal-like breast cancer. Our goal here is to demonstrate how to generate regulon activity profiles for individual tumour samples using the regulons reconstructed by @Fletcher2013.
+
+
+## Package and data requirements
+
+Please ensure you have installed all libraries before proceeding. The *Fletcher2013b* package is available from the R/Bioconductor repository. Installing and then loading the *Fletcher2013b* data package will make available all data required for this case study. The `rtni1st` dataset is a pre-processed `TNI-class` object that includes the regulons reconstructed by @Fletcher2013 and a gene expression matrix for the METABRIC cohort 1.
+
+```{r eval=FALSE}
+library(RTN)
+library(Fletcher2013b)
+library(pheatmap)
+```
+
+```{r eval=FALSE}
+#-- Load 'rtni1st' data object, which includes regulons and expression profiles
+data("rtni1st")
+```
+
+```{r eval=FALSE}
+#-- A list of transcription factors of interest (here 36 risk-associated TFs)
+risk.tfs <- c("AFF3", "AR", "ARNT2", "BRD8", "CBFB", "CEBPB", "E2F2", "E2F3", "ENO1", "ESR1", "FOSL1", "FOXA1", "GATA3", "GATAD2A", "LZTFL1", "MTA2", "MYB", "MZF1", "NFIB", "PPARD", "RARA", "RB1", "RUNX3", "SNAPC2", "SOX10", "SPDEF", "TBX19", "TCEAL1", "TRIM29", "XBP1", "YBX1", "YPEL3", "ZNF24", "ZNF434", "ZNF552", "ZNF587")
+```
+
+
+## Regulon activity profiles
+
+Regulon activity profiles (RAPs) seek to characterize regulatory program similarities and differences between samples in a cohort. In order to assess a large number of samples, we implemented a function that computes the two-tailed GSEA for the entire cohort (additional details are provided in @Groeneveld2019). Briefly, for each regulon, the `tni.gsea2` function estimates a regulon activity score for each sample available in the `TNI-class` object. For each gene in a sample, a differential gene expression is calculated from its expression in the sample relative to its average expression in the cohort; the genes are then ordered as a ranked list representing a differential gene expression signature, which is used to run the GSEA-2T as explained in `tna.gsea2` method (see *section 2.1*).
+
+```{r eval=FALSE}
+#-- Compute regulon activity for individual samples
+metabric_regact <- tni.gsea2(rtni1st, tfs = risk.tfs)
+```
+
+The `tni.gsea2` returns a list with the calculated enrichment scores: ES*pos*, ES*neg* and dES, which represents the regulon activity of individual samples. Next, the `pheatmap` function is used to generate a heatmap showing RAPs along with some sample attributes (**Figure 4**).
+
+```{r eval=FALSE}
+#-- Get sample attributes from the 'rtni1st' dataset
+metabric_annot <- tni.get(rtni1st, "colAnnotation")
+#-- Get ER+/- and PAM50 attributes for pheatmap
+attribs <- c("LumA","LumB","Basal","Her2","Normal","ER+","ER-")
+metabric_annot <- metabric_annot[,attribs]
+```
+
+```{r eval=FALSE}
+#-- Plot regulon activity profiles
+pheatmap(t(metabric_regact$dif), 
+         main="METABRIC cohort 1 (n=977 samples)",
+         annotation_col = metabric_annot, 
+         show_colnames = FALSE, annotation_legend = FALSE, 
+         clustering_method = "ward.D2", fontsize_row = 6,
+         clustering_distance_rows = "correlation",
+         clustering_distance_cols = "correlation")
+```
+
+```{r eval=FALSE, include=FALSE}
+pheatmap(t(metabric_regact$dif), 
+         main="METABRIC cohort 1 (n=977 samples)",
+         annotation_col = metabric_annot, 
+         show_colnames = FALSE, annotation_legend = FALSE, 
+         clustering_method = "ward.D2",
+         clustering_distance_rows = "correlation",
+         clustering_distance_cols = "correlation", 
+         fontsize_row = 6, height = 5, width = 7,
+         filename = "fig4.pdf")
+```
+
+
+![title](fig4.png)
+<b>Figure 4.</b> Regulon activity profiles of individual tumour samples from the METABRIC cohort 1 (for an example where this strategy has been used, please see @Robertson2017).
+
+# Transforming TNI-class objects
+
+The `tni.replace.samples` function is the entry point to assess new samples with previously calculated regulons. This function will require an existing `TNI-class` objects, replacing the gene expression matrix and sample annotation. The `tni.replace.samples` will check all the given arguments, specilly the consistency of gene annotation between datasets. Next we show how to generate RAPs for TCGA-BRCA samples using the regulons reconstructed by @Fletcher2013.
+
+```{r eval=FALSE}
+#-- Replace samples
+rtni1st_tcgasamples <- tni.replace.samples(rtni1st, tcgaBRCA_mRNA_data)
+```
+
+```{r eval=FALSE}
+#-- Compute regulon activity for the new samples
+tcga_regact <- tni.gsea2(rtni1st_tcgasamples, tfs = risk.tfs)
+```
+
+```{r eval=FALSE}
+#-- Get sample attributes from the 'rtni1st_tcgasamples' dataset
+tcga_annot <- tni.get(rtni1st_tcgasamples, "colAnnotation")
+#-- Adjust PAM50 attributes for pheatmap
+tcga_annot <- within(tcga_annot,{
+  'LumA' = ifelse(subtype_BRCA_Subtype_PAM50%in%c("LumA"),1,0)
+  'LumB' = ifelse(subtype_BRCA_Subtype_PAM50%in%c("LumB"),1,0)
+  'Basal' = ifelse(subtype_BRCA_Subtype_PAM50%in%"Basal",1,0)
+  'Her2' = ifelse(subtype_BRCA_Subtype_PAM50%in%c("Her2"),1,0)
+  'Normal' = ifelse(subtype_BRCA_Subtype_PAM50%in%c("Normal"),1,0)
+})
+attribs <- c("LumA","LumB","Basal","Her2","Normal")
+tcga_annot <- tcga_annot[,attribs]
+```
+
+```{r eval=FALSE}
+#-- Plot regulon activity profiles
+pheatmap(t(tcga_regact$dif), 
+         main="TCGA-BRCA cohort subset (n=500 samples)",
+         annotation_col = tcga_annot, 
+         show_colnames = FALSE, annotation_legend = FALSE, 
+         clustering_method = "ward.D2", fontsize_row = 6,
+         clustering_distance_rows = "correlation",
+         clustering_distance_cols = "correlation")
+```
+
+```{r eval=FALSE, include=FALSE}
+pheatmap(t(tcga_regact$dif), 
+         main="TCGA-BRCA cohort subset (n=500 samples)",
+         annotation_col = tcga_annot, 
+         show_colnames = FALSE, annotation_legend = FALSE, 
+         clustering_method = "ward.D2",
+         clustering_distance_rows = "correlation",
+         clustering_distance_cols = "correlation", 
+         fontsize_row = 6, height = 4.5, width = 7,
+         filename = "fig5.pdf")
+```
+
+![title](fig5.png)
+<b>Figure 5.</b> Regulon activity profiles of individual tumour samples for a subset (n=500) of the TCGA-BRCA cohort using regulons reconstructed by @Fletcher2013 (for an example where this strategy has been used, please see @Corces2018).
+
+# Citation
+
+When using RTN in publications, please cite:
+
+* Groeneveld CS, Chagas VS, Jones SJM, Robertson AG, Ponder BAJ, Meyer KB, Castro MAA. RTNsurvival: An R/Bioconductor package for regulatory network survival analysis. Bioinformatics, btz229, 2019. doi: 10.1093/bioinformatics/btz229
+
+* Chagas VS, Groeneveld CS, Oliveira KG, Trefflich S, de Almeida RC, Ponder BAJ, Meyer KB, Jones SJM, Robertson AG, Castro MAA. RTNduals: An R/Bioconductor package for analysis of co-regulation and inference of dual regulons.
+Bioinformatics, btz534, 2019. doi: 10.1093/bioinformatics/btz534
+
+* Castro MAA, de Santiago I, Campbell TM, Vaughn C, Hickey TE, Ross E, Tilley WD, Markowetz F, Ponder BAJ, Meyer KB. Regulators of genetic risk of breast cancer identified by integrative network analysis. Nature Genetics, 48(1):12-21, 2016. doi: 10.1038/ng.3458
+
+* Fletcher MNC, Castro MAA, Wang X, de Santiago I, O'Reilly M, Chin S, Rueda OM, Caldas C, Ponder BAJ, Markowetz F, Meyer KB. Master regulators of FGFR2 signalling and breast cancer risk. Nature Communications, 4:2464, 2013. doi: 10.1038/ncomms3464
 
 # Session information
 

@@ -60,19 +60,17 @@ getMarkers.rset<-function(randomSet,getlinked=TRUE){
 mapvset<-function(vSet,snpnames){
   snpnames <- data.table(x=snpnames, y=1:length(snpnames),key="x")
   y=NULL
-  junk<-lapply(1:length(vSet),function(i){
+  for(i in 1:length(vSet)){
     tp<-.mtdata(vSet[[i]])
     mappedMarkers<-list()
-    junk<-lapply(1:length(tp$blocks),function(j){
+    for(j in 1:length(tp$blocks)){
       tpp<-tp$blocks[[j]]
       mapm<-snpnames[data.table(names(tpp))][,y]
       mapm<-mapm[!is.na(mapm)]
-      mappedMarkers[[names(tp$blocks[j])]]<<-mapm
-      NULL
-    })
-    vSet[[i]]@metadata$mappedMarkers<<-mappedMarkers
-    NULL
-  })
+      mappedMarkers[[names(tp$blocks[j])]]<-mapm
+    }
+    vSet[[i]]@metadata$mappedMarkers<-mappedMarkers
+  }
   vSet
 }
 .mtdata<-function(x) {
@@ -94,19 +92,17 @@ maprset<-function(rSet,snpnames,verbose=TRUE){
   resrset<-lapply(1:nr,function(i){
     vSet<-rSet[[i]]
     if(verbose) setTxtProgressBar(pb, i/nr)
-    junk<-lapply(1:length(vSet),function(i){
+    for(i in 1:length(vSet)){
       tp<-.mtdata(vSet[[i]])
       mappedMarkers<-list()
-      junk<-lapply(1:length(tp$blocks),function(j){
+      for(j in 1:length(tp$blocks)){
         tpp<-tp$blocks[[j]]
         mapm<-snpnames[data.table(names(tpp))][,y]
         mapm<-mapm[!is.na(mapm)]
-        mappedMarkers[[names(tp$blocks[j])]]<<-mapm
-        NULL
-      })
-      vSet[[i]]@metadata$mappedMarkers<<-mappedMarkers
-      NULL
-    })
+        mappedMarkers[[names(tp$blocks[j])]]<-mapm
+      }
+      vSet[[i]]@metadata$mappedMarkers<-mappedMarkers
+    }
     vSet
   })
   resrset
@@ -120,12 +116,12 @@ getAvsRanges<-function(vSet){
     blocks<-vSet[[i]]
     clRanges<-IRanges()
     index<-NULL
-    junk<-lapply(1:length(blocks),function(j){
+    for(j in 1:length(blocks)){
       pos<-as.integer(blocks[[j]])
       query<-IRanges(start=pos, end=pos,names=names(blocks[[j]]))
-      index<<-c(index,rep(j,length(query)))
-      clRanges<<-c(clRanges,query)
-    })
+      index<-c(index,rep(j,length(query)))
+      clRanges<-c(clRanges,query)
+    }
     clRanges@metadata$chr<-chr
     clRanges@metadata$markers<-names(blocks)
     clRanges@metadata$blocks<-blocks
@@ -174,13 +170,12 @@ getAnnotRanges<-function(annotation,maxgap=0, getTree=TRUE, getReduced=FALSE){
 ##..names indicate the LD cluster (i.e. the RiskSNP assignment) 
 getMappedClusters<-function(object){
   MarkerIDs<-NULL
-  junk<-lapply(object@variantSet,function(vset){
+  for(vset in object@variantSet){
     tp<-lapply(vset@metadata$blocks,names)
     tp<-unlist(tp)
     names(tp)<-vset@metadata$markers[vset@metadata$index]
-    MarkerIDs<<-c(MarkerIDs,tp)
-    NULL
-  })
+    MarkerIDs<-c(MarkerIDs,tp)
+  }
   mappedIds<-getMappedMarkers(object)
   MarkerIDs<-MarkerIDs[names(MarkerIDs)%in%mappedIds$RiskSNP]
   MarkerIDs<-MarkerIDs[MarkerIDs%in%mappedIds$RiskAssociatedSNP]
@@ -190,12 +185,11 @@ getMappedClusters<-function(object){
 getMappedMarkers<-function(object){
   RiskSNP<-NULL
   RiskAssociatedSNP<-NULL
-  junk<-sapply(names(object@results$evse),function(reg){
+  for(reg in names(object@results$evse)){
     eqtls<-object@results$evse[[reg]]$eqtls
-    RiskSNP<<-c(RiskSNP,eqtls$RiskSNP)
-    RiskAssociatedSNP<<-c(RiskAssociatedSNP,eqtls$RiskAssociatedSNP)
-    NULL
-  })
+    RiskSNP<-c(RiskSNP,eqtls$RiskSNP)
+    RiskAssociatedSNP<-c(RiskAssociatedSNP,eqtls$RiskAssociatedSNP)
+  }
   rsid<-object@validatedMarkers$rsid
   RiskSNP<-rsid[rsid%in%RiskSNP]
   RiskAssociatedSNP<-unique(RiskAssociatedSNP)
@@ -781,33 +775,31 @@ eqtlExtractFull<-function(vSet,annot,gxdata,snpdata){
   })
   #---simplify list
   res<-list()
-  lapply(1:length(clusterMapping),function(i){
+  for(i in 1:length(clusterMapping)){
     tp<-clusterMapping[[i]]
     if(is.list(tp)){
-      lapply(names(tp),function(j){
+      for(j in names(tp)){
         tpp<-tp[[j]]
         tpp<-tpp[!is.na(tpp[,2]),]
         if(ncol(tpp)>2 && nrow(tpp)>0){
-          res[[j]]<<-tpp
+          res[[j]]<-tpp
         }
-      })
+      }
     }
-    NULL
-  })
+  }
   clusterMapping<-res
   #---get summary
   summ<-data.frame(NULL,stringsAsFactors=FALSE)
-  lapply(names(clusterMapping),function(riskSNP){
+  for(riskSNP in names(clusterMapping)){
     tp<-clusterMapping[[riskSNP]]
     Fstat<-tp[,1,drop=FALSE]
     Pstat<-tp[,2,drop=FALSE]
     geneid<-colnames(tp)[-c(1,2)]
-    sapply(rownames(Fstat),function(associatedSNP){
+    for(associatedSNP in rownames(Fstat)){
       tpp<-data.frame(riskSNP,associatedSNP,geneid,Fstat[associatedSNP,],Pstat[associatedSNP,],stringsAsFactors=FALSE)
-      summ<<-rbind(summ,tpp)
-      NULL
-    })
-  })
+      summ<-rbind(summ,tpp)
+    }
+  }
   if(nrow(summ)>0){
     colnames(summ)<-c("RiskSNP","RiskAssociatedSNP","GeneID","F","Pr(>F)")
   }
@@ -870,7 +862,7 @@ eqtlExtractAnova<-function(vSet,annot,gxdata,snpdata){
       overlaps<-findOverlaps(query,subject)
       geneList<-.mtdata(subject)$mappedAnnotations
       resfit<-NULL
-      junk<-lapply(1:length(query@metadata$markers),function(j){
+      for(j in 1:length(query@metadata$markers)){
         snpList<-.mtdata(query)$mappedMarkers[[j]]
         ov<-S4Vectors::from(overlaps)%in%which(query@metadata$index==j)
         ov<-unique(S4Vectors::to(overlaps)[ov])
@@ -879,10 +871,9 @@ eqtlExtractAnova<-function(vSet,annot,gxdata,snpdata){
           res<-eqtlTestDetailedAnova(geneList=as.character(gList),snpList=as.integer(snpList),gxdata,snpdata)
           res$RiskAssociatedSNP<-rownames(snpdata)[res$RiskAssociatedSNP]
           res<-data.frame(RiskSNP=query@metadata$markers[j],res,stringsAsFactors=FALSE)
-          resfit<<-rbind(resfit,res)
+          resfit<-rbind(resfit,res)
         }
-        NULL
-      })
+      }
     } else {
       resfit<-NA
     }
@@ -890,10 +881,9 @@ eqtlExtractAnova<-function(vSet,annot,gxdata,snpdata){
   })
   #---simplify list
   summ<-NULL
-  lapply(1:length(clusterMapping),function(i){
-    summ<<-rbind(summ,clusterMapping[[i]])
-    NULL
-  })
+  for(i in 1:length(clusterMapping)){
+    summ<-rbind(summ,clusterMapping[[i]])
+  }
   if(nrow(summ)>0){
     colnames(summ)<-c(".RiskSNP",".RiskAssociatedSNP",".GeneID",".F",".Pr(>F)",".Coef",".R2")
   }
@@ -912,7 +902,7 @@ eqtlTestDetailedAnova<-function(geneList,snpList,gxdata,snpdata){
   #run lm
   resfit<-NULL
   if(ncol(snpdata)>1 && ncol(gxdata)>1){
-    junk<-sapply(colnames(snpdata),function(S){
+    for(S in colnames(snpdata)){
       fmla <- formula( paste("gxdata ~",S, collapse=" ") )
       raov <- aov(fmla, data=as.data.frame(snpdata,stringsAsFactors=FALSE))
       cf<-raov$coefficients[S,]
@@ -925,18 +915,18 @@ eqtlTestDetailedAnova<-function(geneList,snpList,gxdata,snpdata){
       colnames(sf)<-names(cf)
       sf<-t(sf)
       raov<-data.frame(RiskAssociatedSNP=S,GeneID=rownames(sf),sf,Coef=cf,stringsAsFactors=FALSE)
-      resfit<<-rbind(resfit,raov)
-    })
+      resfit<-rbind(resfit,raov)
+    }
   } else {
-    junk<-sapply(colnames(snpdata),function(S){
+    for(S in colnames(snpdata)){
       fmla <- formula( paste("gxdata ~",S, collapse=" ") )
       raov <- aov(fmla, data=as.data.frame(snpdata,stringsAsFactors=FALSE))
       cf<-raov$coefficients[2]
       sf<-as.data.frame(summary(raov)[[1]])
       sf<-sf[1,4:5]
       raov<-data.frame(RiskAssociatedSNP=S,GeneID=colnames(gxdata),F=sf[,1],Prob=sf[,2],Coef=cf,stringsAsFactors=FALSE)
-      resfit<<-rbind(resfit,raov)
-    })
+      resfit<-rbind(resfit,raov)
+    }
   }
   rownames(resfit)<-NULL
   resfit$RiskAssociatedSNP<-snpList[resfit$RiskAssociatedSNP]
@@ -947,11 +937,10 @@ eqtlTestDetailedAnova<-function(geneList,snpList,gxdata,snpdata){
   colnames(R2)<-snpList
   rownames(R2)<-geneList
   summ<-NULL
-  sapply(colnames(R2),function(i){
+  for(i in colnames(R2)){
     tp<-data.frame(RiskAssociatedSNP=i,GeneID=rownames(R2),R2=R2[,i],stringsAsFactors=FALSE)
-    summ<<-rbind(summ,tp)
-    NULL
-  })
+    summ<-rbind(summ,tp)
+  }
   rownames(summ)<-NULL
   #---
   resfit<-cbind(resfit,R2=summ$R2)
@@ -970,20 +959,18 @@ getEvseMatrix<-function(object,what="probs"){
   } else if(what=="fstat"){
     vl=0;cl="F";efun=max
   }
-  junk<-sapply(names(object@results$evse),function(reg){
+  for(reg in names(object@results$evse)){
     eqtls<-object@results$evse[[reg]]$eqtls
     rvec<-rep(vl,length(RiskSNP))
     names(rvec)<-RiskSNP
-    junk<-sapply(RiskSNP,function(rs){
+    for(rs in RiskSNP){
       idx<-which(eqtls$RiskSNP==rs)
       if(length(idx)>0){
-        rvec[rs]<<-efun(eqtls[idx,cl])
+        rvec[rs]<-efun(eqtls[idx,cl])
       }
-      NULL
-    })
-    evsemtx<<-rbind(evsemtx,rvec)
-    NULL
-  })
+    }
+    evsemtx<-rbind(evsemtx,rvec)
+  }
   rownames(evsemtx)<-names(object@results$evse)
   evsemtx
 }
@@ -1018,11 +1005,11 @@ report.vset<-function(variantSet){
     res
   })
   summ<-NULL
-  junk<-lapply(lkmarkers,function(lt){
-    lapply(lt,function(ltt){
-      summ<<-rbind(summ,ltt)
-    })
-  })
+  for(lt in lkmarkers){
+    for(ltt in lt){
+      summ<-rbind(summ,ltt)
+    }
+  }
   idx<-which(summ[,1]!=summ[,2])
   summ<-summ[idx,]
   summ<-data.frame(summ,stringsAsFactors = FALSE)

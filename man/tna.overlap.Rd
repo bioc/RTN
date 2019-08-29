@@ -58,19 +58,19 @@ a data frame in the slot "results", see 'overlap' option in \code{\link[RTN:tna.
 
 \examples{
 
-data(dt4rtn)
-
-# select 5 regulatoryElements for a quick demonstration!
-tfs4test <- dt4rtn$tfs[c("PTTG1","E2F2","FOXM1","E2F3","RUNX2")]
+data(tniData)
+data(tnaData)
 
 \dontrun{
 
-rtni <- tni.constructor(expData=dt4rtn$gexp, regulatoryElements=tfs4test, 
-        rowAnnotation=dt4rtn$gexpIDs)
-rtni<-tni.permutation(rtni)
-rtni<-tni.bootstrap(rtni)
-rtni<-tni.dpi.filter(rtni)
-rtna<-tni2tna.preprocess(rtni, phenotype=dt4rtn$pheno, hits=dt4rtn$hits, phenoIDs=dt4rtn$phenoIDs)
+rtni <- tni.constructor(expData=tniData$expData, 
+        regulatoryElements=c("PTTG1","E2F2","FOXM1","E2F3","RUNX2"), 
+        rowAnnotation=tniData$rowAnnotation)
+rtni <- tni.permutation(rtni)
+rtni <- tni.bootstrap(rtni)
+rtni <- tni.dpi.filter(rtni)
+rtna <- tni2tna.preprocess(rtni, phenotype=tnaData$phenotype, 
+        hits=tnaData$hits, phenoIDs=tnaData$phenoIDs)
 
 #run overlap analysis pipeline
 rtna <- tna.overlap(rtna)

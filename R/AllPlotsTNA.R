@@ -4,7 +4,7 @@
 
 ##------------------------------------------------------------------------------
 ##Plot enrichment analysis from TNA objects.
-tna.plot.gsea1<-function(object,  labPheno="tna", file=labPheno, filepath=".", regulon.order="size", 
+tna.plot.gsea1<-function(object,  labPheno="", file="tna_gsea1", filepath=".", regulon.order="size", 
                          ntop=NULL, tfs=NULL, ylimPanels=c(0.0,3.5,0.0,0.8), heightPanels=c(1,1,3), 
                          width=4.4, height=4, ylabPanels=c("Phenotype","Regulon","Enrichment score"), 
                          xlab="Position in the ranked list of genes", alpha=0.5, sparsity=10, 
@@ -268,7 +268,7 @@ gsplot1 <- function(runningScore, enrichmentScore, positions, adjpv,
 
 ##------------------------------------------------------------------------------
 ##Plot 2-tailed enrichment analysis from TNA objects.
-tna.plot.gsea2<-function(object, labPheno="tna", file=labPheno, filepath=".", regulon.order="size", 
+tna.plot.gsea2<-function(object, labPheno="", file="tna_gsea2", filepath=".", regulon.order="size", 
                          ntop=NULL, tfs=NULL, ylimPanels=c(-3.0,3.0,-0.5,0.5), heightPanels=c(2.0,0.8,5.0), 
                          width=2.8, height=3.0, ylabPanels=c("Phenotype","Regulon","Enrichment score"), 
                          xlab="Position in the ranked list of genes", 

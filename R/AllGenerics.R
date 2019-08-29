@@ -1,17 +1,15 @@
-##generic functions
 ##-------------------------------------------------------------------------
 setGeneric("tni.preprocess",
-           function(object, rowAnnotation=NULL, colAnnotation=NULL, cvfilter=TRUE, 
+           function(object, rowAnnotation=NULL, colAnnotation=NULL, cvfilter=FALSE, 
                     verbose=TRUE)
              standardGeneric("tni.preprocess"), package="RTN")
 setGeneric("tni.permutation",
            function(object, pValueCutoff=0.01, pAdjustMethod="BH", globalAdjustment=TRUE, 
-                    estimator="pearson",nPermutations=1000, pooledNullDistribution=TRUE, 
+                    estimator="spearman",nPermutations=1000, pooledNullDistribution=TRUE, 
                     parChunks=50, verbose=TRUE) 
              standardGeneric("tni.permutation"), package="RTN")
 setGeneric("tni.bootstrap",
-           function(object,estimator="pearson", nBootstraps=100, consensus=95, 
-                    parChunks=10, verbose=TRUE)
+           function(object, nBootstraps=100, consensus=95, parChunks=10, verbose=TRUE)
              standardGeneric("tni.bootstrap"), package="RTN")
 setGeneric("tni.dpi.filter",
            function(object, eps=0, verbose=TRUE)
@@ -53,6 +51,10 @@ setGeneric("tni.prune",
                     tarPriorityMethod = "EC", minPrunedSize = 30, 
                     verbose = TRUE, ...) 
                standardGeneric("tni.prune"), package="RTN")
+setGeneric("tni.replace.samples",
+           function(object, expData, rowAnnotation=NULL, colAnnotation=NULL,
+                    verbose=TRUE)
+             standardGeneric("tni.replace.samples"), package="RTN")
 ##-------------------------------------------------------------------------
 setGeneric("tna.graph",
            function(object, tnet="dpi", gtype="rmap", minRegulonSize=15, tfs=NULL, 

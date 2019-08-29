@@ -58,35 +58,33 @@ Mauro Castro
 
 \examples{
 
-data(dt4rtn)
-
-# select 5 regulatoryElements for a quick demonstration!
-tfs4test <- dt4rtn$tfs[c("PTTG1","E2F2","FOXM1","E2F3","RUNX2")]
+data(tniData)
+data(tnaData)
 
 \dontrun{
 
-rtni <- tni.constructor(expData=dt4rtn$gexp, regulatoryElements=tfs4test, 
-        rowAnnotation=dt4rtn$gexpIDs)
-rtni<-tni.permutation(rtni)
-rtni<-tni.bootstrap(rtni)
-rtni<-tni.dpi.filter(rtni, eps=0.05)
-
-#run MRA analysis pipeline
-rtna<-tni2tna.preprocess(rtni, phenotype=dt4rtn$pheno, hits=dt4rtn$hits, phenoIDs=dt4rtn$phenoIDs)
+rtni <- tni.constructor(expData=tniData$expData, 
+        regulatoryElements=c("PTTG1","E2F2","FOXM1","E2F3","RUNX2"), 
+        rowAnnotation=tniData$rowAnnotation)
+rtni <- tni.permutation(rtni)
+rtni <- tni.bootstrap(rtni)
+rtni <- tni.dpi.filter(rtni)
+rtna <- tni2tna.preprocess(rtni, phenotype=tnaData$phenotype, 
+        hits=tnaData$hits, phenoIDs=tnaData$phenoIDs)
 rtna <- tna.mra(rtna)
 
-# compute regulatory maps
-g<-tna.graph(rtna, tnet="dpi", gtype="rmap", tfs=tfs4test)
+# get the regulatory map
+g1 <- tna.graph(rtna, tnet="dpi", gtype="rmap", tfs=c("PTTG1","E2F2","FOXM1"))
 
-# option: plot the igraph object using RedeR
+# get the association map
+g2 <- tna.graph(rtna, tnet="ref", gtype="amap")
+
+# option: plot the igraph objects using RedeR
 #library(RedeR)
-#rdp<-RedPort()
+#rdp <- RedPort()
 #calld(rdp)
-#addGraph(rdp,g)
-#relax(rdp,p1=50,p5=20)
-
-# compute association maps
-g<-tna.graph(rtna, tnet="ref", gtype="amap", tfs=tfs4test)
+#addGraph(rdp,g1)
+#relax(rdp, ps=TRUE)
 
 }
 }

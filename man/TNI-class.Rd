@@ -12,6 +12,7 @@
 \alias{tni.gsea2,TNI-method}
 \alias{tni.area3,TNI-method}
 \alias{tni.regulon.summary,TNI-method}
+\alias{tni.replace.samples,TNI-method}
 \alias{tni2tna.preprocess,TNI-method}
 \alias{tni.prune,TNI-method}
 
@@ -84,6 +85,8 @@ for high-throughput gene expression.
     see \code{\link[RTN:tni.regulon.summary]{tni.regulon.summary}} }
     \item{tni.prune}{\code{signature(object = "TNI")}: 
     see \code{\link[RTN:tni.prune]{tni.prune}} }
+    \item{tni.replace.samples}{\code{signature(object = "TNI")}: 
+    see \code{\link[RTN:tni.replace.samples]{tni.replace.samples}} }    
     \item{tni2tna.preprocess}{\code{signature(object = "TNI")}: 
     see \code{\link[RTN:tni2tna.preprocess]{tni2tna.preprocess}} }
 	 }

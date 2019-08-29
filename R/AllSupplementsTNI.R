@@ -385,9 +385,9 @@ miMdTfStats<-function(gexp, regulons, nsamples, nPermutations=1000,
   #---modulated targets < minRegulonSize should score zero
   sz<-unlist(lapply(regulons,length))
   if(any(sz<minRegulonSize)){
-    sapply(names(sz[sz==0]),function(tf){
-      regulons[[tf]]<<-sample(rownames(gexp),minRegulonSize)
-    })
+    for(tf in names(sz[sz==0])){
+      regulons[[tf]]<-sample(rownames(gexp),minRegulonSize)
+    }
   }
   #---get low/high sample idxs
   nc<-ncol(gexp)
@@ -540,18 +540,18 @@ cv.filter<-function(gexp, ids){
   sdgx<-apply(gexp,1,sd,na.rm=TRUE)
   cvgx<-abs(sdgx/meangx)
   # align ids
-  ids <- data.frame(ids[rownames(gexp),], CV=cvgx, stringsAsFactors=FALSE)
+  ids <- data.frame(ids[rownames(gexp),,drop=FALSE], CV=cvgx, stringsAsFactors=FALSE)
   # remove probes without rowAnnotation
-  ids <- ids[!is.na(ids[,2]),]
-  ids <- ids[ids[,2]!="",]
+  ids <- ids[!is.na(ids[,2]),,drop=FALSE]
+  ids <- ids[ids[,2]!="",,drop=FALSE]
   # remove duplicated genes by CV
-  ids <- ids[sort.list(ids$CV,decreasing=TRUE),]
+  ids <- ids[sort.list(ids$CV,decreasing=TRUE),,drop=FALSE]
   unids<-unique(ids[,2])
   idx<-match(unids,ids[,2])
-  ids<-ids[idx,]
+  ids<-ids[idx,,drop=FALSE]
   # update and return gexp matrix
-  gexp<-gexp[rownames(ids),]
-  ids<-ids[,-ncol(ids)]
+  gexp<-gexp[rownames(ids),,drop=FALSE]
+  ids<-ids[,-ncol(ids),drop=FALSE]
   return(list(gexp=gexp,ids=ids))
 }
 
@@ -688,50 +688,46 @@ tni.mmap<-function(object,mnet,tnet,pvnet,othertfs,testedtfs,modulators){
   pvalue<-NULL
   tpnet<-mcnet[tfs,tfs,drop=FALSE]
   tpnet[tpnet!=0]=1
-  sapply(1:nrow(tpnet),function(i){
-    sapply(1:ncol(tpnet),function(j){
+  for(i in 1:nrow(tpnet)){
+    for(j in 1:ncol(tpnet)){
       tp<-tpnet[i,j] + tpnet[j,i]
       if(j>i){
         if(tp!=0){
-          emode<<-c(emode,0)
-          etype<<-c(etype,"TF.TF")
-          elist<<-rbind(elist,c(tfs[i],tfs[j]))
-          pvalue<<-c(pvalue,NA)
-          emode<<-c(emode,0)
-          etype<<-c(etype,"TF.TF")
-          elist<<-rbind(elist,c(tfs[j],tfs[i]))
-          pvalue<<-c(pvalue,NA)
+          emode<-c(emode,0)
+          etype<-c(etype,"TF.TF")
+          elist<-rbind(elist,c(tfs[i],tfs[j]))
+          pvalue<-c(pvalue,NA)
+          emode<-c(emode,0)
+          etype<-c(etype,"TF.TF")
+          elist<-rbind(elist,c(tfs[j],tfs[i]))
+          pvalue<-c(pvalue,NA)
         }
       }
-      NULL
-    })
-    NULL
-  })
+    }
+  }
   #others
   if(length(onlytar)>0){
     tpnet<-mcnet[onlytar,tfs,drop=FALSE]
     tpvnet<-pvnet[onlytar,tfs,drop=FALSE]
-    sapply(1:nrow(tpnet),function(i){
-      sapply(1:ncol(tpnet),function(j){
+    for(i in 1:nrow(tpnet)){
+      for(j in 1:ncol(tpnet)){
         tp<-tpnet[i,j]
         tpv<-tpvnet[i,j]
         if(abs(tp)==10){
-          emode<<-c(emode,tp)
+          emode<-c(emode,tp)
           tpp<-ifelse(tp<0,"-Md.TF","+Md.TF")
-          etype<<-c(etype,tpp)
-          elist<<-rbind(elist,c(onlytar[i],tfs[j]))
-          pvalue<<-c(pvalue,tpv)
+          etype<-c(etype,tpp)
+          elist<-rbind(elist,c(onlytar[i],tfs[j]))
+          pvalue<-c(pvalue,tpv)
         } else if(abs(tp)==1){
-          emode<<-c(emode,tp)
+          emode<-c(emode,tp)
           tpp<-ifelse(tp<0,"-TF.Target","+TF.Target")
-          etype<<-c(etype,tpp)
-          elist<<-rbind(elist,c(tfs[j],onlytar[i]))
-          pvalue<<-c(pvalue,tpv)
+          etype<-c(etype,tpp)
+          elist<-rbind(elist,c(tfs[j],onlytar[i]))
+          pvalue<-c(pvalue,tpv)
         }
-        NULL
-      })
-      NULL
-    })
+      }
+    }
   }
   #Correct TF-TF assigments derived from the MI analysis
   if(length(othertfs)>0){
@@ -865,7 +861,7 @@ setregs1<-function(object,g,testedtfs,modulators){
 ##experimental code!!! (opem mmaps)
 tni.mmap.detailed<-function(object,mnet,testedtfs,mds,ntop,nbottom){
   mnet.targets<-list()
-  junk<-sapply(testedtfs,function(tf){
+  for(tf in testedtfs){
     tp1<-object@results$conditional$effect[[tf]]
     tp2<-mnet[,tf];tp2<-tp2[tp2!=0]
     tp3<-tp1[,names(tp2),drop=FALSE]
@@ -880,10 +876,9 @@ tni.mmap.detailed<-function(object,mnet,testedtfs,mds,ntop,nbottom){
       } else {
         rownames(res)<-tp1$tagets
       }
-      mnet.targets[[tf]]<<-res
+      mnet.targets[[tf]]<-res
     }
-    NULL
-  })
+  }
   #---
   gLists<-lapply(names(mnet.targets),function(tf){
     tar<-object@results$tn.dpi[,tf]
@@ -906,17 +901,17 @@ tni.mmap.detailed<-function(object,mnet,testedtfs,mds,ntop,nbottom){
       interactionType[1:2]<-"TF|Md"
       elist<-data.frame(elist,interactionType,modeOfAction,modulationEffect,modulationType,stringsAsFactors=FALSE)
       idx<-sort.list(abs(elist$modeOfAction),na.last=FALSE,decreasing=FALSE)
-      elist<-elist[idx,]
+      elist<-elist[idx,,drop=FALSE]
       if(!is.null(ntop)){
         tp<-abs(elist$modulationEffect)
         tp[1:2]<-NA
         idx<-sort.list(tp,na.last=FALSE,decreasing=FALSE)
-        elist<-elist[idx,]
+        elist<-elist[idx,,drop=FALSE]
         idx<-c(1,2,rev(3:nrow(elist)))[1:(ntop+2)]
         if(!is.null(nbottom)){
           idx<-c(idx, 3:(nbottom+2) )
         }
-        elist<-elist[sort(idx),]
+        elist<-elist[sort(idx),,drop=FALSE]
       }
       #---
       g<-igraph::graph.edgelist(as.matrix(elist[,1:2]), directed=TRUE)
@@ -929,7 +924,7 @@ tni.mmap.detailed<-function(object,mnet,testedtfs,mds,ntop,nbottom){
       idx<-abs(elist$modeOfAction)
       idx[elist$modulationType==0]<-NA
       idx<-sort.list(idx,na.last=FALSE,decreasing=FALSE)
-      elist<-elist[idx,]
+      elist<-elist[idx,,drop=FALSE]
       #---
       g<-igraph::graph.edgelist(as.matrix(elist[,1:2]), directed=TRUE)
       #---set node xy   
@@ -1020,7 +1015,7 @@ drcircle<-function (nv, ybend=1, xbend=1, ang=1, rotate=0, plot=FALSE) {
 #test overlap among regulons in a tnet via phyper function
 tni.phyper<-function(tnet){
   tnet[tnet!=0]<-1
-  tnet<-tnet[rowSums(tnet)>0,]
+  tnet<-tnet[rowSums(tnet)>0,,drop=FALSE]
   phtest<-function(x,xmat){
     c<-x+xmat
     pop<-length(x)
@@ -1042,18 +1037,18 @@ tni.phyper<-function(tnet){
 #reverse results from conditional analyses, from TF-MD to MD-TF
 cdt.getReverse<-function(cdt,pAdjustMethod="bonferroni"){
   cdtrev<-list()
-  junk<-sapply(1:length(cdt),function(i){
+  for(i in 1:length(cdt)){
     tf<-names(cdt)[i]
     tp<-cdt[[i]]
     if(nrow(tp)>0){
       mds<-rownames(tp)
-      sapply(mds,function(md){
+      for(md in mds){
         tpp<-tp[md,c(2,1,3:ncol(tp))]
         rownames(tpp)<-tf
-        cdtrev[[md]]<<-rbind(cdtrev[[md]],tpp)
-      })
+        cdtrev[[md]]<-rbind(cdtrev[[md]],tpp)
+      }
     }
-  })
+  }
   if(length(cdtrev)>0){
     cdtrev<-p.adjust.cdt(cdt=cdtrev,pAdjustMethod=pAdjustMethod, p.name="PvFET",adjp.name="AdjPvFET")
     cdtrev<-p.adjust.cdt(cdt=cdtrev,pAdjustMethod=pAdjustMethod, p.name="PvKS",adjp.name="AdjPvKS",sort.name="PvKS")
@@ -1148,10 +1143,10 @@ hclust2igraph<-function(hc){
     #remove nests based on length cutoff
     tmap<-treemap(hc)
     hcNodes<-tmap$hcNodes
-    hcNests<-hcNodes[hcNodes$type=="nest",]
+    hcNests<-hcNodes[hcNodes$type=="nest",,drop=FALSE]
     hcEdges<-tmap$hcEdges
     nestList<-tmap$nest
-    rmnodes<-hcEdges[hcEdges$edgeLength<hc$cutoff,]
+    rmnodes<-hcEdges[hcEdges$edgeLength<hc$cutoff,,drop=FALSE]
     rmnodes<-unique(rmnodes$parentNode)
     rmnodes<-hcNodes$hcId[hcNodes$node%in%rmnodes]
     mergeBlocks=FALSE
@@ -1188,7 +1183,7 @@ hclust2igraph<-function(hc){
   #get treemap
   tmap<-treemap(hc)
   hcNodes<-tmap$hcNodes
-  hcNests<-hcNodes[hcNodes$type=="nest",]
+  hcNests<-hcNodes[hcNodes$type=="nest",,drop=FALSE]
   hcEdges<-tmap$hcEdges
   nestList<-tmap$nest
   nestmap<-tmap$nestmap
@@ -1196,7 +1191,7 @@ hclust2igraph<-function(hc){
   rootid<-tmap$rootid
   #set nests do be removed
   if(!is.null(rmnodes) && length(rmnodes)>0){
-    rmnodes<-hcNodes[hcNodes$mergeId%in%rmnodes,]
+    rmnodes<-hcNodes[hcNodes$mergeId%in%rmnodes,,drop=FALSE]
     rmnodes<-rmnodes$node[!rmnodes$node==rootid]
     #update hcEdges and nestList
     if(length(rmnodes)>0){
@@ -1232,10 +1227,10 @@ hcEdges.filter<-function(hcEdges,hcNodes,rmnodes,lineage,rootid,
   #update lineage
   lineage<-lapply(lineage,setdiff,rmnodes)
   #get the correct order
-  rmNests<-hcNodes[hcNodes$node%in%rmnodes,]
-  rmEdges<-hcEdges[hcEdges$childNode%in%rmnodes,]
+  rmNests<-hcNodes[hcNodes$node%in%rmnodes,,drop=FALSE]
+  rmEdges<-hcEdges[hcEdges$childNode%in%rmnodes,,drop=FALSE]
   #get filtered hcEdges
-  hcEdges<-hcEdges[!hcEdges$childNode%in%rmNests$node,]
+  hcEdges<-hcEdges[!hcEdges$childNode%in%rmNests$node,,drop=FALSE]
   #update parents'ids
   for(i in 1:nrow(hcEdges)){
     newpn<-lineage[[hcEdges$childNode[i]]][1]
@@ -1318,7 +1313,7 @@ treemap<-function(hc){
   N<-nrow(hc$merge);nn<-N+1
   hcEdges<-NULL
   eLength<-NULL
-  junk<-sapply(1:N,function(i){
+  for(i in 1:N){
     y1<-hc$merge[i,1]
     y2<-hc$merge[i,2]
     if(y1>0){
@@ -1332,9 +1327,9 @@ treemap<-function(hc){
       l2<-hc$height[i]
     }    
     tp<-cbind(rbind(c(i,y1),c(i,y2)),c(l1,l2))
-    hcEdges<<-rbind(hcEdges,tp)
+    hcEdges<-rbind(hcEdges,tp)
     NULL
-  })
+  }
   colnames(hcEdges)<-c("parentNode","childNode","edgeLength")
   hcEdges<-data.frame(hcEdges,stringsAsFactors=FALSE)
   hcEdges$parentHeight<-obj$height[hcEdges$parentNode]
@@ -1474,10 +1469,10 @@ treemap<-function(hc){
 }
 
 ##------------------------------------------------------------------------------
-.tni.stratification.gsea2 <- function(regulonActivity, nSections=1, center=TRUE){
+.tni.stratification.gsea2 <- function(regulonActivity, sections=1, center=TRUE){
   regstatus <- sign(regulonActivity$dif)
   for (reg in colnames(regstatus)){
-    sq <- c(seq_len(nSections))
+    sq <- c(seq_len(sections))
     pos <- regulonActivity$pos[, reg]
     neg <- regulonActivity$neg[, reg]
     dif <- regulonActivity$dif[, reg]
@@ -1486,14 +1481,14 @@ treemap<-function(hc){
     tp <- regstatus[, reg]
     #---
     tp1 <- sort(dif[tp > 0], decreasing = TRUE)
-    tp1[] <- rep(sq, each = ceiling(length(tp1)/nSections), length.out = length(tp1))
+    tp1[] <- rep(sq, each = ceiling(length(tp1)/sections), length.out = length(tp1))
     regstatus[names(tp1), reg] <- tp1
     #---
     tp2 <- sort(dif[tp < 0], decreasing = TRUE)
-    tp2[] <- rep(sq + nSections + 1, each = ceiling(length(tp2)/nSections), length.out = length(tp2))
+    tp2[] <- rep(sq + sections + 1, each = ceiling(length(tp2)/sections), length.out = length(tp2))
     regstatus[names(tp2), reg] <- tp2
   }
-  mid <- nSections + 1
+  mid <- sections + 1
   regstatus[regstatus == 0] <- mid
   #---
   if(center){
@@ -1501,31 +1496,31 @@ treemap<-function(hc){
     mid <- 0
   }
   #---
-  regulonActivity$regstatus <- regstatus
-  regulonActivity$nSections <- nSections
+  regulonActivity$status <- regstatus
+  regulonActivity$sections <- sections
   regulonActivity$center <- mid
   return(regulonActivity)
 }
 
 ##------------------------------------------------------------------------------
-.tni.stratification.area <- function(regulonActivity, nSections=1, center=FALSE){
+.tni.stratification.area <- function(regulonActivity, sections=1, center=FALSE){
   regstatus <- sign(regulonActivity$dif)
   for (reg in colnames(regstatus)){
-    sq <- c(seq_len(nSections))
+    sq <- c(seq_len(sections))
     dif <- regulonActivity$dif[, reg]
     tp <- regstatus[, reg]
     #---
     tp1 <- sort(dif[tp > 0], decreasing = TRUE)
-    tp1[] <- rep(sq, each = ceiling(length(tp1)/nSections), length.out = length(tp1))
+    tp1[] <- rep(sq, each = ceiling(length(tp1)/sections), length.out = length(tp1))
     regstatus[names(tp1), reg] <- tp1
     #---
     tp2 <- sort(dif[tp < 0], decreasing = TRUE)
-    tp2[] <- rep(sq + nSections + 1, each = ceiling(length(tp2)/nSections), length.out = length(tp2))
+    tp2[] <- rep(sq + sections + 1, each = ceiling(length(tp2)/sections), length.out = length(tp2))
     regstatus[names(tp2), reg] <- tp2
   }
   #--- obs. this stratification generates a 'midle' group 
   #--- only when there are samples with regulon activity assigned with 0 or NA
-  mid <- nSections + 1
+  mid <- sections + 1
   regstatus[regstatus == 0 | is.na(regstatus)] <- mid
   #---
   if(center){
@@ -1533,8 +1528,8 @@ treemap<-function(hc){
     mid <- 0
   }
   #---
-  regulonActivity$regstatus <- regstatus
-  regulonActivity$nSections <- nSections
+  regulonActivity$status <- regstatus
+  regulonActivity$sections <- sections
   regulonActivity$center <- mid
   return(regulonActivity)
 }

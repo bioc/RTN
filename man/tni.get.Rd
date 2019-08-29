@@ -101,32 +101,25 @@ Mauro Castro
 
 \examples{
 
-data(dt4rtn)
-
-# select 5 regulatoryElements for a quick demonstration!
-tfs4test <- dt4rtn$tfs[c("PTTG1","E2F2","FOXM1","E2F3","RUNX2")]
+data(tniData)
 
 \dontrun{
 
-rtni <- tni.constructor(expData=dt4rtn$gexp, regulatoryElements=tfs4test, 
-        rowAnnotation=dt4rtn$gexpIDs)
-rtni<-tni.permutation(rtni)
-rtni<-tni.bootstrap(rtni)
-rtni<-tni.dpi.filter(rtni)
+rtni <- tni.constructor(expData=tniData$expData, 
+        regulatoryElements=c("PTTG1","E2F2","FOXM1","E2F3","RUNX2"), 
+        rowAnnotation=tniData$rowAnnotation)
+rtni <- tni.permutation(rtni)
+rtni <- tni.bootstrap(rtni)
+rtni <- tni.dpi.filter(rtni)
 
 # check summary
-tni.get(rtni,what="summary")
+tni.get(rtni, what="summary")
 
-# get a data matrix with MI values 
-# (not evaluated by 'tni.dpi.filter')
-refnet<-tni.get(rtni,what="refnet")
-
-# get a data matrix with MI values
-# (evaluated by 'tni.dpi.filter')
-tnet<-tni.get(rtni,what="tnet")
+# get regulons
+regulons <- tni.get(rtni, what = "regulons")
 
 # get status of the pipeline
-tni.get(rtni,what="status")
+tni.get(rtni, what="status")
 }
 }
 

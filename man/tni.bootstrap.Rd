@@ -10,7 +10,7 @@ This function takes a TNI object and returns the consensus transcriptional netwo
 }
 
 \usage{
-tni.bootstrap(object, estimator="pearson", nBootstraps=100, consensus=95, parChunks=10, verbose=TRUE)
+tni.bootstrap(object, nBootstraps=100, consensus=95, parChunks=10, verbose=TRUE)
 }
 
 \arguments{
@@ -18,10 +18,6 @@ tni.bootstrap(object, estimator="pearson", nBootstraps=100, consensus=95, parChu
 \item{object}{
 a processed object of class 'TNI' \code{\link[RTN:TNI-class]{TNI-class}} evaluated by the method 
 \code{\link[RTN:tni.permutation]{tni.permutation}}.
-}
-\item{estimator}{
-a character string indicating which estimator to be used for mutual information computation. 
-One of "pearson" (default), "kendall", or "spearman", can be abbreviated.
 }
 \item{nBootstraps}{
 a single integer or numeric value specifying the number of bootstraps 
@@ -57,27 +53,25 @@ see 'tn.ref' option in \code{\link[RTN:tni.get]{tni.get}}.
 
 \examples{
 
-data(dt4rtn)
-
-# select 5 regulatoryElements for a quick demonstration!
-tfs4test <- dt4rtn$tfs[c("PTTG1","E2F2","FOXM1","E2F3","RUNX2")]
+data(tniData)
 
 \dontrun{
 
 # preprocessing
-rtni <- tni.constructor(expData=dt4rtn$gexp, regulatoryElements=tfs4test, 
-        rowAnnotation=dt4rtn$gexpIDs)
+rtni <- tni.constructor(expData=tniData$expData, 
+        regulatoryElements=c("PTTG1","E2F2","FOXM1","E2F3","RUNX2"), 
+        rowAnnotation=tniData$rowAnnotation)
 
 # linear version!
-rtni<-tni.permutation(rtni)
-rtni<-tni.bootstrap(rtni)
+rtni <- tni.permutation(rtni)
+rtni <- tni.bootstrap(rtni)
 
 # parallel version with SNOW package!
-library(snow)
-options(cluster=snow::makeCluster(3, "SOCK"))
-rtni<-tni.permutation(rtni)
-rtni<-tni.bootstrap(rtni)
-stopCluster(getOption("cluster"))
+#library(snow)
+#options(cluster=snow::makeCluster(3, "SOCK"))
+#rtni <- tni.permutation(rtni)
+#rtni <- tni.bootstrap(rtni)
+#stopCluster(getOption("cluster"))
 }
 }
 

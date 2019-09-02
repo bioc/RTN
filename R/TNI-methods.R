@@ -1650,7 +1650,7 @@ setMethod(
         if(object@status["DPI.filter"]!="[x]")
             stop("NOTE: input 'object' needs dpi analysis!")
         if(!is.null(regulatoryElements))
-          regulatoryElements <- tnai.checks("regulatoryElements",regulatoryElements)
+          tnai.checks("regulatoryElements",regulatoryElements)
         tnai.checks("verbose",verbose)
         
         #-- if regulatoryElements = NULL, get a summary of network as a whole

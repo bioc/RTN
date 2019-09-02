@@ -12,7 +12,7 @@
 ##and computes a partial mutal information matrix, i.e., between each TF 
 ##and all potential targets. Sig. mi values are inferred by permutation 
 ##analysis.
-tni.pmin<-function(x,tfs,estimator="pearson",setdg=0,
+tni.pmin<-function(x,tfs,estimator="spearman",setdg=0,
                    simplified=FALSE,getadj=FALSE){
   x <- t(x)
   pmim <- suppressWarnings(cor(x[,tfs],x, method=estimator,use="complete.obs")^2)
@@ -42,7 +42,7 @@ tni.pmin<-function(x,tfs,estimator="pearson",setdg=0,
   }
 }
 ##local pmin function for tni.perm.separate
-.perm.pmin.separate<-function(x,tf,estimator="pearson",nPerm=1000){
+.perm.pmin.separate<-function(x,tf,estimator="spearman",nPerm=1000){
   x=t(x)
   x=cor(replicate(nPerm,sample(x[,tf])),x[,-tf], method=estimator,use="complete.obs")^2
   maxi=0.999999
@@ -52,7 +52,7 @@ tni.pmin<-function(x,tfs,estimator="pearson",setdg=0,
   t(x)
 }
 ##local pmin function for pooled tni.perm.pooled
-.perm.pmin.pooled<-function(x, n, estimator="pearson"){
+.perm.pmin.pooled<-function(x, n, estimator="spearman"){
   x<-matrix(sample(x),ncol=nrow(x),nrow=ncol(x))
   x<-cor(x[,1:n],x, method=estimator, use="complete.obs")^2
   if(n>1){
@@ -152,7 +152,7 @@ tni.perm.pooled<-function(object, parChunks=10, verbose=TRUE){
   ##build the null distribution via permutation  
   ##check if package snow has been loaded and 
   ##a cluster object has been created
-  if(isParallel() && length(object@regulatoryElements)>1) {
+  if(isParallel() && length(object@regulatoryElements)>1){
     cl<-getOption("cluster")
     snow::clusterExport(cl, list(".perm.pmin.pooled"),envir=environment())
     if(verbose)cat("-Performing permutation analysis (parallel version)...\n")
@@ -204,7 +204,13 @@ tni.perm.pooled<-function(object, parChunks=10, verbose=TRUE){
   }
   dimnames(mipval) <- dimnames(miadjpv) <- dimnames(pmim)
   ##decide on the significance
+  if(object@para$perm$pValueCutoff <= 1/np){
+    tp1 <- "NOTE: the input 'pValueCutoff' is below the current permutation resolution (> "
+    tp2 <- ")\n...a larger number of permutations is required to accurately estimate this threshold!"
+    warning(tp1,signif(1/np,1),tp2,call.=FALSE)
+  }
   pmim[miadjpv>object@para$perm$pValueCutoff]=0.0
+  
   return(list(tn.ref=pmim, mipval=mipval, miadjpv=miadjpv))
 }
 
@@ -294,7 +300,7 @@ tni.boot<-function(object, parChunks=10, verbose=TRUE){
 ##It takes a gene expression matrix (x) and a tnet, and computes a simple 
 ##correlation between each TF and all targets; i.e. it adds direction 
 ##to all pre-computed associations.
-tni.cor<-function(x,tnet,estimator="pearson",dg=0, asInteger=TRUE, 
+tni.cor<-function(x,tnet,estimator="spearman",dg=0, asInteger=TRUE, 
                   mapAssignedAssociation=TRUE){
   tnet <- abs(tnet)
   tfs <- colnames(tnet)
@@ -326,7 +332,7 @@ tni.cor<-function(x,tnet,estimator="pearson",dg=0, asInteger=TRUE,
 ##------------------------------------------------------------------------
 ##compute delta mi from pooled null distributions, returns global mi markers
 miThresholdMd <- function(gexp, nsamples, prob=c(0.05,0.95), 
-                          nPermutations=1000, estimator="pearson", 
+                          nPermutations=1000, estimator="spearman", 
                           verbose=TRUE){
   if(length(prob)==1)prob=sort(c(1-prob,prob))
   if(nsamples>ncol(gexp))nsamples=ncol(gexp)
@@ -347,7 +353,7 @@ miThresholdMd <- function(gexp, nsamples, prob=c(0.05,0.95),
 ##------------------------------------------------------------------------
 ##compute delta mi, returns mi markers for each tf individually
 miThresholdMdTf<-function(gexp, tfs, nsamples, prob=c(0.05,0.95), nPermutations=1000, 
-                          estimator="pearson", verbose=TRUE){
+                          estimator="spearman", verbose=TRUE){
   if(length(prob)==1)prob=sort(c(1-prob,prob))
   #---get low/high sample idxs
   nc<-ncol(gexp)
@@ -379,7 +385,7 @@ miThresholdMdTf<-function(gexp, tfs, nsamples, prob=c(0.05,0.95), nPermutations=
 ##compute delta mi, returns mi null for each tf 
 ##randomization applyed on modulators (very conservative)
 miMdTfStats<-function(gexp, regulons, nsamples, nPermutations=1000, 
-                      estimator="pearson", minRegulonSize, verbose=TRUE){
+                      estimator="spearman", minRegulonSize, verbose=TRUE){
   tfs<-names(regulons)
   #---set minimun size to compute the null
   #---modulated targets < minRegulonSize should score zero

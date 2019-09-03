@@ -26,7 +26,7 @@ The **RTN** package is designed for the reconstruction of TRNs and analysis of r
 
 ## Transcriptional Network Inference (TNI)
 
-The **TNI** pipeline starts with the generic function `tni.constructor` and creates a `TNI-class` object, which provides methods for TRN inference from high-throughput gene expression data. The `tni.constructor` takes in a matrix of normalized gene expression and the corresponding gene and sample annotations, as well as a list of regulators to be evaluated. Here, the gene expression matrix and annotations are available in the `tniData` dataset, which was extracted, pre-processed and size-reduced from @Fletcher2013 and @Curtis2012. This dataset consists of a list with 3 objects: a named gene expression matrix (`tniData$expData`), a data frame with gene annotations (`tniData$rowAnnotation`), and a data frame with sample annotations (`tniData$colAnnotation`). We will use this dataset to demonstrate the construction of a small TRN that has only 5 regulons. In general, though, we recommend building regulons for all TFs annotated for a given species; please see the *case study* sections for additional examples.
+The **TNI** pipeline starts with the generic function `tni.constructor` and creates a `TNI-class` object, which provides methods for TRN inference from high-throughput gene expression data. The `tni.constructor` takes in a matrix of normalized gene expression and the corresponding gene and sample annotations, as well as a list of regulators to be evaluated. Here, the gene expression matrix and annotations are available in the `tniData` dataset, which was extracted, pre-processed and size-reduced from @Fletcher2013 and @Curtis2012. This dataset consists of a list with 3 objects: a named gene expression matrix (`tniData$expData`), a data frame with gene annotations (`tniData$rowAnnotation`), and a data frame with sample annotations (`tniData$colAnnotation`). We will use this dataset to demonstrate the construction of a small TRN that has only 5 regulons. In general, though, we recommend building regulons for all TFs annotated for a given species; please see the *case study* sections for additional recommendations.
 
 The `tni.constructor` method will check the consistency of all the given arguments. The **TNI** pipeline is then executed in three steps: (i) compute MI between a regulator and all potential targets, removing non-significant associations by permutation analysis; (ii) remove unstable interactions by bootstrapping; and (iii) apply the ARACNe algorithm. Additional comments are provided throughout the examples.
 
@@ -40,7 +40,7 @@ data(tniData)
 # Input 2: 'regulatoryElements', a vector listing genes regarded as TFs
 # Input 3: 'rowAnnotation', an optional data frame with gene annotation
 # Input 4: 'colAnnotation', an optional data frame with sample annotation
-tfs <- c("PTTG1","E2F2","FOXM1","E2F3","RUNX2")
+tfs <- c("FOXM1","E2F2","E2F3","RUNX2","PTTG1")
 rtni <- tni.constructor(expData = tniData$expData, 
                         regulatoryElements = tfs, 
                         rowAnnotation = tniData$rowAnnotation, 
@@ -76,20 +76,20 @@ tni.regulon.summary(rtni)
 The `tni.regulon.summary` function also lets us get detailed information about a specific regulon, including the number of positive and negative targets. Please use this information as an initial guide in assessing the set of regulons. Usually small regulons (<15 targets) are not useful for most downstream methods, and highly unbalanced regulons (*e.g.* those with only positive targets) provide unstable activity readouts.
 
 ```{r label='Check summary of a regulon', eval=TRUE, collapse=TRUE}
-tni.regulon.summary(rtni, regulatoryElements = "PTTG1")
+tni.regulon.summary(rtni, regulatoryElements = "FOXM1")
 ``` 
 
 All results available in the `TNI-class` object can be retrieved using the `tni.get` accessory function. For example, setting `what = 'regulons.and.mode'` will return a list with regulons, including the weight assigned for each interaction.
 
 ```{r label='Check results', eval=TRUE, collapse=TRUE}
 regulons <- tni.get(rtni, what = "regulons.and.mode", idkey = "SYMBOL")
-head(regulons$PTTG1)
+head(regulons$FOXM1)
 ``` 
 
 The absolute value of a weight represents the MI value, while the sign (+/-) indicates the predicted mode of action based on the Pearson's correlation between the regulator and its targets. We can also retrieve the inferred regulons into an `igraph-class` object [@igraph2] using the `tni.graph` function, which sets some basic graph attributes for visualization in the **RedeR** R package [@Castro2012].
 
 ```{r label='Get graph', eval=TRUE}
-g <- tni.graph(rtni, tfs = c("PTTG1","E2F2","FOXM1"))
+g <- tni.graph(rtni, tfs = c("FOXM1","E2F2","PTTG1"))
 ``` 
 
 The next chunk shows how to plot the `igraph-class` object using **RedeR** (**Figure 1**).

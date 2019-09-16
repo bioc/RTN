@@ -1473,6 +1473,19 @@ treemap<-function(hc){
   }
   rbind(tnet.ref=ref,tnet.dpi=dpi)
 }
+#---------------------------------------------------------------
+.get.tnet.summary <- function(object){
+  tnetsumm <- object@summary$results$tnet
+  #---
+  bin<-object@results$tn.ref
+  bin[bin!=0]<-1
+  tnetsumm[1,]<-c(ncol(bin),sum(rowSums(bin)>0),sum(bin))
+  #---
+  bin<-object@results$tn.dpi
+  bin[bin!=0]<-1
+  tnetsumm[2,]<-c(ncol(bin),sum(rowSums(bin)>0),sum(bin))
+  return(tnetsumm)
+}
 
 ##------------------------------------------------------------------------------
 .tni.stratification.gsea2 <- function(regulonActivity, sections=1, center=TRUE){

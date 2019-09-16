@@ -460,35 +460,35 @@ The RTN, RTNsurvival and RTNduals packages provide methods that were implemented
 
 <u>When using the TNI and TNA analysis pipelines:</u>
 
-* Fletcher MNC *et al.*, Master regulators of FGFR2 signalling and breast cancer risk. *Nature Communications*, 4:2464, 2013. doi: 10.1038/ncomms3464
+* Fletcher MNC *et al.*, Master regulators of FGFR2 signalling and breast cancer risk. *Nature Communications*, 4:2464, 2013. doi: [10.1038/ncomms3464](https://doi.org/10.1038/ncomms3464)
 
 <u>When using the GSEA-2T method to estimate regulon activity:</u>
 
-* Castro MAA *et al.*, Regulators of genetic risk of breast cancer identified by integrative network analysis. *Nature Genetics*, 48(1):12-21, 2016. doi: 10.1038/ng.3458
+* Castro MAA *et al.*, Regulators of genetic risk of breast cancer identified by integrative network analysis. *Nature Genetics*, 48(1):12-21, 2016. doi: [10.1038/ng.3458](https://doi.org/10.1038/ng.3458)
 
-* Campbell TM *et al.*, FGFR2 risk SNPs confer breast cancer risk by augmenting oestrogen responsiveness. *Carcinogenesis*, 37(8):741-750, 2016. doi: 10.1093/carcin/bgw065
+* Campbell TM *et al.*, FGFR2 risk SNPs confer breast cancer risk by augmenting oestrogen responsiveness. *Carcinogenesis*, 37(8):741-750, 2016. doi: [10.1093/carcin/bgw065](https://doi.org/10.1093/carcin/bgw065)
 
 <u>When using RAPs to characterize regulatory similarities and differences between samples in a cohort:</u>
 
-* Robertson AG *et al.*, Comprehensive Molecular Characterization of Muscle-Invasive Bladder Cancer. *Cell*, 171(3):540-556, 2017. doi: 10.1016/j.cell.2017.09.007
+* Robertson AG *et al.*, Comprehensive Molecular Characterization of Muscle-Invasive Bladder Cancer. *Cell*, 171(3):540-556, 2017. doi: [10.1016/j.cell.2017.09.007](https://doi.org/10.1016/j.cell.2017.09.007)
 
-* Corces MR *et al.*, The chromatin accessibility landscape of primary human cancers. *Science*, 362(6413):eaav1898, 2018.
+* Corces MR *et al.*, The chromatin accessibility landscape of primary human cancers. *Science*, 362(6413):eaav1898, 2018. doi: [10.1126/science.aav1898](https://doi.org/10.1126/science.aav1898)
 
 <u>When using the EVSE method to explore regulators of genetic risk:</u>
 
-* Castro MAA *et al.*, Regulators of genetic risk of breast cancer identified by integrative network analysis. *Nature Genetics*, 48(1):12-21, 2016. doi: 10.1038/ng.3458
+* Castro MAA *et al.*, Regulators of genetic risk of breast cancer identified by integrative network analysis. *Nature Genetics*, 48(1):12-21, 2016. doi: [10.1038/ng.3458](https://doi.org/10.1038/ng.3458)
 
 <u>When using the conditional mutual information analysis pipeline to explore modulators of transcription factors:</u>
 
-* Campbell TM *et al.*, Identification of Post-Transcriptional Modulators of Breast Cancer Transcription Factor Activity Using MINDy. PLoS ONE 11(12):e0168770, 2016. doi: 10.1371/journal.pone.0168770
+* Campbell TM *et al.*, Identification of Post-Transcriptional Modulators of Breast Cancer Transcription Factor Activity Using MINDy. PLoS ONE 11(12):e0168770, 2016. doi: [10.1371/journal.pone.0168770](https://doi.org/10.1371/journal.pone.0168770)
 
 <u>When using the survival analysis pipeline to integrate RAPs with clinical variables:</u>
 
-* Groeneveld CS *et al.*, RTNsurvival: An R/Bioconductor package for regulatory network survival analysis. *Bioinformatics*, btz229, 2019. doi: 10.1093/bioinformatics/btz229
+* Groeneveld CS *et al.*, RTNsurvival: An R/Bioconductor package for regulatory network survival analysis. *Bioinformatics*, btz229, 2019. doi: [10.1093/bioinformatics/btz229](https://doi.org/10.1093/bioinformatics/btz229)
 
 <u>When using the dual-regulon analysis pipeline to search for co-regulatory associations between pairs of regulators:</u>
 
-* Chagas VS *et al.*, RTNduals: An R/Bioconductor package for analysis of co-regulation and inference of dual regulons. *Bioinformatics*, btz534, 2019. doi: 10.1093/bioinformatics/btz534
+* Chagas VS *et al.*, RTNduals: An R/Bioconductor package for analysis of co-regulation and inference of dual regulons. *Bioinformatics*, btz534, 2019. doi: [10.1093/bioinformatics/btz534](https://doi.org/10.1093/bioinformatics/btz534)
 
 
 # Session information

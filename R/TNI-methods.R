@@ -851,6 +851,7 @@ setMethod(
       if(!is.null(idkey))warning("'idkey' argument has no effect on consolidated tables!")
     } else if(what=="summary"){
       query<-object@summary
+      query$results$tnet <- .get.tnet.summary(object)
       query$results$regulonSize <- .get.regulon.summary(object)
     } else if(what=="rowAnnotation"){
       query<-object@rowAnnotation
@@ -1653,6 +1654,9 @@ setMethod(
           tnai.checks("regulatoryElements",regulatoryElements)
         tnai.checks("verbose",verbose)
         
+        #--- check compatibility
+        object <- upgradeTNI(object)
+        
         #-- if regulatoryElements = NULL, get a summary of network as a whole
         if (is.null(regulatoryElements)){
             networkSummary <- tni.get(object)$results
@@ -1663,12 +1667,10 @@ setMethod(
                 cat(nRegulators)
                 message("-- DPI-filtered network: ")
                 print(networkSummary$tnet["tnet.dpi",], quote = FALSE)
-                print(networkSummary$regulonSize["tnet.dpi",], quote = FALSE, 
-                      digits = 3)
+                print(networkSummary$regulonSize["tnet.dpi",], quote = FALSE, digits = 3)
                 message("-- Reference network: ")
                 print(networkSummary$tnet["tnet.ref",], quote = FALSE) 
-                print(networkSummary$regulonSize["tnet.ref",], quote = FALSE,
-                      digits = 3)
+                print(networkSummary$regulonSize["tnet.ref",], quote = FALSE, digits = 3)
                 cat("---\n")
             }
             invisible(networkSummary)
@@ -1874,11 +1876,13 @@ upgradeTNI <- function(object){
       tp <- colnames(object@gexp)
       object@colAnnotation <- data.frame(ID=tp, row.names=tp, stringsAsFactors = FALSE)
     }
+    #---
+    names(object@summary) <- c("regulatoryElements","para","results")
+    rownames(object@summary$regulatoryElements) <- "regulatoryElements"
+    #---
     sum.info.results <- object@summary$results
     colnames(sum.info.results$tnet)<-c("regulatoryElements","Targets","Edges")
     object@summary$results <- sum.info.results
-    names(object@summary) <- c("regulatoryElements","para","results")
-    rownames(object@summary$regulatoryElements) <- "regulatoryElements"
   }
   return(object)
 }

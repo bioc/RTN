@@ -12,10 +12,13 @@
 ##and computes a partial mutal information matrix, i.e., between each TF 
 ##and all potential targets. Sig. mi values are inferred by permutation 
 ##analysis.
-tni.pmin<-function(x,tfs,estimator="spearman",setdg=0,
-                   simplified=FALSE,getadj=FALSE){
+tni.pmin<-function(x, tfs, estimator="spearman", 
+                   boxcox=FALSE, boxcox.sample=FALSE, 
+                   setdg=0, simplified=FALSE, getadj=FALSE){
   x <- t(x)
-  pmim <- suppressWarnings(cor(x[,tfs],x, method=estimator,use="complete.obs")^2)
+  pmim <- suppressWarnings(cor(x[,tfs],x, method=estimator, use="complete.obs"))
+  if(boxcox) pmim <- .boxcox.adj(pmim, boxcox.sample)
+  pmim <- pmim^2
   pmim[is.na(pmim)] <- 0
   if(length(tfs)>1){
     diag(pmim[,tfs])=setdg
@@ -41,10 +44,32 @@ tni.pmin<-function(x,tfs,estimator="spearman",setdg=0,
     return(pmim)
   }
 }
+#We have observed that transcription factor (TF) regulons reconstructed from 
+#the RTN package exhibit different proportions of positive and negative targets. 
+#While the proportion can vary between different regulons, we have observed a 
+#consistent higher proportion of positive targets, specially when using RNA-seq data. 
+#RTN uses mutual information (MI) to assess TF-target associations, assigning 
+#the direction of the inferred associations by Spearman's correlation. Dam et al. (2017) 
+#have acknowledged that different normalization methods introduce different biases 
+#in co-expression analysis, usually towards positive correlation, possibly affected by 
+#read-depth differences between samples and the large abundance of 0 values present 
+#in RNA-seq-derived expression matrices. In order to correct this positive correlation 
+#bias we suggest using this box-cox correction strategy.
+.boxcox.adj <- function(xmat, boxcox.sample=FALSE){
+  xvec <- as.numeric(xmat)
+  if(boxcox.sample){
+    nn <- max( min(1e+5,length(xvec)), length(xvec)*0.1)
+    xvec <- sample(xvec, round(nn))
+  }
+  l <- coef(powerTransform(xvec,  family="yjPower"))
+  xmat[,] <- yjPower(as.numeric(xmat),l)
+  return(xmat)
+}
 ##local pmin function for tni.perm.separate
 .perm.pmin.separate<-function(x,tf,estimator="spearman",nPerm=1000){
   x=t(x)
-  x=cor(replicate(nPerm,sample(x[,tf])),x[,-tf], method=estimator,use="complete.obs")^2
+  x=cor(replicate(nPerm,sample(x[,tf])),x[,-tf], 
+        method=estimator,use="complete.obs")^2
   maxi=0.999999
   x[which(x > maxi)]=maxi
   x = -0.5 * log(1 - x)
@@ -92,19 +117,29 @@ tni.dpi<-function(pmim,eps=0){
 ##------------------------------------------------------------------------
 ## permutation analysis with separated null distribution
 tni.perm.separate<-function(object,verbose=TRUE){
-  ##compute partial mi matrix
-  pmim<-tni.pmin(object@gexp,object@regulatoryElements,object@para$perm$estimator)
-  #compute null distributions
-  ##check if package snow has been loaded and 
-  ##a cluster object has been created
+  ##check if package snow has been loaded and a cluster object has been created
   if(isParallel() && length(object@regulatoryElements)>1){
+    ispar <- TRUE
+    if(verbose)
+      cat("-Performing permutation analysis (parallel version - ProgressBar disabled)...\n")
+    if(verbose)
+      cat("--For", length(object@regulatoryElements), "regulons...\n")
+  } else {
+    ispar <- FALSE
+    if(verbose)cat("-Performing permutation analysis...\n")
+    if(verbose)cat("--For", length(object@regulatoryElements), "regulons...\n")
+  }
+  ##compute partial mi matrix
+  pmim<-tni.pmin(object@gexp,object@regulatoryElements,object@para$perm$estimator, 
+                 object@para$perm$boxcox)
+  ##compute null distributions
+  if(ispar){
     cl<-getOption("cluster")
     snow::clusterExport(cl, list(".perm.pmin.separate"),envir=environment())
-    if(verbose)cat("-Performing permutation analysis (parallel version - ProgressBar disabled)...\n")
-    if(verbose)cat("--For", length(object@regulatoryElements), "regulons...\n")
     mipval <- snow::parSapply(cl, object@regulatoryElements, function(tf){
       pi<-which(tf==rownames(object@gexp))
-      midist <- .perm.pmin.separate(object@gexp, pi, object@para$perm$estimator, object@para$perm$nPermutations)
+      midist <- .perm.pmin.separate(object@gexp, pi, object@para$perm$estimator, 
+                                    object@para$perm$nPermutations)
       midist<-sort(midist, na.last = NA)
       np<-length(midist)
       midist<-np-findInterval(pmim[,tf],midist)
@@ -112,13 +147,12 @@ tni.perm.separate<-function(object,verbose=TRUE){
       midist
     })
   } else {
-    if(verbose)cat("-Performing permutation analysis...\n")
-    if(verbose)cat("--For", length(object@regulatoryElements), "regulons...\n")
     if(verbose) pb <- txtProgressBar(style=3)
     mipval<-sapply(1:length(object@regulatoryElements), function(i){
       tf<-object@regulatoryElements[i]
       pi<-which(tf==rownames(object@gexp))
-      midist <- .perm.pmin.separate(object@gexp, pi, object@para$perm$estimator, object@para$perm$nPermutations)
+      midist <- .perm.pmin.separate(object@gexp, pi, object@para$perm$estimator, 
+                                    object@para$perm$nPermutations)
       midist<-sort(midist, na.last = NA)
       np<-length(midist)
       midist<-np-findInterval(pmim[,tf],midist)
@@ -144,29 +178,44 @@ tni.perm.separate<-function(object,verbose=TRUE){
 ##------------------------------------------------------------------------
 ##permutation with pooled null distribution
 tni.perm.pooled<-function(object, parChunks=10, verbose=TRUE){
+  ##check if package snow has been loaded and a cluster object has been created
+  if(isParallel() && length(object@regulatoryElements)>1){
+    ispar <- TRUE
+    if(verbose)cat("-Performing permutation analysis (parallel version)...\n")
+    if(verbose)cat("--For", length(object@regulatoryElements), "regulons...\n")
+  } else {
+    ispar <- FALSE
+    if(verbose)cat("-Performing permutation analysis...\n")
+    if(verbose)cat("--For", length(object@regulatoryElements), "regulons...\n")
+  }
   ##compute partial mi matrix and get unique values
-  uniqueVec<-tni.pmin(object@gexp,object@regulatoryElements,object@para$perm$estimator)
+  uniqueVec<-tni.pmin(object@gexp,object@regulatoryElements,
+                      object@para$perm$estimator,
+                      object@para$perm$boxcox)
   uniqueVec<-sort(unique(as.numeric(uniqueVec)))
   ##initialize permutation count
   ctsum<-numeric(length(uniqueVec))
-  ##build the null distribution via permutation  
-  ##check if package snow has been loaded and 
-  ##a cluster object has been created
-  if(isParallel() && length(object@regulatoryElements)>1){
+  ##build the null distribution via permutation
+  if(ispar){
     cl<-getOption("cluster")
     snow::clusterExport(cl, list(".perm.pmin.pooled"),envir=environment())
-    if(verbose)cat("-Performing permutation analysis (parallel version)...\n")
-    if(verbose)cat("--For", length(object@regulatoryElements), "regulons...\n")
-    if(parChunks>(object@para$perm$nPermutations/2)){
-      parChunks<-as.integer(object@para$perm$nPermutations/2)
+    nper <- object@para$perm$nPermutations
+    if(is.null(parChunks)){
+      parChunks <- seq.int(length(cl), nper, by=length(cl)*3)
+      if(!nper%in%parChunks)parChunks <- c(parChunks, nper)
+      parChunks <- length(parChunks)
     }
-    nperChunks<-1:object@para$perm$nPermutations
+    if(parChunks>(nper/2)){
+      parChunks<-as.integer(nper/2)
+    }
+    nperChunks<-1:nper
     nperChunks<-split(nperChunks, cut(nperChunks, parChunks))
     nperChunks<-unlist(lapply(nperChunks,length))
     if(verbose)pb<-txtProgressBar(style=3)
     for(i in 1:parChunks){
       permdist <- snow::parLapply(cl,1:nperChunks[i],function(j){
-        permt <- .perm.pmin.pooled(object@gexp,length(object@regulatoryElements),object@para$perm$estimator)
+        permt <- .perm.pmin.pooled(object@gexp,length(object@regulatoryElements),
+                                   object@para$perm$estimator)
         permt <- sort(permt, na.last = NA)
         length(permt)-findInterval(uniqueVec,permt)
       })
@@ -177,11 +226,10 @@ tni.perm.pooled<-function(object, parChunks=10, verbose=TRUE){
       if(verbose)setTxtProgressBar(pb, i/parChunks)
     }
   } else {
-    if(verbose)cat("-Performing permutation analysis...\n")
-    if(verbose)cat("--For", length(object@regulatoryElements), "regulons...\n")
     if(verbose)pb<-txtProgressBar(style=3)
     for(i in 1:object@para$perm$nPermutations){
-      permt <- .perm.pmin.pooled(object@gexp,length(object@regulatoryElements),object@para$perm$estimator)
+      permt <- .perm.pmin.pooled(object@gexp,length(object@regulatoryElements),
+                                 object@para$perm$estimator)
       permt <- sort(permt, na.last = NA)
       permt <- length(permt)-findInterval(uniqueVec,permt)
       ctsum <- ctsum + permt
@@ -190,8 +238,10 @@ tni.perm.pooled<-function(object, parChunks=10, verbose=TRUE){
   }
   if(verbose)close(pb)
   ##compute pvals
-  pmim<-tni.pmin(object@gexp,object@regulatoryElements,object@para$perm$estimator)
-  np <- object@para$perm$nPermutations * ( prod(dim(pmim)) - length(object@regulatoryElements) )
+  pmim<-tni.pmin(object@gexp,object@regulatoryElements,object@para$perm$estimator,
+                 object@para$perm$boxcox)
+  np <- object@para$perm$nPermutations * 
+    ( prod(dim(pmim)) - length(object@regulatoryElements) )
   mipval <- (1 + ctsum)/(1 + np)
   mipval<-mipval[match(as.numeric(pmim),uniqueVec)]
   mipval<-matrix(mipval,nrow=nrow(pmim),ncol=ncol(pmim))  
@@ -217,7 +267,17 @@ tni.perm.pooled<-function(object, parChunks=10, verbose=TRUE){
 ##------------------------------------------------------------------------
 #bootstrap analysis
 tni.boot<-function(object, parChunks=10, verbose=TRUE){
-  ##identify empirical boundaries from tn.ref;
+  ##check if package snow has been loaded and a cluster object has been created
+  if(isParallel() && length(object@regulatoryElements)>1){
+    ispar <- TRUE
+    if(verbose)cat("-Performing bootstrap analysis (parallel version)...\n")
+    if(verbose)cat("--For", length(object@regulatoryElements), "regulons...\n")
+  } else {
+    ispar <- FALSE
+    if(verbose)cat("-Performing bootstrap analysis...\n")
+    if(verbose)cat("--For", length(object@regulatoryElements), "regulons...\n")
+  }
+  ##identify empirical boundaries from tn.ref
   ##..this strategy turns the bootstrap more tractable for large 
   ##..scale datasets.
   mimark<-sapply(1:ncol(object@results$tn.ref), function(i){
@@ -225,21 +285,23 @@ tni.boot<-function(object, parChunks=10, verbose=TRUE){
     if(length(tp)>0) min(tp) else 0
   })
   mimark<-rep(median(mimark),length(mimark))
-  
   ##initialize bootstrap matrix
   bcount<-matrix(0,ncol=ncol(object@results$tn.ref),nrow=nrow(object@results$tn.ref))
   ##run bootstrap
-  ##check if package snow has been loaded and 
-  ##a cluster object has been created  
-  if(isParallel() && length(object@regulatoryElements)>1){
+  if(ispar){
     cl<-getOption("cluster")
-    snow::clusterExport(cl, list("tni.pmin"),envir=environment())
-    if(verbose)cat("-Performing bootstrap analysis (parallel version)...\n")
-    if(verbose)cat("--For", length(object@regulatoryElements), "regulons...\n")
-    if(parChunks>(object@para$boot$nBootstraps/2)){
-      parChunks<-as.integer(object@para$boot$nBootstraps/2)
+    snow::clusterExport(cl, list("tni.pmin",".boxcox.adj","powerTransform","yjPower"),
+                        envir=environment())
+    nboot <- object@para$boot$nBootstraps
+    if(is.null(parChunks)){
+      parChunks <- seq.int(length(cl), nboot, by=length(cl))
+      if(!nboot%in%parChunks)parChunks <- c(parChunks, nboot)
+      parChunks <- length(parChunks)
     }
-    nbootChunks<-1:object@para$boot$nBootstraps
+    if(parChunks>(nboot/2)){
+      parChunks<-as.integer(nboot/2)
+    }
+    nbootChunks<-1:nboot
     nbootChunks<-split(nbootChunks, cut(nbootChunks, parChunks))
     nbootChunks<-unlist(lapply(nbootChunks,length))
     if(verbose)pb<-txtProgressBar(style=3)
@@ -253,7 +315,8 @@ tni.boot<-function(object, parChunks=10, verbose=TRUE){
         #--- compute bootdist
         boott<-tni.pmin(x, tfs=object@regulatoryElements, 
                         estimator=object@para$boot$estimator,
-                        simplified=TRUE)
+                        boxcox=object@para$boot$boxcox, 
+                        boxcox.sample=TRUE, simplified=TRUE)
         sapply(1:ncol(boott),function(k){as.numeric(boott[,k]>mimark[k])})
       })
       for(j in 1:length(bootdist)){
@@ -263,8 +326,6 @@ tni.boot<-function(object, parChunks=10, verbose=TRUE){
       if(verbose)setTxtProgressBar(pb, i/parChunks)
     }
   } else {
-    if(verbose)cat("-Performing bootstrap analysis...\n")
-    if(verbose)cat("--For", length(object@regulatoryElements), "regulons...\n")
     if(verbose) pb <- txtProgressBar(style=3)  
     for(i in 1:object@para$boot$nBootstraps){
       if(verbose) setTxtProgressBar(pb, i/object@para$boot$nBootstraps)
@@ -276,14 +337,18 @@ tni.boot<-function(object, parChunks=10, verbose=TRUE){
       #--- compute bootdist
       bootdist<-tni.pmin(x, tfs=object@regulatoryElements,
                          estimator=object@para$boot$estimator,
-                         simplified=TRUE)
-      bootdist<-sapply(1:ncol(bootdist),function(j){as.numeric(bootdist[,j]>mimark[j])})
+                         boxcox=object@para$boot$boxcox, 
+                         boxcox.sample=TRUE, simplified=TRUE)
+      bootdist<-sapply(1:ncol(bootdist),function(j){
+        as.numeric(bootdist[,j]>mimark[j])
+        })
       bcount <- bcount + bootdist
     }
   }
   if(verbose)close(pb)
   ##decide on the stability of the inferred associations
-  cons<-as.integer( object@para$boot$nBootstraps * (object@para$boot$consensus/100) )
+  cons<-as.integer( object@para$boot$nBootstraps * 
+                      (object@para$boot$consensus/100) )
   object@results$tn.ref[bcount<=cons]<-0
   return(object@results$tn.ref)
 }
@@ -341,18 +406,24 @@ miThresholdMd <- function(gexp, nsamples, prob=c(0.05,0.95),
   if(verbose)pb<-txtProgressBar(style=3)
   nullmark<-sapply(1:nPermutations, function(i){
     if(verbose)setTxtProgressBar(pb, i/nPermutations)
-    rmil<-tni.pmin(gexp[,sample(ncol(gexp),nsamples)],tfs=sample(rownames(gexp),nsc),estimator=estimator,simplified=TRUE)
-    rmih<-tni.pmin(gexp[,sample(ncol(gexp),nsamples)],tfs=sample(rownames(gexp),nsc),estimator=estimator,simplified=TRUE)
+    rmil<-tni.pmin(gexp[,sample(ncol(gexp),nsamples)],
+                   tfs=sample(rownames(gexp),nsc),
+                   estimator=estimator, simplified=TRUE)
+    rmih<-tni.pmin(gexp[,sample(ncol(gexp),nsamples)],
+                   tfs=sample(rownames(gexp),nsc),
+                   estimator=estimator, simplified=TRUE)
     quantile(rmih-rmil,probs=prob,na.rm=TRUE,names=FALSE)
   })
   if(verbose)close(pb)
-  mimark<-c(median(nullmark[1,],na.rm=TRUE),median(nullmark[2,],na.rm=TRUE))
+  mimark<-c(median(nullmark[1,],na.rm=TRUE),
+            median(nullmark[2,],na.rm=TRUE))
   return(mimark)
 }
 
 ##------------------------------------------------------------------------
 ##compute delta mi, returns mi markers for each tf individually
-miThresholdMdTf<-function(gexp, tfs, nsamples, prob=c(0.05,0.95), nPermutations=1000, 
+miThresholdMdTf<-function(gexp, tfs, nsamples, prob=c(0.05,0.95), 
+                          nPermutations=1000, 
                           estimator="spearman", verbose=TRUE){
   if(length(prob)==1)prob=sort(c(1-prob,prob))
   #---get low/high sample idxs
@@ -364,8 +435,10 @@ miThresholdMdTf<-function(gexp, tfs, nsamples, prob=c(0.05,0.95), nPermutations=
   rmid<-sapply(1:nPermutations,function(i){
     if(verbose)setTxtProgressBar(pb, i/nPermutations)
     ridx<-sample(nc)
-    rmil<-tni.pmin(gexp[,ridx[idxl]],tfs=tfs,estimator=estimator,simplified=TRUE)
-    rmih<-tni.pmin(gexp[,ridx[idxh]],tfs=tfs,estimator=estimator,simplified=TRUE)
+    rmil<-tni.pmin(gexp[,ridx[idxl]],tfs=tfs,estimator=estimator,
+                   simplified=TRUE)
+    rmih<-tni.pmin(gexp[,ridx[idxh]],tfs=tfs,estimator=estimator,
+                   simplified=TRUE)
     apply(rmih-rmil,2,quantile,probs=prob,na.rm=TRUE,names=FALSE)
   })
   if(verbose)close(pb)
@@ -373,7 +446,8 @@ miThresholdMdTf<-function(gexp, tfs, nsamples, prob=c(0.05,0.95), nPermutations=
   rmil<-rmid[idx==1,]
   rmih<-rmid[idx==0,]
   if(length(tfs)>1){
-    dmimark<-cbind(apply(rmil,1,median,na.rm=TRUE),apply(rmih,1,median,na.rm=TRUE))
+    dmimark<-cbind(apply(rmil,1,median,na.rm=TRUE),
+                   apply(rmih,1,median,na.rm=TRUE))
     rownames(dmimark)<-tfs
   } else {
     dmimark<-c(median(rmid,na.rm=TRUE),median(rmid,na.rm=TRUE))
@@ -385,7 +459,8 @@ miThresholdMdTf<-function(gexp, tfs, nsamples, prob=c(0.05,0.95), nPermutations=
 ##compute delta mi, returns mi null for each tf 
 ##randomization applyed on modulators (very conservative)
 miMdTfStats<-function(gexp, regulons, nsamples, nPermutations=1000, 
-                      estimator="spearman", minRegulonSize, verbose=TRUE){
+                      estimator="spearman", minRegulonSize,
+                      verbose=TRUE){
   tfs<-names(regulons)
   #---set minimun size to compute the null
   #---modulated targets < minRegulonSize should score zero
@@ -406,8 +481,10 @@ miMdTfStats<-function(gexp, regulons, nsamples, nPermutations=1000,
   rmid<-sapply(1:nPermutations,function(i){
     if(verbose)setTxtProgressBar(pb, i/nPermutations)
     ridx<-sample(nc)
-    rmil<-tni.pmin(gexp[,ridx[idxl]],tfs=tfs,estimator=estimator,simplified=TRUE)
-    rmih<-tni.pmin(gexp[,ridx[idxh]],tfs=tfs,estimator=estimator,simplified=TRUE)
+    rmil<-tni.pmin(gexp[,ridx[idxl]],tfs=tfs,estimator=estimator,
+                   simplified=TRUE)
+    rmih<-tni.pmin(gexp[,ridx[idxh]],tfs=tfs,estimator=estimator,
+                   simplified=TRUE)
     sapply(tfs,function(tf){
       l<-rmil[regulons[[tf]],tf]
       h<-rmih[regulons[[tf]],tf]
@@ -438,8 +515,8 @@ miMdTfStats<-function(gexp, regulons, nsamples, nPermutations=1000,
 #1) computational cost forbids default use in the current implementation
 #2) only one modulator each time
 #3) intends to remove evident unstable modulations of selected modulators
-cdt.stability<-function(gexp,estimator,mrkboot,miThreshold,spsz,md,tfs,sigDelta,
-                    nboot=100,consensus=95, verbose=TRUE){
+cdt.stability<-function(gexp,estimator,mrkboot,miThreshold,spsz,md,tfs,
+                        sigDelta, nboot=100,consensus=95, verbose=TRUE){
   bcount<-sigDelta;bcount[,]<-0
   if(verbose)pb<-txtProgressBar(style=3)
   for(i in 1:nboot){
@@ -454,7 +531,8 @@ cdt.stability<-function(gexp,estimator,mrkboot,miThreshold,spsz,md,tfs,sigDelta,
     mih<-tni.pmin(gxtemp[,idxh],tfs,estimator=estimator,simplified=TRUE)
     mid<-mih-mil
     if(miThreshold=="md.tf" && length(tfs)>1){
-      stabt<-t(apply(mid,1,"<",mrkboot[,1])) | t(apply(mid,1,">",mrkboot[,2]))
+      stabt<-t(apply(mid,1,"<",mrkboot[,1])) | 
+        t(apply(mid,1,">",mrkboot[,2]))
     } else {
       stabt<- mid<mrkboot[1] | mid>mrkboot[2]
     }
@@ -465,9 +543,9 @@ cdt.stability<-function(gexp,estimator,mrkboot,miThreshold,spsz,md,tfs,sigDelta,
 }
 
 ##------------------------------------------------------------------------
-checkModuationEffect<-function(gexp,tfs,modregulons,modulatedTFs,glstat,spsz,minRegulonSize,
-                               pValueCutoff,nPermutations,estimator,pAdjustMethod,
-                               count,verbose){
+checkModuationEffect<-function(gexp,tfs,modregulons,modulatedTFs,glstat,spsz,
+                               minRegulonSize, pValueCutoff,nPermutations,
+                               estimator,pAdjustMethod, count,verbose){
   for(md in names(modregulons)){
     mdreg<-modregulons[[md]][modulatedTFs]
     glstat$observed[[md]]$sig2noise<-glstat$observed[[md]]$sig2noise[modulatedTFs]
@@ -496,7 +574,8 @@ checkModuationEffect<-function(gexp,tfs,modregulons,modulatedTFs,glstat,spsz,min
       glstatrev$null[[tf]]$dist<-rbind(glstatrev$null[[tf]]$dist,null$dist[tf,])
       glstatrev$null[[tf]]$median<-c(glstatrev$null[[tf]]$median,null$median[tf])
       glstatrev$null[[tf]]$sd<-c(glstatrev$null[[tf]]$sd,null$sd[tf])
-      glstatrev$null[[tf]]$zscore<-rbind(glstatrev$null[[tf]]$zscore,null$zscore[tf,])
+      glstatrev$null[[tf]]$zscore<-rbind(glstatrev$null[[tf]]$zscore,
+                                         null$zscore[tf,])
       glstatrev$null[[tf]]$ci<-qnorm(1-(pValueCutoff/length(mds)))
     }
   }
@@ -506,7 +585,8 @@ checkModuationEffect<-function(gexp,tfs,modregulons,modulatedTFs,glstat,spsz,min
     names(glstatrev$null[[tf]]$median)<-mds
     names(glstatrev$null[[tf]]$sd)<-mds
     rownames(glstatrev$null[[tf]]$zscore)<-mds
-    glstatrev$observed[[tf]]$adjpvals<-p.adjust(glstatrev$observed[[tf]]$pvals, method=pAdjustMethod)
+    glstatrev$observed[[tf]]$adjpvals<-p.adjust(glstatrev$observed[[tf]]$pvals, 
+                                                method=pAdjustMethod)
   }
   #update summary
   tp<-glstat$observed
@@ -546,7 +626,8 @@ cv.filter<-function(gexp, ids){
   sdgx<-apply(gexp,1,sd,na.rm=TRUE)
   cvgx<-abs(sdgx/meangx)
   # align ids
-  ids <- data.frame(ids[rownames(gexp),,drop=FALSE], CV=cvgx, stringsAsFactors=FALSE)
+  ids <- data.frame(ids[rownames(gexp),,drop=FALSE], CV=cvgx, 
+                    stringsAsFactors=FALSE)
   # remove probes without rowAnnotation
   ids <- ids[!is.na(ids[,2]),,drop=FALSE]
   ids <- ids[ids[,2]!="",,drop=FALSE]
@@ -619,7 +700,8 @@ tni.rmap<-function(tnet){
   bmat<-rbind(tmat,zmat)
   rmap<-cbind(tnet,bmat)
   rmap[onlytar,tfs]<-0
-  g<-igraph::graph.adjacency(rmap, diag=FALSE, mode="directed", weighted=TRUE)
+  g<-igraph::graph.adjacency(rmap, diag=FALSE, mode="directed",
+                             weighted=TRUE)
   edl<-igraph::get.edgelist(g)
   if(nrow(edl)>0){
     etype<-edl[,1]%in%tfs+edl[,2]%in%tfs
@@ -821,17 +903,20 @@ setregs1<-function(object,g,testedtfs,modulators){
   V(g)$nodeLineColor<-"grey"
   V(g)$nodeFontSize[V(g)$tfs==1]=25
   #set node shape and legend
-  g<-att.setv(g=g, from="tfs", to='nodeShape',shapes=c("DIAMOND","ELLIPSE"),title="", categvec=c(0,1))
+  g<-att.setv(g=g, from="tfs", to='nodeShape',shapes=c("DIAMOND","ELLIPSE"),title="", 
+              categvec=c(0,1))
   g$legNodeShape$legend<-c("Modulator","TF")
   if(ecount(g)>0){
     #set edge attr
     E(g)$edgeWidth<-1.5
     if(any(E(g)$modeOfAction==0)){
-      g<-att.sete(g=g, from="modeOfAction", to='edgeColor',cols=c("#96D1FF","grey80","#FF8E91"), 
+      g<-att.sete(g=g, from="modeOfAction", to='edgeColor',
+                  cols=c("#96D1FF","grey80","#FF8E91"), 
                   title="Mode",categvec=c(-1,0,1))
       g$legEdgeColor$legend<-c("Down","NA","Up")
     } else {
-      g<-att.sete(g=g, from="modeOfAction", to='edgeColor',cols=c("#96D1FF","grey80","#FF8E91"), 
+      g<-att.sete(g=g, from="modeOfAction", to='edgeColor',
+                  cols=c("#96D1FF","grey80","#FF8E91"), 
                   title="Mode",categvec=c(-1,1))
       g$legEdgeColor$legend<-c("Down","Up")
     }
@@ -853,7 +938,8 @@ setregs1<-function(object,g,testedtfs,modulators){
     mdmode[V(g)$tfs==1]=NA
     V(g)$medianModeOfAction<-as.integer(mdmode)
     #assign mode to targets
-    g<-att.setv(g=g, from="medianModeOfAction", to='nodeColor',cols=c("#96D1FF","grey80","#FF8E91"), 
+    g<-att.setv(g=g, from="medianModeOfAction", to='nodeColor',
+                cols=c("#96D1FF","grey80","#FF8E91"), 
                 title="ModeOfAction",categvec=-1:1,pal=1,na.col="grey80")
     V(g)$nodeLineColor<-V(g)$nodeColor
     g<-remove.graph.attribute(g,"legNodeColor")
@@ -894,7 +980,8 @@ tni.mmap.detailed<-function(object,mnet,testedtfs,mds,ntop,nbottom){
       mtartp<-mtar[,md]
       mode<-mnet[md,tf]
       tartp<-tar[names(mtartp)]
-      elist<-cbind(A=c(md,tf,rep("TF|Md",length(tartp))),B=c("TF|Md","TF|Md",names(tartp)))
+      elist<-cbind(A=c(md,tf,rep("TF|Md",length(tartp))),
+                   B=c("TF|Md","TF|Md",names(tartp)))
       rownames(elist)<-NULL
       #---
       modeOfAction<-c(NA,NA,tartp)
@@ -905,7 +992,8 @@ tni.mmap.detailed<-function(object,mnet,testedtfs,mds,ntop,nbottom){
       #---
       interactionType<-rep("TF.Target",length(modeOfAction))
       interactionType[1:2]<-"TF|Md"
-      elist<-data.frame(elist,interactionType,modeOfAction,modulationEffect,modulationType,stringsAsFactors=FALSE)
+      elist<-data.frame(elist,interactionType,modeOfAction,modulationEffect,
+                        modulationType,stringsAsFactors=FALSE)
       idx<-sort.list(abs(elist$modeOfAction),na.last=FALSE,decreasing=FALSE)
       elist<-elist[idx,,drop=FALSE]
       if(!is.null(ntop)){
@@ -971,7 +1059,8 @@ setregs2<-function(g){
   g<-att.setv(g=g, from="SYMBOL", to='nodeAlias')
   V(g)$nodeAlias[V(g)$name=="TF|Md"]<-"TF | Md"
   V(g)$nodeColor<-"white"
-  g<-att.setv(g=g, from="nodeType", to='nodeLineColor',categvec=c("Md","TF","TF|Md","Target"),
+  g<-att.setv(g=g, from="nodeType", to='nodeLineColor',
+              categvec=c("Md","TF","TF|Md","Target"),
               cols=c("#FF6666","#66CCFF","#FF9900","#00CC99"),title="")
   g$legNodeLineColor$legend<-c("Md","TF","TF | Md", "Mod. target")
   #--set legNodeColor
@@ -988,10 +1077,12 @@ setregs2<-function(g){
   E(g)$edgeWidth<-2
   E(g)$edgeWidth[E(g)$modulationType==0]<-2
   #--
-  g<-att.sete(g=g, from="modulationType", to='edgeColor', title="", categvec=c(2,1,0),cols=c("black","grey50","grey70"))
+  g<-att.sete(g=g, from="modulationType", to='edgeColor', title="", 
+              categvec=c(2,1,0),cols=c("black","grey50","grey70"))
   #--
   #E(g)$absModulationEffect<-sign(E(g)$modulationEffect)
-  #g<-att.sete(g=g, from="absModulationEffect", to='edgeColor', title="",  categvec=-1:1, cols=c("grey65","grey95","grey65"))
+  # g<-att.sete(g=g, from="absModulationEffect", to='edgeColor', title="",  
+  #             categvec=-1:1, cols=c("grey65","grey95","grey65"))
   #--
   E(g)$edgeColor[E(g)$modulationType==2]<-"black"
   g$legEdgeColor$legend<-c("conditioned","modulated","non-modulated")
@@ -1028,7 +1119,8 @@ tni.phyper<-function(tnet){
     sample1<-sum(x>0)
     sample2<-colSums(xmat>0)
     overlap<-colSums(c==2)
-    resph<-phyper(overlap-1, sample1, pop - sample1, sample2, lower.tail=FALSE)
+    resph<-phyper(overlap-1, sample1, pop - sample1, sample2, 
+                  lower.tail=FALSE)
     resph
   }
   pmat<-apply(tnet,2,phtest,xmat=tnet)
@@ -1056,16 +1148,24 @@ cdt.getReverse<-function(cdt,pAdjustMethod="bonferroni"){
     }
   }
   if(length(cdtrev)>0){
-    cdtrev<-p.adjust.cdt(cdt=cdtrev,pAdjustMethod=pAdjustMethod, p.name="PvFET",adjp.name="AdjPvFET")
-    cdtrev<-p.adjust.cdt(cdt=cdtrev,pAdjustMethod=pAdjustMethod, p.name="PvKS",adjp.name="AdjPvKS",sort.name="PvKS")
-    cdtrev<-p.adjust.cdt(cdt=cdtrev,pAdjustMethod=pAdjustMethod, p.name="PvSNR",adjp.name="AdjPvSNR",sort.name="PvSNR",global=FALSE)
+    cdtrev<-p.adjust.cdt(cdt=cdtrev,pAdjustMethod=pAdjustMethod, 
+                         p.name="PvFET",adjp.name="AdjPvFET")
+    cdtrev<-p.adjust.cdt(cdt=cdtrev,pAdjustMethod=pAdjustMethod, 
+                         p.name="PvKS",adjp.name="AdjPvKS",sort.name="PvKS")
+    cdtrev<-p.adjust.cdt(cdt=cdtrev,pAdjustMethod=pAdjustMethod, 
+                         p.name="PvSNR",adjp.name="AdjPvSNR",
+                         sort.name="PvSNR",global=FALSE)
   }
   cdtrev
 }
 cdt.get<-function(cdt,pAdjustMethod="bonferroni"){
-  cdt<-p.adjust.cdt(cdt=cdt,pAdjustMethod=pAdjustMethod, p.name="PvFET",adjp.name="AdjPvFET")
-  cdt<-p.adjust.cdt(cdt=cdt,pAdjustMethod=pAdjustMethod, p.name="PvKS",adjp.name="AdjPvKS",sort.name="PvKS")
-  cdt<-p.adjust.cdt(cdt=cdt,pAdjustMethod=pAdjustMethod, p.name="PvSNR",adjp.name="AdjPvSNR",sort.name="PvSNR",global=FALSE)
+  cdt<-p.adjust.cdt(cdt=cdt,pAdjustMethod=pAdjustMethod, 
+                    p.name="PvFET",adjp.name="AdjPvFET")
+  cdt<-p.adjust.cdt(cdt=cdt,pAdjustMethod=pAdjustMethod, 
+                    p.name="PvKS",adjp.name="AdjPvKS",sort.name="PvKS")
+  cdt<-p.adjust.cdt(cdt=cdt,pAdjustMethod=pAdjustMethod, 
+                    p.name="PvSNR",adjp.name="AdjPvSNR",sort.name="PvSNR",
+                    global=FALSE)
   cdt
 }
 #---------------------------------------------------------------
@@ -1078,7 +1178,8 @@ p.adjust.cdt<-function(cdt,pAdjustMethod="bonferroni",p.name="Pvalue",
     pvals<-array(,dim=c(1,2))
     for(i in 1:length(cdt)){
       tp<-cdt[[i]]
-      if(nrow(tp)>0 && !is.null(tp[[p.name]]))pvals<-rbind(pvals,cbind(i,tp[[p.name]]))
+      if(nrow(tp)>0 && !is.null(tp[[p.name]]))
+        pvals<-rbind(pvals,cbind(i,tp[[p.name]]))
     }
     pvals<-pvals[-1,,drop=FALSE]
     colnames(pvals)<-c("idx","p")
@@ -1201,7 +1302,8 @@ hclust2igraph<-function(hc){
     rmnodes<-rmnodes$node[!rmnodes$node==rootid]
     #update hcEdges and nestList
     if(length(rmnodes)>0){
-      hcEdges<-hcEdges.filter(hcEdges,hcNodes,rmnodes,lineage,rootid,mergeBlocks)
+      hcEdges<-hcEdges.filter(hcEdges,hcNodes,rmnodes,lineage,
+                              rootid,mergeBlocks)
       nestList<-nestList[names(nestList)%in%hcEdges$parentNode]
     }
   }
@@ -1340,8 +1442,10 @@ treemap<-function(hc){
   hcEdges<-data.frame(hcEdges,stringsAsFactors=FALSE)
   hcEdges$parentHeight<-obj$height[hcEdges$parentNode]
   #---get unified nodes
-  hcl<-data.frame(node=hc$labels,mergeId=-c(1:nn),hcId=c(1:nn), type="leaf",stringsAsFactors=FALSE)
-  hcn<-data.frame(node=paste("N",c(1:N),sep=""),mergeId=c(1:N),hcId=c(1:N),type="nest",stringsAsFactors=FALSE)
+  hcl<-data.frame(node=hc$labels,mergeId=-c(1:nn),hcId=c(1:nn), type="leaf",
+                  stringsAsFactors=FALSE)
+  hcn<-data.frame(node=paste("N",c(1:N),sep=""),mergeId=c(1:N),hcId=c(1:N),
+                  type="nest",stringsAsFactors=FALSE)
   hcNodes<-rbind(hcl,hcn)
   hcEdges$parentNode<-hcNodes$node[match(hcEdges$parentNode,hcNodes$mergeId)]
   hcEdges$childNode<-hcNodes$node[match(hcEdges$childNode,hcNodes$mergeId)]
@@ -1488,7 +1592,8 @@ treemap<-function(hc){
 }
 
 ##------------------------------------------------------------------------------
-.tni.stratification.gsea2 <- function(regulonActivity, sections=1, center=TRUE){
+.tni.stratification.gsea2 <- function(regulonActivity, sections=1, 
+                                      center=TRUE){
   regstatus <- sign(regulonActivity$dif)
   for (reg in colnames(regstatus)){
     sq <- c(seq_len(sections))
@@ -1500,11 +1605,13 @@ treemap<-function(hc){
     tp <- regstatus[, reg]
     #---
     tp1 <- sort(dif[tp > 0], decreasing = TRUE)
-    tp1[] <- rep(sq, each = ceiling(length(tp1)/sections), length.out = length(tp1))
+    tp1[] <- rep(sq, each = ceiling(length(tp1)/sections), 
+                 length.out = length(tp1))
     regstatus[names(tp1), reg] <- tp1
     #---
     tp2 <- sort(dif[tp < 0], decreasing = TRUE)
-    tp2[] <- rep(sq + sections + 1, each = ceiling(length(tp2)/sections), length.out = length(tp2))
+    tp2[] <- rep(sq + sections + 1, each = ceiling(length(tp2)/sections), 
+                 length.out = length(tp2))
     regstatus[names(tp2), reg] <- tp2
   }
   mid <- sections + 1
@@ -1522,7 +1629,8 @@ treemap<-function(hc){
 }
 
 ##------------------------------------------------------------------------------
-.tni.stratification.area <- function(regulonActivity, sections=1, center=FALSE){
+.tni.stratification.area <- function(regulonActivity, sections=1, 
+                                     center=FALSE){
   regstatus <- sign(regulonActivity$dif)
   for (reg in colnames(regstatus)){
     sq <- c(seq_len(sections))
@@ -1530,11 +1638,13 @@ treemap<-function(hc){
     tp <- regstatus[, reg]
     #---
     tp1 <- sort(dif[tp > 0], decreasing = TRUE)
-    tp1[] <- rep(sq, each = ceiling(length(tp1)/sections), length.out = length(tp1))
+    tp1[] <- rep(sq, each = ceiling(length(tp1)/sections), 
+                 length.out = length(tp1))
     regstatus[names(tp1), reg] <- tp1
     #---
     tp2 <- sort(dif[tp < 0], decreasing = TRUE)
-    tp2[] <- rep(sq + sections + 1, each = ceiling(length(tp2)/sections), length.out = length(tp2))
+    tp2[] <- rep(sq + sections + 1, each = ceiling(length(tp2)/sections), 
+                 length.out = length(tp2))
     regstatus[names(tp2), reg] <- tp2
   }
   #--- obs. this stratification generates a 'midle' group 
@@ -1561,7 +1671,8 @@ treemap<-function(hc){
   #--- get tf-tar mi
   tftar_mi <- lapply(tni.get(object, what="regulons.and.mode", idkey=idkey), abs)
   #--- get tf-tar correlation
-  object@results$tn.dpi <- tni.cor(object@gexp, object@results$tn.dpi, asInteger=FALSE,
+  object@results$tn.dpi <- tni.cor(object@gexp, object@results$tn.dpi, 
+                                   asInteger=FALSE,
                                    estimator=object@para$perm$estimator)
   tftar_cor <- tni.get(object, what="regulons.and.mode", idkey=idkey)
   #--- get tf-tar mixed scores
@@ -1573,9 +1684,11 @@ treemap<-function(hc){
   #--- set input
   regs <- tni.get(object, what="regulatoryElements", idkey=idkey)
   #--- get tf-tar mi
-  tftar_mi <- lapply(tni.get(object, what="refregulons.and.mode", idkey=idkey), abs)
+  tftar_mi <- lapply(tni.get(object, what="refregulons.and.mode", idkey=idkey), 
+                     abs)
   #--- get tf-tar correlation
-  object@results$tn.ref <- tni.cor(object@gexp, object@results$tn.ref, asInteger=FALSE,
+  object@results$tn.ref <- tni.cor(object@gexp, object@results$tn.ref, 
+                                   asInteger=FALSE,
                                    estimator=object@para$perm$estimator)
   tftar_cor <- tni.get(object, what="refregulons.and.mode", idkey=idkey)
   #--- get tf-tar mixed scores
@@ -1642,11 +1755,16 @@ treemap<-function(hc){
   regs <- names(listOfRegulonsAndMode)
   nsamp <- ncol(phenoranks)
   if(isParallel() && length(regs)>1){
-    if(verbose)cat("-Assessing target contribution (parallel version - ProgressBar disabled)...\n")
-    if(verbose)cat("--For", length(listOfRegulonsAndMode), "regulon(s) and", nsamp,'sample(s)...\n')
+    if(verbose)
+      cat("-Assessing target contribution (parallel version - ProgressBar disabled)...\n")
+    if(verbose)
+      cat("--For", length(listOfRegulonsAndMode), "regulon(s) and", 
+          nsamp,'sample(s)...\n')
     cl<-getOption("cluster")
-    snow::clusterExport(cl, list(".gsea2.target.contribution",".run.tni.gsea2.alternative",
-                                 ".fgseaScores4TNI"), envir=environment())
+    snow::clusterExport(cl, list(".gsea2.target.contribution",
+                                 ".run.tni.gsea2.alternative",
+                                 ".fgseaScores4TNI"), 
+                        envir=environment())
     tcontrib <- snow::parLapply(cl,regs, function(reg){
       regulonAndMode <- listOfRegulonsAndMode[[reg]]
       tc <- sapply(1:length(regulonAndMode), function(i){
@@ -1658,8 +1776,11 @@ treemap<-function(hc){
       return(tc)
     })
   } else {
-    if(verbose) cat("-Assessing target contribution...\n")
-    if(verbose)cat("--For", length(listOfRegulonsAndMode), "regulon(s) and", nsamp,'sample(s)...\n')
+    if(verbose) 
+      cat("-Assessing target contribution...\n")
+    if(verbose)
+      cat("--For", length(listOfRegulonsAndMode), "regulon(s) and", 
+          nsamp,'sample(s)...\n')
     if(verbose) pb <- txtProgressBar(style=3)
     ntotal <- sum(unlist(lapply(listOfRegulonsAndMode, length)))
     ncount <- 0
@@ -1697,6 +1818,16 @@ treemap<-function(hc){
   }
   names(regActivity) <- samples
   return(regActivity)
+}
+## Count regulon's targets
+.regulonCounts <- function(regulonsAndMode){
+  counts <- lapply(regulonsAndMode, function(reg){
+    c(length(reg),sum(reg>0),sum(reg<0))
+  })
+  counts <- data.frame(t(data.frame(counts, check.names = F)), 
+                       check.names = F)
+  colnames(counts) <- c("Size","Positive", "Negative")
+  return(counts)
 }
 
 #---------------------------------------------------------------

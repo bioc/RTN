@@ -15,7 +15,7 @@ the TF and its targets conditioned to the gene expression of a modulator.
 \usage{
 tni.conditional(object, modulators=NULL, tfs=NULL, sampling=35, pValueCutoff=0.01, 
 pAdjustMethod="bonferroni", minRegulonSize=15, minIntersectSize=5, 
-miThreshold="md", prob=0.99, pwtransform=FALSE, medianEffect=FALSE, 
+miThreshold="md", prob=0.99, medianEffect=FALSE, 
 iConstraint=TRUE, verbose=TRUE, ...)
 }
 
@@ -61,9 +61,6 @@ a single character value specifying the underlying distribution used to estimate
 \item{prob}{
 a probability value in [0,1] used to estimate the 'miThreshold' based on the underlying quantile distribution.
 }
-\item{pwtransform}{
-a single logical value specifying whether a Box-Cox power transformation should be used to improve data symmetry (this procedure might be carefully used as a complementary test to check the validity of the inferred associations).
-}
 \item{medianEffect}{
 a single logical value specifying whether to assess the median effect of each modulator. This global statistics does not affect the inferential process over single TF-target interactions. This method is still experimental, it can be used as a complementary analysis to chek the overall modulation effect onto all targets listed in a given regulon (this step  may require substantial computation time).
 }
@@ -75,7 +72,9 @@ verbose=TRUE) or not (when verbose=FALSE).
 a single logical value specifying to display detailed messages (when 
 verbose=TRUE) or not (when verbose=FALSE).
 }
-\item{...}{ additional arguments passed to tna.graph function. } 
+\item{...}{ 
+additional arguments passed to tna.graph function. 
+} 
 }
 
 \value{

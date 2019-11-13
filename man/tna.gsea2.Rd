@@ -10,8 +10,9 @@ This function takes a TNA object and returns a CMAP-like analysis obtained by tw
 }
 
 \usage{
-tna.gsea2(object, pValueCutoff=0.05, pAdjustMethod="BH",  minRegulonSize=15, nPermutations=1000, 
-        exponent=1, tnet="dpi", stepFilter=TRUE, tfs=NULL, verbose=TRUE)
+tna.gsea2(object, pValueCutoff=0.05, pAdjustMethod="BH", minRegulonSize=15, 
+sizeFilterMethod="posORneg", nPermutations=1000, exponent=1, tnet="dpi", 
+tfs=NULL, verbose=TRUE, doSizeFilter=NULL)
 }
 
 \arguments{
@@ -32,6 +33,9 @@ a single integer or numeric value specifying the minimum number of
 elements in a regulon that must map to elements of the gene universe. 
 Gene sets with fewer than this number are removed from the analysis.
 }
+\item{sizeFilterMethod}{
+a single character value specifying the use of the 'minRegulonSize' argument, which is applyed to regulon's positive and negative targets. Options: "posANDneg", "posORneg", "posPLUSneg". For "posANDneg", the number of both positive and negative targets should be > 'minRegulonSize'; for "posORneg", the number of either positive or negative targets should be > 'minRegulonSize'; and for "posPLUSneg", the number of all targets should be > 'minRegulonSize'.
+}
 \item{nPermutations}{
 a single integer or numeric value specifying the number of permutations 
 for deriving p-values in GSEA.
@@ -44,18 +48,15 @@ a single integer or numeric value used in weighting phenotypes in GSEA
 a single character value specifying which transcriptional network should to used to 
 compute the GSEA analysis. Options: "dpi" and "ref".
 }
-\item{stepFilter}{
-a single logical value specifying to use a step-filter algorithm removing 
-non-significant regulons derived from \code{\link[RTN:tna.mra]{tna.mra}}
-(when stepFilter=TRUE) or not (when stepFilter=FALSE). It may have a substantial impact 
-on the overall processing time.
-}
 \item{tfs}{
-an optional vector with transcription factor identifiers (this option overrides the 'stepFilter' argument).
+an optional vector with transcription factor identifiers.
 }
 \item{verbose}{
 a single logical value specifying to display detailed messages (when 
 verbose=TRUE) or not (when verbose=FALSE).
+}
+\item{doSizeFilter}{
+'doSizeFilter' is deprecated, please use the 'filterSize' parameter.
 }
 }
 
@@ -89,7 +90,7 @@ rtna <- tni2tna.preprocess(rtni, phenotype=tnaData$phenotype,
         hits=tnaData$hits, phenoIDs=tnaData$phenoIDs)
 
 #run GSEA2 analysis pipeline
-rtna <- tna.gsea2(rtna, stepFilter=FALSE)
+rtna <- tna.gsea2(rtna)
 
 #get results
 tna.get(rtna, what="gsea2")
@@ -97,7 +98,7 @@ tna.get(rtna, what="gsea2")
 # run parallel version with SNOW package!
 library(snow)
 options(cluster=snow::makeCluster(3, "SOCK"))
-rtna <- tna.gsea2(rtna,stepFilter=FALSE)
+rtna <- tna.gsea2(rtna)
 stopCluster(getOption("cluster"))
 }
 }

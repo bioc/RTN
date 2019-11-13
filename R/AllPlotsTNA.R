@@ -65,6 +65,7 @@ tna.plot.gsea1<-function(object,  labPheno="", file="tna_gsea1", filepath=".", r
              ylabPanels=ylabPanels,xlab=xlab,alpha=alpha, sparsity=sparsity, 
              autoformat=autoformat, plotpdf=plotpdf, ...=...)
 }
+
 #-------------------------------------------------------------------------------------
 #--subfunction for tna.plot.gsea1
 plot.gsea1<-function(resgsea, rgcs, phenotype, orderAbsValue, nPermutations, exponent,
@@ -104,13 +105,14 @@ plot.gsea1<-function(resgsea, rgcs, phenotype, orderAbsValue, nPermutations, exp
              height,alpha,sparsity,plotpdf, ...=...)
   
 }
+
 #-------------------------------------------------------------------------------------
 #--subfunction for tna.plot.gsea1
 get.merged.data1<-function(gs.names,phenotype,rgcs,resgsea,exponent){
   res<-list()
   for(gs.name in gs.names){
     test<-gseaScores4RTN(geneList=phenotype,geneSet=rgcs[[gs.name]], 
-                         exponent=exponent,mode="graph")
+                         exponent=exponent,mode="runningscores")
     res$enrichmentScores[[gs.name]]<-test$enrichmentScore
     res$runningScores[[gs.name]]<-test$runningScore
     res$positions[[gs.name]]<-test$positions
@@ -127,6 +129,7 @@ get.merged.data1<-function(gs.names,phenotype,rgcs,resgsea,exponent){
   tests[["labels"]]<-names(gs.names)
   tests
 }
+
 #-------------------------------------------------------------------------------------
 #--subfunction for tna.plot.gsea1
 check.format1<-function(tests){
@@ -147,6 +150,7 @@ check.format1<-function(tests){
   ylimPanels[3:4]<-tpp
   ylimPanels
 }
+
 #-------------------------------------------------------------------------------------
 #--subfunction for tna.plot.gsea1
 make.plot1 <- function(tests, labPheno, file, filepath, heightPanels, ylimPanels, ylabPanels,
@@ -159,6 +163,7 @@ make.plot1 <- function(tests, labPheno, file, filepath, heightPanels, ylimPanels
           ...=... )
   if (plotpdf)dev.off()
 }
+
 #-------------------------------------------------------------------------------------
 #--subfunction for tna.plot.gsea1
 gsplot1 <- function(runningScore, enrichmentScore, positions, adjpv, 
@@ -373,6 +378,8 @@ plot.gsea2<-function(resgsea, rgcs, phenotype, nPermutations, exponent,
     tests$adjpv[["down"]]<-resgsea$negative[i,"Adjusted.Pvalue"]
     tests$adjpv[]<-paste("= ",as.character(format(tests$adjpv,scientific=TRUE,digits=2)),sep="")
     tests$dES<-resgsea$differential[i,"Observed.Score"]
+    tests$regsizes <- c(resgsea$negative[i,"Regulon.Size"],resgsea$positive[i,"Regulon.Size"])
+    names(tests$regsizes) <- c("neg","pos")
     ##-----fix pvalue report for the resolution
     idx<-tests$pv==pvresolu
     tests$adjpv[idx]<-pvcutoff
@@ -383,20 +390,21 @@ plot.gsea2<-function(resgsea, rgcs, phenotype, nPermutations, exponent,
                xlab,width,height,alpha,sparsity, plotpdf, ...=...)
   }
 }
+
 #-------------------------------------------------------------------------------------
 #--subfunction for tna.plot.gsea2
 get.merged.data2<-function(gs.name,phenotype,rgcs,resgsea,exponent){
   res<-list()
   gs<-rgcs[[gs.name]]
   test<-gseaScores4RTN(geneList=phenotype, geneSet=gs, 
-                       exponent=exponent, mode="graph")
+                       exponent=exponent, mode="runningscores")
   res$positions[[gs.name]]<-test$positions
   res$pvals[[gs.name]]<-resgsea[gs.name,][["Pvalue"]]
   res$adjpvals[[gs.name]]<-resgsea[gs.name,][["Adjusted.Pvalue"]]
   testup<-gseaScores4RTN(geneList=phenotype, geneSet=gs[gs>0], 
-                         exponent=exponent, mode="graph")
+                         exponent=exponent, mode="runningscores")
   testdown<-gseaScores4RTN(geneList=phenotype, geneSet=gs[gs<0], 
-                           exponent=exponent, mode="graph")
+                           exponent=exponent, mode="runningscores")
   res$testup$enrichmentScores[[gs.name]]<-testup$enrichmentScore
   res$testup$runningScores[[gs.name]]<-testup$runningScore
   res$testdown$enrichmentScores[[gs.name]]<-testdown$enrichmentScore
@@ -413,6 +421,7 @@ get.merged.data2<-function(gs.name,phenotype,rgcs,resgsea,exponent){
   tests$adjpv[["pv"]]<-res$adjpvals
   tests
 }
+
 #-------------------------------------------------------------------------------------
 #--subfunction for tna.plot.gsea2
 check.format2<-function(tests){
@@ -437,6 +446,7 @@ check.format2<-function(tests){
   ylimPanels[3:4]<-tpp
   ylimPanels
 }
+
 #-------------------------------------------------------------------------------------
 #--subfunction for tna.plot.gsea2
 make.plot2 <- function(tests, labPheno, file, filepath, heightPanels, ylimPanels, ylabPanels,
@@ -447,15 +457,16 @@ make.plot2 <- function(tests, labPheno, file, filepath, heightPanels, ylimPanels
   }
   gsplot2(tests$testup$runningScore, tests$testup$enrichmentScore, 
           tests$testdown$runningScore, tests$testdown$enrichmentScore,tests$dES, 
-          tests$positions, tests$adjpv, tests$geneList, tests$label, heightPanels, 
-          ylimPanels, ylabPanels, xlab, labPheno, alpha, sparsity, ...=... )
+          tests$positions, tests$adjpv, tests$geneList, tests$label, tests$regsizes, 
+          heightPanels, ylimPanels, ylabPanels, xlab, labPheno, alpha, sparsity, ...=... )
   if (plotpdf)dev.off()
 }
+
 #-------------------------------------------------------------------------------------
 #--subfunction for tna.plot.gsea2
 gsplot2 <- function(runningScoreUp, enrichmentScoreUp, runningScoreDown, enrichmentScoreDown,
-                    dES, positions, adjpv, geneList, label, heightPanels, ylimPanels, ylabPanels, 
-                    xlab, labPheno, alpha, sparsity, ...) {
+                    dES, positions, adjpv, geneList, label, regsizes, heightPanels, 
+                    ylimPanels, ylabPanels, xlab, labPheno, alpha, sparsity, ...) {
   #-------------------------------------------------
   positions<-as.matrix(positions)
   positions[positions==1]=2
@@ -522,7 +533,8 @@ gsplot2 <- function(runningScoreUp, enrichmentScoreUp, runningScoreDown, enrichm
       segments(xx,yy-0.9,xx, yy-0.1, col=rsc.colors[cc],lwd=0.35)
     }
     axis(2,las=2, at=c(1:ng)-0.5,labels=ylabPanels[2], line=0, cex.axis=cexlev[3],lwd=1.3, ...=...)
-    legend("top", legend=c("negative","positive"), col=rsc.colors, bty="n",cex=cexlev[4],
+    leg <- paste0(c("negative (","positive ("), regsizes,")")
+    legend("top", legend=leg, col=rsc.colors, bty="n",cex=cexlev[5],
            horiz=TRUE,seg.len=1,lwd=2,title=NULL,title.adj = 0,inset=-0.1,x.intersp=0.5, ...=...)
   }
   #-------------------------------------------------
@@ -582,12 +594,18 @@ gsplot2 <- function(runningScoreUp, enrichmentScoreUp, runningScoreDown, enrichm
     pp<-pretty(c(0,nrow(cc)))
     axis(1,cex.axis=cexlev[2], lwd=1.3,at=pp, labels=pp,  ...=...)
     axis(2,las=2,cex.axis=cexlev[2], lwd=1.3, ...=...)
-    adjpv<-c(adjpv["down"],adjpv["up"],adjpv["pv"])
-    lbstat<-paste(c("neg ","pos ","diff "),adjpv,sep="")
-    legend("bottomleft", legend=lbstat, col=c(rsc.colors[1],rsc.colors[2],NA), pch=20, bty="n",cex=cexlev[5], 
-           pt.cex=1.2, title="  Adj. p-value", title.adj = 0, y.intersp=0.85,x.intersp=0.6, ...=...)
-    legend("topright", legend=label, col=NA, pch=NA, bty="n",cex=cexlev[1]*1.3, pt.cex=1.2, title=NULL,  ...=...)
-    legend("bottomright", legend=paste("dES = ",dES,sep=""), col=NA, pch=NA, bty="n",cex=cexlev[1]*0.6, title=NULL,  ...=...)
+    # adjpv<-c(adjpv["down"],adjpv["up"],adjpv["pv"])
+    # lbstat<-paste(c("neg ","pos ","diff "),adjpv,sep="")
+    # legend("bottomleft", legend=lbstat, col=c(rsc.colors[1],rsc.colors[2],NA), pch=20, bty="n",cex=cexlev[5], 
+    #        pt.cex=1.2, title="  Adj. p-value", title.adj = 0, y.intersp=0.85,x.intersp=0.6, ...=...)
+    # legend("topright", legend=label, col=NA, pch=NA, bty="n",cex=cexlev[1]*1.3, pt.cex=1.2, title=NULL,  ...=...)
+    # legend("bottomright", legend=paste("dES = ",dES,sep=""), col=NA, pch=NA, bty="n",cex=cexlev[1]*0.6, title=NULL,  ...=...)
+    lbstat<-paste(c("dES = ","Adj. p-value = "),c(dES, adjpv["pv"]),sep="")
+    legend("bottomleft", legend=lbstat, title=NULL, bty="n", cex=cexlev[5], 
+           xjust = 0, inset = c(-0.025,0),
+           y.intersp=1, x.intersp=0.6, ...=...)
+    legend("topright", legend=label, col=NA, pch=NA, bty="n",cex=cexlev[1]*1.3, 
+           pt.cex=1.2, title=NULL,  ...=...)
   }
   par(op)
 }

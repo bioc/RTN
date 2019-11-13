@@ -145,7 +145,7 @@ As a complementary approach, the `tna.gsea1` function runs the one-tailed gene s
 ```{r label='Run GSEA method', eval=TRUE, results='hide'}
 # Run the GSEA method
 # Please set nPermutations >= 1000
-rtna <- tna.gsea1(rtna, stepFilter=FALSE, nPermutations=100)
+rtna <- tna.gsea1(rtna, nPermutations=100)
 ``` 
 
 Setting `what = 'gsea1'` in the `tna.get` accessory function will retrive a data frame listing the GSEA statistics, and the corresponding GSEA plots can be generated using the `tna.plot.gsea1` function (**Figure 2**).
@@ -169,7 +169,7 @@ The GSEA-1T, however, does not indicate the direction of the association. Next t
 ```{r label='Run the GSEA-2T method', eval=TRUE, results='hide'}
 # Run the GSEA-2T method
 # Please set nPermutations >= 1000
-rtna <- tna.gsea2(rtna, stepFilter = FALSE, nPermutations = 100)
+rtna <- tna.gsea2(rtna, nPermutations = 100)
 ``` 
 
 Setting `what = 'gsea2'` in the `tna.get` accessory function will retrieve a data frame listing the GSEA-2T statistics, and the corresponding GSEA plots can be generated using the `tna.plot.gsea2` function.

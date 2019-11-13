@@ -8,20 +8,17 @@ Reconstruction and Analysis of Transcriptional Networks.
 }
 
 \description{
-This package provides classes and methods for transcriptional network inference and analysis. Modulators of transcription factor activity are assessed by conditional mutual information, and master regulators are mapped to phenotypes using different strategies, e.g., gene set enrichment, shadow and synergy analyses. Additionally, master regulators can be linked to genetic markers using eQTL/VSE analysis, taking advantage of the haplotype block structure mapped to the human genome in order to explore risk-associated SNPs identified in GWAS studies.
+A transcriptional regulatory network (TRN) consists of a collection of transcription factors (TFs) and the regulated target genes. TFs are regulators that recognize specific DNA sequences and guide the expression of the genome, either activating or repressing the expression the target genes. The set of genes controlled by the same TF forms a regulon. This package provides classes and methods for the reconstruction of TRNs and analysis of regulons.
 }
 
 \details{
 \tabular{ll}{
 Package: \tab RTN\cr
 Type: \tab Package\cr
-Depends: \tab R (>= 2.15), methods, igraph\cr
-Imports: \tab RedeR, minet, snow, limma, data.table, ff, car, IRanges\cr
-Suggests: \tab HTSanalyzeR, RUnit, BiocGenerics\cr
+Depends: \tab R, methods\cr
+Imports: \tab RedeR, minet, viper, mixtools, snow, limma, data.table, IRanges, igraph, S4Vectors, SummarizedExperiment, car\cr
+Suggests: \tab RUnit, BiocGenerics, BiocStyle, knitr, rmarkdown\cr
 License: \tab Artistic-2.0\cr
-biocViews: \tab NetworkInference, GeneRegulation, GeneExpression, GraphsAndNetworks\cr
-Collate: \tab ClassUnions.R, AllChecks.R, AllClasses.R, AllGenerics.R, AllSupplements.R, AllPlots.R, TNA-methods.R, TNI-methods.R,AVS-methods.R\cr
-LazyLoad: \tab yes\cr
 }
 }
 
@@ -41,11 +38,8 @@ LazyLoad: \tab yes\cr
 \link[RTN:tni2tna.preprocess]{tni2tna.preprocess}: \tab a preprocessing method for objects of class TNI.\cr
 \link[RTN:TNA-class]{TNA-class}: \tab an S4 class for Transcriptional Network Analysis.\cr
 \link[RTN:tna.mra]{tna.mra}: \tab master regulator analysis (MRA) over a list of regulons.\cr
-\link[RTN:tna.overlap]{tna.overlap}: \tab overlap analysis over a list of regulons.\cr
 \link[RTN:tna.gsea1]{tna.gsea1}: \tab one-tailed gene set enrichment analysis (GSEA) over a list of regulons.\cr
 \link[RTN:tna.gsea2]{tna.gsea2}: \tab two-tailed gene set enrichment analysis (GSEA) over a list of regulons.\cr
-\link[RTN:tna.synergy]{tna.synergy}: \tab synergy analysis over a list of regulons.\cr
-\link[RTN:tna.shadow]{tna.shadow}: \tab shadow analysis over a list of regulons.\cr
 \link[RTN:tna.get]{tna.get}: \tab get information from individual slots in a TNA object.\cr
 \link[RTN:tna.plot.gsea1]{tna.plot.gsea1}: \tab plot results from the one-tailed GSEA.\cr
 \link[RTN:tna.plot.gsea2]{tna.plot.gsea2}: \tab plot results from the two-tailed GSEA.\cr

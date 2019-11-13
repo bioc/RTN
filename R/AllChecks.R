@@ -4,40 +4,47 @@ tnai.checks <- function(name, para, supp) {
     if(!(is.integer(para) || is.numeric(para)) || length(para)!=1 || para>1 || para<0)
       stop("'alpha' should be an integer or numeric value <=1 and >=0 !\n",call.=FALSE)
   }
- else if(name=="maxgap") {
+  else if(name=="maxgap") {
     if(!(is.integer(para) || is.numeric(para)) || length(para)!=1 || para<0 || as.integer(para)<para)
       stop("'maxgap' should be an integer value >=0!\n",call.=FALSE)
+  }
+  else if(name=="sizeFilterMethod") {
+    opts <- c("posPLUSneg","posORneg","posANDneg")
+    if(!is.singleString(para) || !(para %in% opts))
+      stop(paste("'sizeFilterMethod' should be any one of the options: \n", opts ),call.=FALSE )
   }
  else if(name=="tna.what"){
     opts<-c("summary","status","para",
             "pheno","hits", "regulatoryElements", 
             "tnet", "refnet",
+            "regulonSize","refregulonSize",
             "regulons","refregulons",
             "regulons.and.mode", "refregulons.and.mode",
             "rowAnnotation", "colAnnotation",
-            "mra","gsea1", "gsea2",
+            "mra","gsea1", "gsea2","gsea2summary",
             "overlap","synergy","shadow")
     supps <- c("nondpiregulons.and.mode","regulons.and.pheno","refregulons.and.pheno")
     if(!is.character(para) || length(para)!=1 || !(para %in% c(opts,supps)))
-      stop(paste("'what' should be any one of the options: \n", paste(opts,collapse = ", ") ),call.=FALSE )
+      stop(paste("'what' should be any one of the options: ", paste(opts,collapse = ", ") ),call.=FALSE )
   }
  else if(name=="tni.what"){
     opts<-c("summary","status", "para",
             "gexp","regulatoryElements",
             "tnet","refnet",
+            "regulonSize","refregulonSize",
             "regulons","refregulons",
             "regulons.and.mode", "refregulons.and.mode",
             "rowAnnotation", "colAnnotation", "cdt","cdtrev")
     supps <- c("regulons.and.mode.gmm","refregulons.and.mode.gmm")
     if(!is.character(para) || length(para)!=1 || !(para %in% c(opts,supps)))
-      stop(paste("'what' should be any one of the options: \n", paste(opts,collapse = ", ") ) ,call.=FALSE )
+      stop(paste("'what' should be any one of the options: ", paste(opts,collapse = ", ") ) ,call.=FALSE )
   }
  else if(name=="avs.what"){
     opts<-c("markers","validatedMarkers","variantSet","randomSet","summary",
             "status","linkedMarkers","randomMarkers","vse","evse","pevse",
             "annotation.vse","annotation.evse","annotation.pevse")
     if(!is.character(para) || length(para)!=1 || !(para %in% opts))
-      stop(paste("'what' should be any one of the options: \n", paste(opts,collapse = ", ") ),call.=FALSE )
+      stop(paste("'what' should be any one of the options: ", paste(opts,collapse = ", ") ),call.=FALSE )
   }
  else if(name=="avs.plot.what"){
     opts<-c("vse","evse","pevse")
@@ -96,7 +103,7 @@ tnai.checks <- function(name, para, supp) {
     }
     if(length(para)==1){
       para<-c(-abs(para),abs(para))
-    }else {
+    } else {
       para<-sort(para)
       if(sum(para>0)!=1)stop("custom 'mdStability' upper and lower bounds should have different signals!")
     }
@@ -109,10 +116,6 @@ tnai.checks <- function(name, para, supp) {
  else if(name=="autoformat"){
     if(!is.logical(para) || length(para)!=1)
       stop("'autoformat' should be a logical value!",call.=FALSE)
-  }
- else if(name=="labpair") {
-    if( (!is.matrix(para) || ncol(para)!=2) )
-      stop("'labpair' should be a two-column matrix with regulon pair labels!",call.=FALSE)
   }
  else if(name=="tnet"){
     if(!is.character(para) || length(para)!=1 || !(para %in% c("dpi", "ref")))
@@ -166,60 +169,62 @@ tnai.checks <- function(name, para, supp) {
          any(duplicated(rownames(para))) || any(duplicated(colnames(para))) )
       stop("the 'gxdata' matrix should be named on rows and cols (unique names)!",call.=FALSE)
   } else if(name=="regulatoryElements") {
-    if(!is.character(para) || any(is.na(para)) || any(para==""))
-      stop("'regulatoryElements' should be a character vector, without 'NA' or empty names!",call.=FALSE)
+    if(!is.null(para)){
+      if(!is.character(para) || any(is.na(para)) || any(para==""))
+        stop("'regulatoryElements' should be a character vector, without 'NA' or empty names!",call.=FALSE)
+    }
   } else if(name=="samples") {
     if(!is.null(para)){
       if(!all.characterValues(para)){
         stop("'samples' should be a character vector, without 'NA'!",call.=FALSE)
       }
     }
-  }else if(name=="features") {
+  } else if(name=="features") {
     if(!is.null(para)){
       if(!all.characterValues(para)){
         stop("'features' should be a character vector, without 'NA'!",call.=FALSE)
       }
     }
-  }else if(name == "refsamp"){
+  } else if(name == "refsamp"){
     if(!is.null(para)){
       if(!all.characterValues(para)){
         stop("'refsamp' should be a character vector, without 'NA'!",call.=FALSE)
       }
     }
-  }else if(name=="tfs") {
+  } else if(name=="tfs") {
     if(!is.null(para)){
     if( !is.character(para) || any(is.na(para)) || any(para==""))
       stop("'tfs' should be a character vector, without 'NA' or empty names!",call.=FALSE)
     }
-  }else if(name=="mds") {
+  } else if(name=="mds") {
     if(!is.null(para)){
       if( !is.character(para) || any(is.na(para)) || any(para==""))
         stop("'mds' should be a character vector, without 'NA' or empty names!",call.=FALSE)
     }
-  }else if(name=="modulators") {
+  } else if(name=="modulators") {
     if(!is.null(para)){
       if( !is.character(para) || any(is.na(para)) || any(para==""))
         stop("'modulators' should be a character vector, without 'NA' or empty names!",call.=FALSE) 
     }
-  }else if(name=="sampling") {
+  } else if(name=="sampling") {
     if( !(is.integer(para) || is.numeric(para)) || length(para)!=1 || para>100 || para<1 || round(para,0)!=para )
       stop("'sampling' should be an integer value >= 1 and <= 100 !",call.=FALSE)
-  }else if(name=="probs") {
+  } else if(name=="probs") {
     if( !(is.integer(para) || is.numeric(para)) || length(para)!=1 || para>1 || para<0)
       stop("'probs' should be a numeric value >= 0 and <= 1 !",call.=FALSE)
-  }else if(name=="minRegCor") {
+  } else if(name=="minRegCor") {
     if( !(is.integer(para) || is.numeric(para)) || length(para)!=1 || para>1 || para<0)
         stop("'minRegCor' should be a numeric value >= 0 and <= 1 !",call.=FALSE)
-  }else if(name=="prob") {
+  } else if(name=="prob") {
     if( !(is.integer(para) || is.numeric(para)) || length(para)!=1 || para>1 || para<0)
       stop("'prob' should be a numeric value >= 0 and <= 1 !",call.=FALSE)
-  }else if(name=="amapCutoff") {
+  } else if(name=="amapCutoff") {
     if(!is.null(para) && (!is.numeric(para) || length(para)!=1 || para>1 || para<0))
       stop("'amapCutoff' should be a numeric value >=0 and <=1!",call.=FALSE)
-  }else if(name=="amapFilter"){
+  } else if(name=="amapFilter"){
     if(!is.character(para) || length(para)!=1 || !(para %in% c("phyper","quantile","custom")))
       stop("'amapFilter' should be any one of 'quantile', 'phyper' and 'custom'!",call.=FALSE)
-  }else if(name=="listOfRegulons") {
+  } else if(name=="listOfRegulons") {
     if(!is.list(para))
       stop("'listOfRegulons' should be a list of gene sets!\n")
     if(  is.null(names(para)) || length(unique(names(para)))<length(names(para))  )
@@ -228,7 +233,7 @@ tnai.checks <- function(name, para, supp) {
       if(!is.character(reg))
         stop("'listOfRegulons' should include character vectors!",call.=FALSE)
     })
-  }else if(name=="listOfRegulonsAndMode") {
+  } else if(name=="listOfRegulonsAndMode") {
     if(!is.list(para))
       stop("'listOfRegulonsAndMode' should be a list of gene sets!\n")
     if(  is.null(names(para)) || length(unique(names(para)))<length(names(para))  )
@@ -239,7 +244,7 @@ tnai.checks <- function(name, para, supp) {
       if(is.null(names(reg)) || any(is.na(names(reg))) || any(names(reg)==""))
         stop("'listOfRegulonsAndMode' should include named vectors, without 'NA' or empty names!",call.=FALSE)
     })
-  }else if(name=="glist") {
+  } else if(name=="glist") {
     if(!is.null(para)){
       if(!is.list(para))
         stop("'glist' should be a list of gene sets or regulons!\n")
@@ -252,140 +257,145 @@ tnai.checks <- function(name, para, supp) {
       }
       return(para)
     }
-  }else if(name=="pAdjustMethod") {
+  } else if(name=="pAdjustMethod") {
     if(!is.character(para) || length(para)!=1 || 
       !(para %in% c("holm", "hochberg", "hommel", "bonferroni", "BH", "BY", "fdr")))
       stop("'pAdjustMethod' should be any one of 'holm','hochberg','hommel','bonferroni','BH','BY' and 'fdr'!",call.=FALSE)
-  }else if(name=="coverage") {
+  } else if(name=="coverage") {
     if(!is.character(para) || length(para)!=1 || 
          !(para %in% c("tnet", "all")))
       stop("'coverage' should be any one of 'tnet' and 'all'!",call.=FALSE)
-  }else if(name=="pValueCutoff") {
+  } else if(name=="pValueCutoff") {
     if(!(is.integer(para) || is.numeric(para)) || length(para)!=1 || para>1 || para<0)
       stop("'pValueCutoff' should be an integer or numeric value >=0 and <=1  !",call.=FALSE)
-  }else if(name=="miThreshold") {
+  } else if(name=="miThreshold") {
     if(is.character(para)){
       if(!is.character(para) || length(para)!=1 || !(para %in% c("md","md.tf")))
         stop("'miThreshold' should be any one of 'md' and 'md.tf''!",call.=FALSE)
-    }else {
+    } else {
       if( !(is.integer(para) || is.numeric(para)) || length(para)<1 || length(para)>2)
         stop("custom 'miThreshold' should be a numeric value, or a vector of length = 2!",call.=FALSE)
     }
-  }else if(name=="consensus") {
+  } else if(name=="consensus") {
     if(!(is.integer(para) || is.numeric(para)) || length(para)!=1 || para>100 || para<1)
       stop("'consensus' should be an integer or numeric value <=100 and >=1 !",call.=FALSE)
-  }else if(name=="pooledNullDistribution") {
+  } else if(name=="pooledNullDistribution") {
     if(!is.singleLogical(para))
       stop("'pooledNullDistribution' should be a logical value!",call.=FALSE)
-  }else if(name=="doSizeFilter") {
+  } else if(name=="doSizeFilter") {
     if(!is.singleLogical(para))
       stop("'doSizeFilter' should be a logical value!",call.=FALSE)
-  }else if(name=="targetContribution") {
+  } else if(name=="sizeThreshold") {
+    if(!is.singleLogical(para))
+      stop("'sizeThreshold' should be a logical value!",call.=FALSE)
+  } else if(name=="targetContribution") {
     if(!is.singleLogical(para))
       stop("'targetContribution' should be a logical value!",call.=FALSE)
-  }else if(name=="additionalData") {
+  } else if(name=="additionalData") {
     if(!is.singleLogical(para))
       stop("'additionalData' should be a logical value!",call.=FALSE)
-  }else if(name=="scale") {
+  } else if(name=="scale") {
     if(!is.singleLogical(para))
       stop("'scale' should be a logical value!",call.=FALSE)
-  }else if(name=="nPermutations") {
+  } else if(name=="nPermutations") {
     if(!(is.integer(para) || is.numeric(para)) || length(para)!=1 || para<1 || round(para,0)!=para)
       stop("'nPermutations' should be an integer >=1 !",call.=FALSE)
-  }else if(name=="parChunks") {
-    if(!(is.integer(para) || is.numeric(para)) || length(para)!=1 || para<2 || round(para,0)!=para)
-      stop("'parChunks' should be an integer >=2 !",call.=FALSE)
-  }else if(name=="nBootstraps") {
+  } else if(name=="parChunks") {
+    if(!is.null(para)){
+      if(!(is.integer(para) || is.numeric(para)) || length(para)!=1 || para<2 || round(para,0)!=para)
+        stop("'parChunks' should be an integer >=2 !",call.=FALSE)
+    }
+  } else if(name=="nBootstraps") {
     if(!(is.integer(para) || is.numeric(para)) || length(para)!=1 || para<1 || round(para,0)!=para)
       stop("'nBootstraps' should be an integer >=1 !",call.=FALSE)
-  }else if(name=="minRegulonSize") {
+  } else if(name=="minRegulonSize") {
     if(!(is.integer(para) || is.numeric(para)) || length(para)!=1 || para<1 || round(para,0)!=para)
       stop("'minRegulonSize' should be an integer >=1 !",call.=FALSE) 
-  }else if(name=="minPrunedSize") {
+  } else if(name=="minPrunedSize") {
     if(!(is.integer(para) || is.numeric(para)) || length(para)!=1 || para<1 || round(para,0)!=para)
         stop("'minPrunedSize' should be an integer >=1 !",call.=FALSE) 
   } else if(name=="activityMethod") {
-  if(!is.character(para) || length(para)!=1 || !(para %in% c("gsea2", "GSEA2", "area3", "AREA3")))
+    if(!is.character(para) || length(para)!=1 || !(para %in% c("gsea2", "GSEA2", "area3", "AREA3")))
     stop("'activityMethod' should be 'GSEA2' or 'AREA3'!",call.=FALSE)
   } else if(name=="minSize") {
     if(!(is.integer(para) || is.numeric(para)) || length(para)!=1 || para<1 || round(para,0)!=para)
       stop("'minSize' should be an integer >=1 !",call.=FALSE) 
-  }else if(name=="evse.minSize") {
+  } else if(name=="evse.minSize") {
     if(!(is.integer(para) || is.numeric(para)) || any(para<1) || any(round(para,0)!=para) )
       stop("'minSize' should be integer >=1 !",call.=FALSE)
     if( length(para)<1 || length(para)>2)
       stop("'minSize' should either be a single value or a vector of length = 2 !",call.=FALSE)
     if(length(para)==1)para<-c(para,para)
     return(para)
-  }else if(name=="minIntersectSize") {
+  } else if(name=="minIntersectSize") {
     if(!(is.integer(para) || is.numeric(para)) || length(para)!=1 || para<0 || para>100)
       stop("'minIntersectSize' should be an integer >=0 and <=100 !",call.=FALSE)
-  }else if(name=="minAgreement") {
+  } else if(name=="minAgreement") {
     if(!(is.integer(para) || is.numeric(para)) || length(para)!=1 || para<1 || para>100)
       stop("'minAgreement' should be an integer >=1 and <=100 !",call.=FALSE)
-  }else if(name=="statFilter") {
+  } else if(name=="statFilter") {
     if(!is.character(para) || length(para)!=1 || !(para %in% c("phyper","pchisq")))
       stop("'statFilter' should be any one of 'phyper' and 'pchisq'!",call.=FALSE)
-  }else if(name=="statUniverse") {
+  } else if(name=="statUniverse") {
     if(!is.character(para) || length(para)!=1 || !(para %in% c("all","tnet","reg")))
       stop("'statUniverse' should be any one of 'all' and 'tnet'!",call.=FALSE)
-  }else if(name=="eps") {
+  } else if(name=="eps") {
     if(!is.na(para)){
       if(!is.numeric(para) || length(para)!=1 || para<0)
         stop("'eps' should be an numeric value >=0 or NA!",call.=FALSE)   
     }
-  }else if(name=="exponent") {
+  } else if(name=="exponent") {
     if(!(is.integer(para) || is.numeric(para)) || length(para)!=1 || para<1)
       stop("'exponent' should be an integer or numeric value >=1 !",call.=FALSE)
-  }else if(name=="cvfilter") {
+  } else if(name=="cvfilter") {
     if(!is.logical(para) || length(para)!=1)
       stop("'cvfilter' should be a logical value!",call.=FALSE)
-  }else if(name=="verbose") {
+  } else if(name=="verbose") {
     if(!is.logical(para) || length(para)!=1)
       stop("'verbose' should be a logical value!",call.=FALSE)
-  }else if(name=="log") {
+  } else if(name=="log") {
     if(!is.logical(para) || length(para)!=1)
       stop("'log' should be a logical value!",call.=FALSE)
-  }else if(name=="iConstraint") {
+  } else if(name=="iConstraint") {
     if(!is.logical(para) || length(para)!=1)
       stop("'iConstraint' should be a logical value!",call.=FALSE)
-  }else if(name=="mask") {
+  } else if(name=="mask") {
     if(!is.logical(para) || length(para)!=1)
       stop("'mask' should be a logical value!",call.=FALSE)
   } else if(name=="decreasing") {
     if(!is.logical(para) || length(para)!=1)
       stop("'decreasing' should be a logical value!",call.=FALSE)
-  }else if(name=="fineMapping") {
+  } else if(name=="fineMapping") {
     if(!is.logical(para) || length(para)!=1)
       stop("'fineMapping' should be a logical value!",call.=FALSE)
-  }else if(name=="boxcox") {
+  } else if(name=="boxcox") {
     if(!is.logical(para) || length(para)!=1)
       stop("'boxcox' should be a logical value!",call.=FALSE)
-  }else if(name=="tnet") {
+  } else if(name=="tnet") {
     if(!is.character(para) || length(para)!=1 || !(para %in% c("dpi", "ref")))
       stop("'tnet' should be any one of 'dpi' and 'ref'!",call.=FALSE)
-  }else if(name=="stepFilter") {
+  } else if(name=="stepFilter") {
     if(!is.logical(para) || length(para)!=1)
       stop("'stepFilter' should be a logical value!",call.=FALSE)
   } else if(name=="orderAbsValue") {
     if(!is.logical(para) || length(para)!=1)
       stop("'orderAbsValue' should be a logical value!",call.=FALSE)
-  }else if(name=="phenotype") {
+  } else if(name=="phenotype") {
     if(!is.null(para)){
       if( !( is.numeric(para) || is.integer(para) ) || length(para)==0 )
         stop("'phenotype' should be a named numeric or integer vector with length >0 !",call.=FALSE)
       if(is.null(names(para)))
         stop("'phenotype' should be a named vector, without 'NA' or empty names!",call.=FALSE)
     }
-  }else if(name=="hits") {
+  } else if(name=="hits") {
     if(!is.null(para)){
       if(!is.character(para) || length(para)==0 || !is.vector(para))
         stop("'hits' should be a character vector with length >0 !",call.=FALSE)      
     }
-  }else if(name=="phenoIDs") {
+  } else if(name=="phenoIDs") {
     if(is.null(para)){
       return(para)
-    }else {
+    } else {
       if( (!is.matrix(para) && !is.data.frame(para) ) || ncol(para)<2 ){
         stop("'phenoIDs' should be a dataframe (or a matrix of characters) with ncol >=2 !",call.=FALSE)
       }
@@ -460,7 +470,7 @@ tnai.checks <- function(name, para, supp) {
       tp2<-"[chr1, chr2, chr3, ..., chr22, chrX]!"
       if(n>0.95){
         stop(tp1,tp2,call.=FALSE)
-      }else {
+      } else {
         nonvalid <- unique(para$CHROM[chrChecks])
         if(length(nonvalid)>1) nonvalid <- c(nonvalid[1],"...",nonvalid[length(nonvalid)])
         nonvalid <- paste(nonvalid,collapse=", ")
@@ -522,7 +532,7 @@ tnai.checks <- function(name, para, supp) {
       tp2<-"[chr1, chr2, chr3, ..., chr22, chrX]!"
       if(n>0.95){
         stop(tp1,tp2,call.=FALSE)
-      }else {
+      } else {
         nonvalid <- unique(para$CHROM[chrChecks])
         if(length(nonvalid)>1) nonvalid <- c(nonvalid[1],"...",nonvalid[length(nonvalid)])
         nonvalid <- paste(nonvalid,collapse=", ")

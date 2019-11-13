@@ -24,7 +24,7 @@ setMethod(
     #-- get regulatoryElements
     regnames <- tni.get(object, "regulatoryElements")
     if(!is.null(regulatoryElements)){
-      regulatoryElements <- tnai.checks(name="regulatoryElements", para=regulatoryElements)
+      tnai.checks(name="regulatoryElements", para=regulatoryElements)
       if(sum(regulatoryElements%in%regnames) > 
          sum(regulatoryElements%in%names(regnames))){
         regulatoryElements <- regnames[regnames%in%regulatoryElements]
@@ -41,16 +41,16 @@ setMethod(
     
     #-- creating effect list
     if (tarPriorityMethod == "TC"){
-      dataActivity <- tni.gsea2(object, tfs = regulatoryElements, 
+      dataActivity <- tni.gsea2(object, regulatoryElements = regulatoryElements, 
                                targetContribution=TRUE, verbose=verbose, ...=...)
       listOfTargetEffect <- dataActivity$data$listOfTargetContribution
     } else if (tarPriorityMethod == "EC"){
-      dataActivity <- tni.gsea2(object, tfs = regulatoryElements, 
+      dataActivity <- tni.gsea2(object, regulatoryElements = regulatoryElements, 
                                 additionalData=TRUE, verbose=verbose, ...=...)
       listOfTargetEffect <- lapply(regulatoryElements, expressionCorrelation, 
                              object, dataActivity)
     } else if (tarPriorityMethod == "MI"){
-      dataActivity <- tni.gsea2(object, tfs = regulatoryElements, 
+      dataActivity <- tni.gsea2(object, regulatoryElements = regulatoryElements, 
                                additionalData=TRUE, verbose=verbose, ...=...)
       listOfTargetEffect <- lapply(regulatoryElements, mutualInformation,
                              object, dataActivity)
@@ -65,8 +65,8 @@ setMethod(
         if(verbose)cat("--For", length(regulatoryElements), "regulon(s) and", nsamp,'sample(s)...\n')
         cl<-getOption("cluster")
         snow::clusterExport(cl, list("minRegulonComputation",".gsea2.target.contribution",
-                               ".run.tni.gsea2.alternative",".fgseaScores4TNI", 
-                               "gseaScores4RTN"), envir=environment())
+                               ".run.tni.gsea2.alternative",".fgseaScores4TNI","checkTars"), 
+                            envir=environment())
         prunedTarlist <- snow::parLapply(cl, regulatoryElements, minRegulonComputation, 
                                    dataActivity, listOfTargetEffect, minPrunedSize, 
                                    minRegCor, verbose=FALSE, ...=...)

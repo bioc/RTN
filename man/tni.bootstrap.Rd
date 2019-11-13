@@ -10,7 +10,7 @@ This function takes a TNI object and returns the consensus transcriptional netwo
 }
 
 \usage{
-tni.bootstrap(object, nBootstraps=100, consensus=95, parChunks=10, verbose=TRUE)
+tni.bootstrap(object, nBootstraps=100, consensus=95, parChunks=NULL, verbose=TRUE)
 }
 
 \arguments{
@@ -66,7 +66,7 @@ rtni <- tni.constructor(expData=tniData$expData,
 rtni <- tni.permutation(rtni)
 rtni <- tni.bootstrap(rtni)
 
-# parallel version with SNOW package!
+## parallel version with SNOW package!
 #library(snow)
 #options(cluster=snow::makeCluster(3, "SOCK"))
 #rtni <- tni.permutation(rtni)

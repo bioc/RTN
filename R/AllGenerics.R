@@ -5,14 +5,14 @@ setGeneric("tni.preprocess",
              standardGeneric("tni.preprocess"), package="RTN")
 setGeneric("tni.permutation",
            function(object, pValueCutoff=0.01, pAdjustMethod="BH", globalAdjustment=TRUE, 
-                    estimator="spearman",nPermutations=1000, pooledNullDistribution=TRUE, 
-                    parChunks=50, verbose=TRUE) 
+                    estimator="spearman", nPermutations=1000, pooledNullDistribution=TRUE, 
+                    boxcox=TRUE, parChunks=NULL, verbose=TRUE) 
              standardGeneric("tni.permutation"), package="RTN")
 setGeneric("tni.bootstrap",
-           function(object, nBootstraps=100, consensus=95, parChunks=10, verbose=TRUE)
+           function(object, nBootstraps=100, consensus=95, parChunks=NULL, verbose=TRUE)
              standardGeneric("tni.bootstrap"), package="RTN")
 setGeneric("tni.dpi.filter",
-           function(object, eps=0, verbose=TRUE)
+           function(object, eps=0, sizeThreshold=TRUE, minRegulonSize=15, verbose=TRUE)
              standardGeneric("tni.dpi.filter"), package="RTN")
 setGeneric("tni.get",
            function(object, what="summary", order=TRUE, ntop=NULL, reportNames=TRUE, 
@@ -21,19 +21,21 @@ setGeneric("tni.get",
 setGeneric("tni.conditional",
            function(object, modulators=NULL, tfs=NULL, sampling=35, pValueCutoff=0.01, 
                     pAdjustMethod="bonferroni", minRegulonSize=15, minIntersectSize=5, 
-                    miThreshold="md", prob=0.99, pwtransform=FALSE, medianEffect=FALSE, 
+                    miThreshold="md", prob=0.99, medianEffect=FALSE, 
                     iConstraint=TRUE, verbose=TRUE, ...)
              standardGeneric("tni.conditional"), package="RTN")
 setGeneric("tni.gsea2",
-           function(object, minRegulonSize=15, doSizeFilter=FALSE, scale=FALSE, exponent=1, 
-                    tnet="dpi",tfs=NULL, samples=NULL, features=NULL, refsamp=NULL, log=FALSE,
+           function(object, minRegulonSize=15, sizeFilterMethod="posORneg", scale=FALSE, 
+                    exponent=1, tnet="dpi",regulatoryElements=NULL, samples=NULL, 
+                    features=NULL, refsamp=NULL, log=FALSE,
                     alternative=c("two.sided", "less", "greater"),
-                    targetContribution=FALSE, additionalData=FALSE, verbose=TRUE)
+                    targetContribution=FALSE, additionalData=FALSE, 
+                    verbose=TRUE, doSizeFilter=NULL)
              standardGeneric("tni.gsea2"), package="RTN")
 setGeneric("tni.area3",
-           function(object, minRegulonSize=15, doSizeFilter=FALSE, scale=FALSE, tnet="dpi",
-                    tfs=NULL, samples=NULL, features=NULL, refsamp=NULL, 
-                    log=FALSE, verbose=TRUE)
+           function(object, minRegulonSize=15, sizeFilterMethod="posORneg", scale=FALSE, 
+                    tnet="dpi", regulatoryElements=NULL, samples=NULL, features=NULL, 
+                    refsamp=NULL, log=FALSE, verbose=TRUE, doSizeFilter=NULL)
              standardGeneric("tni.area3"), package="RTN")
 setGeneric("tni.graph",
            function(object, tnet="dpi", gtype="rmap", minRegulonSize=15, tfs=NULL, 
@@ -56,39 +58,20 @@ setGeneric("tni.replace.samples",
                     verbose=TRUE)
              standardGeneric("tni.replace.samples"), package="RTN")
 ##-------------------------------------------------------------------------
-setGeneric("tna.graph",
-           function(object, tnet="dpi", gtype="rmap", minRegulonSize=15, tfs=NULL, 
-                    amapFilter="quantile", amapCutoff=NULL, ...)
-             standardGeneric("tna.graph"), package="RTN")
 setGeneric("tna.mra",
            function(object, pValueCutoff=0.05, pAdjustMethod="BH", minRegulonSize=15,
-                    tnet="dpi", verbose=TRUE) 
+                    tnet="dpi", tfs=NULL, verbose=TRUE) 
              standardGeneric("tna.mra"), package="RTN")
-setGeneric("tna.overlap",
-           function(object, pValueCutoff=0.05, pAdjustMethod="BH", minRegulonSize=15, 
-                    tnet="ref", tfs=NULL, verbose=TRUE)
-             standardGeneric("tna.overlap"), package="RTN")
 setGeneric("tna.gsea1",
            function(object, pValueCutoff=0.05, pAdjustMethod="BH",  minRegulonSize=15, 
                     nPermutations=1000, exponent=1, tnet="dpi", orderAbsValue=TRUE, 
-                    stepFilter=TRUE, tfs=NULL, verbose=TRUE) 
+                    tfs=NULL, verbose=TRUE) 
              standardGeneric("tna.gsea1"), package="RTN")
 setGeneric("tna.gsea2",
            function(object, pValueCutoff=0.05, pAdjustMethod="BH",  minRegulonSize=15, 
-                    nPermutations=1000, exponent=1, tnet="dpi", stepFilter=TRUE, 
-                    tfs=NULL, verbose=TRUE) 
+                    sizeFilterMethod="posORneg", nPermutations=1000, exponent=1, tnet="dpi", 
+                    tfs=NULL, verbose=TRUE, doSizeFilter=NULL) 
              standardGeneric("tna.gsea2"), package="RTN")
-setGeneric("tna.synergy",
-           function(object, pValueCutoff=0.05, pAdjustMethod="BH", minRegulonSize=15, 
-                    minIntersectSize=1, nPermutations=1000, exponent=1, tnet="ref", 
-                    orderAbsValue=TRUE, stepFilter=TRUE, 
-                    tfs=NULL, verbose=TRUE)
-             standardGeneric("tna.synergy"), package="RTN")
-setGeneric("tna.shadow",
-           function(object, pValueCutoff=0.05, pAdjustMethod="BH", minRegulonSize=15, 
-                    minIntersectSize=1, nPermutations=1000, exponent=1, tnet="ref", 
-                    orderAbsValue=TRUE, stepFilter=TRUE, tfs=NULL, verbose=TRUE)
-             standardGeneric("tna.shadow"), package="RTN")
 setGeneric("tna.get",
            function(object, what="summary", order=TRUE, ntop=NULL, reportNames=TRUE, idkey=NULL) 
              standardGeneric("tna.get"), package="RTN")

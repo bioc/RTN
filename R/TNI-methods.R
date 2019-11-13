@@ -51,19 +51,19 @@ setMethod("initialize",
             colnames(sum.info.regElements)<-c("input","valid")           
             ##-----parameters
             sum.info.para <- list()
-            sum.info.para$perm<-matrix(,1,6)
+            sum.info.para$perm<-matrix(,1,7)
             colnames(sum.info.para$perm)<-c("pValueCutoff","pAdjustMethod", "globalAdjustment",
-                                       "estimator", "nPermutations","pooledNullDistribution")
+                               "estimator", "nPermutations","pooledNullDistribution", "boxcox")
             rownames(sum.info.para$perm)<-"Parameter"
-            sum.info.para$boot<-matrix(,1,3)
-            colnames(sum.info.para$boot)<-c("estimator", "nBootstraps", "consensus")        
+            sum.info.para$boot<-matrix(,1,4)
+            colnames(sum.info.para$boot)<-c("estimator", "nBootstraps", "consensus", "boxcox")        
             rownames(sum.info.para$boot)<-"Parameter"
             sum.info.para$dpi<-matrix(,1,1)
             colnames(sum.info.para$dpi)<-c("eps")       
             rownames(sum.info.para$dpi)<-"Parameter"
-            sum.info.para$cdt<-matrix(,1,8)
+            sum.info.para$cdt<-matrix(,1,7)
             colnames(sum.info.para$cdt)<-c("sampling","pValueCutoff","pAdjustMethod","minRegulonSize",
-                                           "minIntersectSize","miThreshold","prob","pwtransform")
+                                           "minIntersectSize","miThreshold","prob")
             rownames(sum.info.para$cdt)<-"Parameter"
             ##-----results
             sum.info.results<-list()
@@ -192,7 +192,7 @@ setMethod(
   "tni.permutation",
   "TNI",
   function(object, pValueCutoff=0.01, pAdjustMethod="BH", globalAdjustment=TRUE, estimator="spearman",
-           nPermutations=1000, pooledNullDistribution=TRUE, parChunks=50, verbose=TRUE){
+           nPermutations=1000, pooledNullDistribution=TRUE, boxcox=TRUE, parChunks=NULL, verbose=TRUE){
     if(object@status["Preprocess"]!="[x]")stop("NOTE: input 'object' needs preprocessing!")
     
     #---check compatibility
@@ -205,10 +205,12 @@ setMethod(
     tnai.checks(name="estimator",para=estimator)  
     tnai.checks(name="nPermutations",para=nPermutations)
     tnai.checks(name="pooledNullDistribution",para=pooledNullDistribution)
+    tnai.checks(name="boxcox",para=boxcox)
     tnai.checks(name="parChunks",para=parChunks)
     tnai.checks(name="verbose",para=verbose)
     object@para$perm<-list(pValueCutoff=pValueCutoff,pAdjustMethod=pAdjustMethod,globalAdjustment=globalAdjustment,
-                      estimator=estimator,nPermutations=nPermutations,pooledNullDistribution=pooledNullDistribution)
+                      estimator=estimator,nPermutations=nPermutations,pooledNullDistribution=pooledNullDistribution,
+                      boxcox=boxcox)
     object@summary$para$perm[1,]<-unlist(object@para$perm)
     ###compute reference network###
     ##---permutation analysis
@@ -236,7 +238,7 @@ setMethod(
   "tni.bootstrap",
   "TNI",
   function(object, nBootstraps=100, consensus=95, 
-           parChunks=10, verbose=TRUE){
+           parChunks=NULL, verbose=TRUE){
     if(object@status["Preprocess"]!="[x]")stop("NOTE: input 'object' needs preprocessing and permutation analysis!")
     if(object@status["Permutation"]!="[x]")stop("NOTE: input 'object' needs permutation analysis!")
     
@@ -251,7 +253,9 @@ setMethod(
     
     #--- assign same estimator used in the permutation step
     estimator <- tni.get(object, "para")$perm$estimator
-    object@para$boot<-list(estimator=estimator, nBootstraps=nBootstraps, consensus=consensus)
+    boxcox <- tni.get(object, "para")$perm$boxcox
+    object@para$boot<-list(estimator=estimator, nBootstraps=nBootstraps, 
+                           consensus=consensus, boxcox=boxcox)
     object@summary$para$boot[1,]<-unlist(object@para$boot)
     
     #--- run bootstrap analysis
@@ -272,7 +276,7 @@ setMethod(
 setMethod(
   "tni.dpi.filter",
   "TNI",
-  function(object, eps=0, verbose=TRUE){
+  function(object, eps=0, sizeThreshold=TRUE, minRegulonSize=15, verbose=TRUE){
     if(object@status["Permutation"]!="[x]")
       stop("NOTE: input 'object' needs permutation/bootstrep analysis!")
     
@@ -281,26 +285,70 @@ setMethod(
     
     ##---check and assign parameters
     tnai.checks(name="eps",para=eps)
+    tnai.checks(name="sizeThreshold",para=sizeThreshold)
+    tnai.checks(name="minRegulonSize",para=minRegulonSize)
     tnai.checks(name="verbose",para=verbose)
     
     ##---if not provided, estimate eps from tn.ref
     if(is.na(eps)){
       eps <- abs(object@results$tn.ref)
       eps <- min(eps[eps!=0])/2
+      sizeThreshold=FALSE
     }
     object@para$dpi <- list(eps=eps)
     object@summary$para$dpi[1,]<-unlist(object@para$dpi)
     
     ##---apply dpi filter
     if(verbose)cat("-Applying dpi filter...\n")
-    object@results$tn.dpi<-tni.dpi(abs(object@results$tn.ref), eps=object@para$dpi$eps)
-    object@results$tn.dpi<-object@results$tn.dpi * tni.cor(object@gexp,object@results$tn.dpi,estimator=object@para$perm$estimator)
-    if(verbose)cat("-DPI filter complete! \n\n")
-    object@status["DPI.filter"] <- "[x]"
-    ##update summary and return results
+    object@results$tn.dpi <- tni.dpi(abs(object@results$tn.ref), eps=object@para$dpi$eps)
+    object@results$tn.dpi <- object@results$tn.dpi * tni.cor(object@gexp,object@results$tn.dpi,
+                                                             estimator=object@para$perm$estimator)
+    
+    ##---apply sizeThreshold on small/unbalanced regulons
+    if(sizeThreshold){
+      regulon_counts <- tni.get(object, what="regulonSize")
+      regulon_counts <- regulon_counts[,c("Positive","Negative")]>minRegulonSize
+      regs <- which(rowSums(regulon_counts)==1)
+      regs <- rownames(regulon_counts)[regs]
+      epsz <- abs(object@results$tn.ref)
+      epsz <- min(epsz[epsz!=0])/2
+      if(length(regs)>0 & epsz>eps){
+        tnet1 <- object@results$tn.dpi
+        tnet2 <- tni.dpi(abs(object@results$tn.ref), eps=epsz)
+        tnet2 <- tnet2 * tni.cor(object@gexp, tnet2, estimator=object@para$perm$estimator)
+        for(reg in regs){
+          idx1 <- which(!regulon_counts[reg,])
+          if(idx1==1){
+            tp1 <- tnet1[,reg]
+            tp2 <- tnet2[,reg];tp2[tp2<=0] <- NA
+            tp2 <- sort(tp2, decreasing = TRUE, na.last=NA)
+            if(length(tp2)>0){
+              tp2 <- tp2[1:min(minRegulonSize,length(tp2))]
+              tp1[names(tp2)] <- tp2
+              tnet1[,reg] <- tp1
+            }
+          } else {
+            tp1 <- tnet1[,reg]
+            tp2 <- tnet2[,reg];tp2[tp2>=0] <- NA
+            tp2 <- sort(tp2, decreasing = FALSE, na.last=NA)
+            if(length(tp2)>0){
+              tp2 <- tp2[1:min(minRegulonSize,length(tp2))]
+              tp1[names(tp2)] <- tp2
+              tnet1[,reg] <- tp1
+            }
+          }
+        }
+        object@results$tn.dpi <- tnet1
+      }
+    }
+    
+    ##update and return results
     bin<-object@results$tn.dpi
     bin[bin!=0]<-1
     object@summary$results$tnet[2,]<-c(ncol(bin),sum(rowSums(bin)>0),sum(bin))
+    if(verbose)cat("-DPI filter complete! \n\n")
+    object@status["DPI.filter"] <- "[x]"
+    
     return(object)
   }
 )
@@ -309,11 +357,12 @@ setMethod(
 ##GSEA2 for TNI
 setMethod(
   "tni.gsea2",
-  "TNI",function(object, minRegulonSize=15, doSizeFilter=FALSE, 
-                 scale=FALSE, exponent=1, tnet="dpi", tfs=NULL, 
+  "TNI",function(object, minRegulonSize=15, sizeFilterMethod="posORneg", 
+                 scale=FALSE, exponent=1, tnet="dpi", regulatoryElements=NULL, 
                  samples=NULL, features=NULL, refsamp=NULL, log=FALSE, 
                  alternative=c("two.sided", "less", "greater"), 
-                 targetContribution=FALSE, additionalData=FALSE, verbose=TRUE){
+                 targetContribution=FALSE, additionalData=FALSE, verbose=TRUE, 
+                 doSizeFilter=NULL){
     if(object@status["Preprocess"]!="[x]")
       stop("NOTE: TNI object is not compleate: requires preprocessing!")
     if(object@status["Permutation"]!="[x]")
@@ -327,10 +376,10 @@ setMethod(
     ##-----check and assign parameters
     tnai.checks(name="minRegulonSize",para=minRegulonSize)
     tnai.checks(name="scale",para=scale)
-    tnai.checks(name="doSizeFilter",para=doSizeFilter)
+    tnai.checks(name="sizeFilterMethod",para=sizeFilterMethod)
     tnai.checks(name="exponent",para=exponent)
     tnai.checks(name="gsea.tnet",para=tnet)
-    tnai.checks(name="tfs",para=tfs)
+    tnai.checks(name="regulatoryElements",para=regulatoryElements)
     tnai.checks(name="samples",para=samples)
     tnai.checks(name="features",para=features)
     tnai.checks(name="refsamp",para=refsamp)
@@ -340,8 +389,18 @@ setMethod(
     tnai.checks(name="additionalData",para=additionalData)
     tnai.checks(name="verbose",para=verbose) 
     object@para$gsea2<-list(minRegulonSize=minRegulonSize, exponent=exponent,
-                            tnet=tnet, doSizeFilter=doSizeFilter, 
+                            tnet=tnet, sizeFilterMethod=sizeFilterMethod, 
                             alternative=alternative, scale=scale, log=log)
+    
+    if(!is.null(doSizeFilter)){
+      warning("'doSizeFilter' is deprecated, please use the 'sizeFilterMethod' parameter.")
+      tnai.checks(name="doSizeFilter",para=doSizeFilter)
+      if(doSizeFilter){
+        sizeFilterMethod="posANDneg"
+      } else {
+        sizeFilterMethod="posORneg"
+      }
+    }
     
     ##------ compute reference gx vec
     if(scale) object@gexp <- t(scale(t(object@gexp)))
@@ -383,54 +442,35 @@ setMethod(
     }
     
     ##-----set regs
-    if(!is.null(tfs)){
-      if(sum(tfs%in%object@regulatoryElements) > sum(tfs%in%names(object@regulatoryElements) ) ){
-        tfs<-object@regulatoryElements[object@regulatoryElements%in%tfs]
+    if(!is.null(regulatoryElements)){
+      if(sum(regulatoryElements%in%object@regulatoryElements) > 
+         sum(regulatoryElements%in%names(object@regulatoryElements) ) ){
+        regulatoryElements <- object@regulatoryElements[object@regulatoryElements%in%regulatoryElements]
       } else {
-        tfs<-object@regulatoryElements[names(object@regulatoryElements)%in%tfs]
+        regulatoryElements<-object@regulatoryElements[names(object@regulatoryElements)%in%regulatoryElements]
       }
-      if(length(tfs)==0)stop("NOTE: 'tfs' argument has no valid names!")
+      if(length(regulatoryElements)==0)
+        stop("NOTE: 'regulatoryElements' argument has no valid names!")
     } else {
-      tfs<-object@regulatoryElements
+      regulatoryElements<-object@regulatoryElements
     }
-    listOfRegulonsAndMode<-listOfRegulonsAndMode[tfs]
+    listOfRegulonsAndMode<-listOfRegulonsAndMode[regulatoryElements]
     
-    ##-----remove partial regs, below the minRegulonSize
-    for(nm in names(listOfRegulonsAndMode)){
-      reg<-listOfRegulonsAndMode[[nm]]
-      if(sum(reg<0)<minRegulonSize){
-        reg<-reg[reg>0]
-      }
-      if(sum(reg>0)<minRegulonSize){
-        reg<-reg[reg<0]
-      }
-      listOfRegulonsAndMode[[nm]]<-reg
-    }
-    
-    ##-----check regulon size (both clouds)
-    gs.size.max <- unlist(lapply(listOfRegulonsAndMode, function(reg){
-      max(sum(reg>0),sum(reg<0))
-    }))
-    gs.size.min <- unlist(lapply(listOfRegulonsAndMode, function(reg){
-      min(sum(reg>0),sum(reg<0))
-    }))
-    ##-----stop when no subset passes the size requirement
-    if(all(gs.size.max<minRegulonSize)){
-      stop(paste("NOTE: no partial regulon has minimum >= ", minRegulonSize, sep=""))
-    }
-    ##-----get filtered list
-    if(doSizeFilter){
-      listOfRegulonsAndMode<-listOfRegulonsAndMode[which(gs.size.min>=minRegulonSize)]
-      tfs<-tfs[tfs%in%names(listOfRegulonsAndMode)]
-      if(length(listOfRegulonsAndMode)==0){
-        stop("NOTE: no regulon has passed the 'doSizeFilter' requirement!")
-      }
+    ##-----check regulon size
+    regcounts <- .regulonCounts(listOfRegulonsAndMode)
+    if(sizeFilterMethod=="posANDneg"){
+      idx <- regcounts$Positive >= minRegulonSize & regcounts$Negative >= minRegulonSize
+    } else if(sizeFilterMethod=="posORneg"){
+      idx <- regcounts$Positive >= minRegulonSize | regcounts$Negative >= minRegulonSize
     } else {
-      listOfRegulonsAndMode<-listOfRegulonsAndMode[which(gs.size.max>=minRegulonSize)]
-      tfs<-tfs[tfs%in%names(listOfRegulonsAndMode)]
-      if(length(listOfRegulonsAndMode)==0){
-        stop("NOTE: no regulon has passed the 'minRegulonSize' requirement!")
-      }
+      idx <- regcounts$Size >= minRegulonSize
+    }
+    regulatoryElements <- regulatoryElements[regulatoryElements%in%rownames(regcounts)[idx]]
+    listOfRegulonsAndMode <- listOfRegulonsAndMode[regulatoryElements]
+    
+    ##-----stop when no regulon passes the size requirement
+    if(length(listOfRegulonsAndMode)==0){
+      stop("NOTE: no regulon has passed the 'minRegulonSize' requirement!")
     }
     
     #-----get phenotypes
@@ -488,9 +528,12 @@ setMethod(
           exponent=exponent,
           alternative=alternative
         )
-        regulonActivity$differential<-rbind(regulonActivity$differential,res$differential[tfs])
-        regulonActivity$positive<-rbind(regulonActivity$positive,res$positive[tfs])
-        regulonActivity$negative<-rbind(regulonActivity$negative,res$negative[tfs])
+        regulonActivity$differential<-rbind(regulonActivity$differential,
+                                            res$differential[regulatoryElements])
+        regulonActivity$positive<-rbind(regulonActivity$positive,
+                                        res$positive[regulatoryElements])
+        regulonActivity$negative<-rbind(regulonActivity$negative,
+                                        res$negative[regulatoryElements])
         if(verbose) setTxtProgressBar(pb, i/length(samples))
       }
       if(verbose) close(pb)
@@ -514,9 +557,11 @@ setMethod(
       regulonActivity$data$exponent <- exponent
       regulonActivity$data$alternative <- alternative
     } else {
-      colnames(regulonActivity$differential)<-names(tfs)
-      colnames(regulonActivity$positive)<-names(tfs)
-      colnames(regulonActivity$negative)<-names(tfs)
+      colnames(regulonActivity$differential)<-names(regulatoryElements)
+      colnames(regulonActivity$positive)<-names(regulatoryElements)
+      colnames(regulonActivity$negative)<-names(regulatoryElements)
+      colnames(regulonActivity$status)<-names(regulatoryElements)
+      regulonActivity$regulatoryElements <- regulatoryElements
     }
     return(regulonActivity)
   }
@@ -526,9 +571,9 @@ setMethod(
 ##aREA-3T for TNI
 setMethod(
   "tni.area3",
-  "TNI",function(object, minRegulonSize=15, doSizeFilter=FALSE, scale=FALSE, 
-                 tnet="dpi", tfs=NULL, samples=NULL, features=NULL, refsamp=NULL, 
-                 log=FALSE, verbose=TRUE){
+  "TNI",function(object, minRegulonSize=15, sizeFilterMethod="posORneg", scale=FALSE, 
+                 tnet="dpi", regulatoryElements=NULL, samples=NULL, features=NULL, 
+                 refsamp=NULL, log=FALSE, verbose=TRUE, doSizeFilter=NULL){
     if(object@status["Preprocess"]!="[x]")stop("NOTE: TNI object is not compleate: requires preprocessing!")
     if(object@status["Permutation"]!="[x]")stop("NOTE: TNI object is not compleate: requires permutation/bootstrap and DPI filter!")  
     if(object@status["DPI.filter"]!="[x]")stop("NOTE: TNI object is not compleate: requires DPI filter!")
@@ -538,18 +583,28 @@ setMethod(
     
     ##-----check and assign parameters
     tnai.checks(name="minRegulonSize",para=minRegulonSize)
-    tnai.checks(name="doSizeFilter",para=doSizeFilter)
+    tnai.checks(name="sizeFilterMethod",para=sizeFilterMethod)
     tnai.checks(name="scale",para=scale)
     tnai.checks(name="area.tnet",para=tnet)
-    tnai.checks(name="tfs",para=tfs)
+    tnai.checks(name="regulatoryElements",para=regulatoryElements)
     tnai.checks(name="samples",para=samples)
     tnai.checks(name="features",para=features)
     tnai.checks(name="refsamp",para=refsamp)
     tnai.checks(name="log",para=log) 
     tnai.checks(name="verbose",para=verbose) 
     object@para$area3 <- list(minRegulonSize=minRegulonSize, 
-                              doSizeFilter=doSizeFilter,
+                              sizeFilterMethod=sizeFilterMethod,
                               scale=scale, tnet=tnet, log=log)
+    
+    if(!is.null(doSizeFilter)){
+      warning("'doSizeFilter' is deprecated, please use the 'sizeFilterMethod' parameter.")
+      tnai.checks(name="doSizeFilter",para=doSizeFilter)
+      if(doSizeFilter){
+        sizeFilterMethod="posANDneg"
+      } else {
+        sizeFilterMethod="posORneg"
+      }
+    }
     
     ##------ compute reference gx vec
     if(scale) object@gexp <- t(scale(t(object@gexp)))
@@ -591,54 +646,38 @@ setMethod(
     }
     
     ##-----set regs
-    if(!is.null(tfs)){
-      if(sum(tfs%in%object@regulatoryElements) > sum(tfs%in%names(object@regulatoryElements) ) ){
-        tfs <- object@regulatoryElements[object@regulatoryElements%in%tfs]
+    if(!is.null(regulatoryElements)){
+      if(sum(regulatoryElements%in%object@regulatoryElements) > 
+         sum(regulatoryElements%in%names(object@regulatoryElements) ) ){
+        regulatoryElements <- object@regulatoryElements[
+          object@regulatoryElements%in%regulatoryElements]
       } else {
-        tfs <- object@regulatoryElements[names(object@regulatoryElements)%in%tfs]
+        regulatoryElements <- object@regulatoryElements[
+          names(object@regulatoryElements)%in%regulatoryElements]
       }
-      if(length(tfs)==0)stop("NOTE: 'tfs' argument has no valid names!")
+      if(length(regulatoryElements)==0)
+        stop("NOTE: 'regulatoryElements' argument has no valid names!")
     } else {
-      tfs<-object@regulatoryElements
+      regulatoryElements<-object@regulatoryElements
     }
-    listOfRegulonsAndMode <- listOfRegulonsAndMode[tfs]
+    listOfRegulonsAndMode <- listOfRegulonsAndMode[regulatoryElements]
     
-    ##-----remove partial regs, below the minRegulonSize
-    for(nm in names(listOfRegulonsAndMode)){
-      reg<-listOfRegulonsAndMode[[nm]]
-      if(sum(reg<0)<minRegulonSize){
-        reg<-reg[reg>0]
-      }
-      if(sum(reg>0)<minRegulonSize){
-        reg<-reg[reg<0]
-      }
-      listOfRegulonsAndMode[[nm]]<-reg
-    }
-    
-    ##-----check regulon size (both clouds)
-    gs.size.max <- unlist(lapply(listOfRegulonsAndMode, function(reg){
-      max(sum(reg>0),sum(reg<0))
-    }))
-    gs.size.min <- unlist(lapply(listOfRegulonsAndMode, function(reg){
-      min(sum(reg>0),sum(reg<0))
-    }))
-    ##-----stop when no subset passes the size requirement
-    if(all(gs.size.max<minRegulonSize)){
-      stop(paste("NOTE: no partial regulon has minimum >= ", minRegulonSize, sep=""))
-    }
-    ##-----get filtered list
-    if(doSizeFilter){
-      listOfRegulonsAndMode <- listOfRegulonsAndMode[which(gs.size.min>=minRegulonSize)]
-      tfs<-tfs[tfs%in%names(listOfRegulonsAndMode)]
-      if(length(listOfRegulonsAndMode)==0){
-        stop("NOTE: no regulon has passed the 'doSizeFilter' requirement!")
-      }
+    ##-----check regulon size
+    regcounts <- .regulonCounts(listOfRegulonsAndMode)
+    if(sizeFilterMethod=="posANDneg"){
+      idx <- regcounts$Positive >= minRegulonSize & regcounts$Negative >= minRegulonSize
+    } else if(sizeFilterMethod=="posORneg"){
+      idx <- regcounts$Positive >= minRegulonSize | regcounts$Negative >= minRegulonSize
     } else {
-      listOfRegulonsAndMode <- listOfRegulonsAndMode[which(gs.size.max>=minRegulonSize)]
-      tfs<-tfs[tfs%in%names(listOfRegulonsAndMode)]
-      if(length(listOfRegulonsAndMode)==0){
-        stop("NOTE: no regulon has passed the 'minRegulonSize' requirement!")
-      }
+      idx <- regcounts$Size >= minRegulonSize
+    }
+    regulatoryElements <- regulatoryElements[
+      regulatoryElements%in%rownames(regcounts)[idx]]
+    listOfRegulonsAndMode <- listOfRegulonsAndMode[regulatoryElements]
+    
+    ##-----stop when no regulon passes the size requirement
+    if(length(listOfRegulonsAndMode)==0){
+      stop("NOTE: no regulon has passed the 'minRegulonSize' requirement!")
     }
     
     #--- get phenotypes
@@ -657,24 +696,25 @@ setMethod(
     } else {
       listOfRegulonsAndModeGmm <- tni.get(object,what="regulons.and.mode.gmm")
     }
-    listOfRegulonsAndModeGmm <- listOfRegulonsAndModeGmm[tfs]
+    listOfRegulonsAndModeGmm <- listOfRegulonsAndModeGmm[regulatoryElements]
     
     #--- set regulons for aREA
     arearegs <- list()
-    for(tf in tfs){
-      arearegs[[tf]]$tfmode <- listOfRegulonsAndModeGmm[[tf]]$gmm
-      arearegs[[tf]]$likelihood <- listOfRegulonsAndModeGmm[[tf]]$mi
+    for(rg in regulatoryElements){
+      arearegs[[rg]]$tfmode <- listOfRegulonsAndModeGmm[[rg]]$gmm
+      arearegs[[rg]]$likelihood <- listOfRegulonsAndModeGmm[[rg]]$mi
     }
     if (verbose) {
       cat("Running aREA algorithm...\n")
     }
     nes <- t(aREA(eset=phenotypes, regulon=arearegs, minsize=0, verbose=FALSE)$nes)
-    nes <- nes[samples,tfs]
-    colnames(nes) <- names(tfs)
+    nes <- nes[samples,regulatoryElements]
+    colnames(nes) <- names(regulatoryElements)
     
     #-- for compatibility, wrap up results into the same format
-    regulonActivity <- list(dif=nes)
+    regulonActivity <- list(differential=nes)
     regulonActivity <- .tni.stratification.area(regulonActivity)
+    regulonActivity$regulatoryElements <- regulatoryElements
     return(regulonActivity)
   }
 )
@@ -748,7 +788,11 @@ setMethod(
     tnai.checks(name="reportNames",para=reportNames)
     ##-----get query
     query <- NULL
-    if(what=="gexp"){
+    if(what=="regulonSize"){
+      query <- .regulonCounts(tni.get(object, what="regulons.and.mode"))  
+    } else if(what=="refregulonSize"){
+      query <- .regulonCounts(tni.get(object, what="refregulons.and.mode"))
+    } else if(what=="gexp"){
       query<-object@gexp
       if(!is.null(idkey))
         query<-translateQuery(query,idkey,object,"gexpAndNames",reportNames)
@@ -912,7 +956,7 @@ setMethod(
   "TNI",
   function(object, modulators=NULL, tfs=NULL, sampling=35, pValueCutoff=0.01, 
            pAdjustMethod="bonferroni", minRegulonSize=15, minIntersectSize=5, 
-           miThreshold="md", prob=0.99, pwtransform=FALSE, medianEffect=FALSE, 
+           miThreshold="md", prob=0.99, medianEffect=FALSE, 
            iConstraint=TRUE, verbose=TRUE, mdStability=FALSE){
     
     #---check compatibility
@@ -928,7 +972,6 @@ setMethod(
     tnai.checks(name="minRegulonSize",para=minRegulonSize)
     tnai.checks(name="minIntersectSize",para=minIntersectSize)
     tnai.checks(name="miThreshold",para=miThreshold)
-    tnai.checks(name="pwtransform",para=pwtransform)
     tnai.checks(name="medianEffect",para=medianEffect)
     tnai.checks(name="prob",para=prob)
     tnai.checks(name="verbose",para=verbose)
@@ -944,10 +987,10 @@ setMethod(
     object@para$cdt<-list(sampling=sampling, pValueCutoff=pValueCutoff,
                           pAdjustMethod=pAdjustMethod, minRegulonSize=minRegulonSize, 
                           minIntersectSize=minIntersectSize, miThreshold=NA, prob=prob,
-                          pwtransform=pwtransform, iConstraint=iConstraint)
+                          iConstraint=iConstraint)
     ##-----summary info
     cdt<-unlist(object@para$cdt)
-    object@summary$para$cdt<-matrix(cdt,nrow=1,ncol=9)
+    object@summary$para$cdt<-matrix(cdt,nrow=1,ncol=8)
     rownames(object@summary$para$cdt)<-"Parameter"
     colnames(object@summary$para$cdt)<-names(cdt)
 
@@ -1026,7 +1069,7 @@ setMethod(
     gs.size <- unlist(
       lapply(tfTargets, length)
     )
-    tfs<-tfs[tfs%in%names(gs.size[gs.size>minRegulonSize])]
+    tfs<-tfs[tfs%in%names(gs.size[gs.size>=minRegulonSize])]
     tfTargets<-tfTargets[tfs]
     tfAllTargets<-tfAllTargets[tfs]
     tnetAllTargets<-rownames(object@results$tn.dpi)[rowSums(object@results$tn.dpi!=0)>0]
@@ -1072,21 +1115,6 @@ setMethod(
     idx<-t(apply(gxtemp[modulators,,drop=FALSE],1,sort.list))
     idxLow<-idx[,idxLow,drop=FALSE]
     idxHigh<-idx[,idxHigh,drop=FALSE]
-    #----power transformation
-    if(pwtransform){
-      if(verbose)cat("--Applying power transformation...\n")
-      for(tf in tfs){
-        x<-gxtemp[tf,]
-        if(shapiro.test(x)$p.value<0.05){
-          if(any(x<=0))x<-x+1-min(x)
-          # l <- coef(powerTransform(x),round=TRUE)
-          # x <- bcPower(x,l, jacobian.adjusted=TRUE)
-          l <- round(.estimate.bcpower(x),digits=5)
-          x <- .bcpower(x,l, jacobian.adjusted=TRUE)
-          gxtemp[tf,]<-x
-        }
-      }
-    }
     
     ##-----estimate mutual information threshold
     if(is.character(miThreshold)){
@@ -1661,7 +1689,7 @@ setMethod(
         if (is.null(regulatoryElements)){
             networkSummary <- tni.get(object)$results
             if(verbose){
-                nRegulators <- paste("This regulatory network comprised of", 
+                nRegulators <- paste("Regulatory network comprised of", 
                                      networkSummary$tnet["tnet.dpi", "regulatoryElements"],
                                      "regulons. \n")
                 cat(nRegulators)

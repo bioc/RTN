@@ -10,8 +10,9 @@ This function takes a TNA object and returns the results of the GSEA analysis ov
 }
 
 \usage{
-tna.gsea1(object, pValueCutoff=0.05, pAdjustMethod="BH",  minRegulonSize=15, nPermutations=1000, 
-        exponent=1, tnet="dpi", orderAbsValue=TRUE, stepFilter=TRUE, tfs=NULL, verbose=TRUE)
+tna.gsea1(object, pValueCutoff=0.05, pAdjustMethod="BH",  minRegulonSize=15, 
+nPermutations=1000, exponent=1, tnet="dpi", orderAbsValue=TRUE, tfs=NULL, 
+verbose=TRUE)
 }
 
 \arguments{
@@ -48,14 +49,8 @@ compute the GSEA analysis. Options: "dpi" and "ref".
 a single logical value indicating whether the values should be converted to absolute values and then 
 ordered (if TRUE), or ordered as they are (if FALSE).
 }
-\item{stepFilter}{
-a single logical value specifying to use a step-filter algorithm removing 
-non-significant regulons derived from \code{\link[RTN:tna.mra]{tna.mra}}
-(when stepFilter=TRUE) or not (when stepFilter=FALSE). It may have a substantial impact 
-on the overall processing time.
-}
 \item{tfs}{
-an optional vector with transcription factor identifiers (this option overrides the 'stepFilter' argument).
+an optional vector with transcription factor identifiers.
 }
 \item{verbose}{
 a single logical value specifying to display detailed messages (when 
@@ -93,7 +88,7 @@ rtna <- tni2tna.preprocess(rtni, phenotype=tnaData$phenotype,
         hits=tnaData$hits, phenoIDs=tnaData$phenoIDs)
 
 #run GSEA1 analysis pipeline
-rtna <- tna.gsea1(rtna, stepFilter=FALSE)
+rtna <- tna.gsea1(rtna)
 
 #get results
 tna.get(rtna, what="gsea1")
@@ -101,7 +96,7 @@ tna.get(rtna, what="gsea1")
 # run parallel version with SNOW package!
 library(snow)
 options(cluster=snow::makeCluster(3, "SOCK"))
-rtna <- tna.gsea1(rtna,stepFilter=FALSE)
+rtna <- tna.gsea1(rtna)
 stopCluster(getOption("cluster"))
 }
 }

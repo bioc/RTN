@@ -11,7 +11,8 @@ list of regulons from a transcriptional network (with multiple hypothesis testin
 }
 
 \usage{
-tna.mra(object, pValueCutoff=0.05, pAdjustMethod="BH", minRegulonSize=15, tnet="dpi", verbose=TRUE)
+tna.mra(object, pValueCutoff=0.05, pAdjustMethod="BH", minRegulonSize=15, 
+tnet="dpi", tfs=NULL, verbose=TRUE)
 }
 \arguments{
 
@@ -34,6 +35,9 @@ Gene sets with fewer than this number are removed from the analysis.
 \item{tnet}{
 a single character value specifying which transcriptional network should to used to 
 compute the MRA analysis. Options: "dpi" and "ref".
+}
+\item{tfs}{
+an optional vector with transcription factor identifiers.
 }
 \item{verbose}{
 a single logical value specifying to display detailed messages (when 

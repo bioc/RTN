@@ -6,7 +6,8 @@ Get information from individual slots in a TNA object.
 }
 
 \description{
-Get information from individual slots in a TNA object. Available results from a previous analysis can be selected either by pvalue cutoff (default) or top significance.
+Get information from individual slots in a TNA object. Available results from a previous 
+analysis can be selected either by pvalue cutoff (default) or top significance.
 }
 
 \usage{
@@ -20,19 +21,28 @@ an object of class \code{\link[RTN:TNA-class]{TNA-class}}.
 }
 \item{what}{
 a single character value specifying which information should be retrieved from the slots. 
-Options: 'summary', 'status', 'para', 'pheno', 'hits', 'regulatoryElements', 'tnet', 'refnet', 'regulons', 'refregulons', 'regulons.and.mode', 'refregulons.and.mode', 'rowAnnotation', 'colAnnotation', 'mra', 'gsea1', 'gsea2', 'overlap', 'synergy', 'shadow'.
+Options: 'summary', 'status', 'para', 'pheno', 'hits', 'regulatoryElements', 'tnet', 
+'refnet', 'regulons', 'refregulons', 'regulons.and.mode', 'refregulons.and.mode', 
+'rowAnnotation', 'colAnnotation', 'mra', 'gsea1', 'gsea2', 'gsea2summary'.
 }
 \item{order}{
-a single logical value specifying whether or not the output data should be ordered by significance. Valid only for 'gsea1', 'gsea2', 'overlap', 'synergy' or 'shadow' options.
+a single logical value specifying whether or not the output data should be ordered by 
+significance. Valid only for 'mra', 'gsea1' and 'gsea2' options.
 }
 \item{ntop}{
-a single integer value specifying to select how many results of top significance from 'gsea', 'overlap', 'synergy' or 'shadow' options.
+a single integer value specifying to select how many results of top significance from 
+'mra', 'gsea1' and 'gsea2' options.
 }
 \item{reportNames}{
-a single logical value specifying to report regulons with 'names' (when reportNames=TRUE) or not (when reportNames=FALSE). This option is effective only if transcription factors were named with alternative identifiers in the pre-processing analysis. It takes effect on 'mra', 'gsea', 'overlap', 'synergy' and 'shadow' options.
+a single logical value specifying to report regulons with 'names' (when reportNames=TRUE) 
+or not (when reportNames=FALSE). This option is effective only if transcription factors 
+were named with alternative identifiers in the pre-processing analysis. It takes effect 
+on 'mra', 'gsea1' and 'gsea2' options.
 }
 \item{idkey}{
-an optional single character value specifying an ID name from the available 'TNA' annotation to be used as alias for data query outputs (obs. it has no effect on consolidated tables).
+an optional single character value specifying an ID name from the available 'TNA' 
+annotation to be used as alias for data query outputs (obs. it has no effect on 
+consolidated tables).
 }
 }
 
@@ -52,19 +62,29 @@ A vector indicating the status of each available method in the pipeline.
 A list with the parameters used by each available method in the pipeline.
 }
 \item{pheno}{
-A numeric vector of phenotypes named by gene identifiers (see \code{\link[RTN:tni2tna.preprocess]{tni2tna.preprocess}}).
+A numeric vector of phenotypes named by gene identifiers 
+(see \code{\link[RTN:tni2tna.preprocess]{tni2tna.preprocess}}).
 }
 \item{hits}{
-A character vector of gene identifiers for those considered as hits (see \code{\link[RTN:tni2tna.preprocess]{tni2tna.preprocess}}).
+A character vector of gene identifiers for those considered as hits 
+(see \code{\link[RTN:tni2tna.preprocess]{tni2tna.preprocess}}).
 }
 \item{regulatoryElements}{
 A vector of regulatory elements (e.g. transcription factors).
 }
 \item{tnet}{
-A data matrix with MI values, evaluated by the DPI filter. MI values are computed between regulators and targets, with regulators on cols and targets on rows. Note that signals (+/-) are assigned to the inferred associations in order to represent the 'mode of action', which is derived from Pearson's correlation between regulators and targets.
+A data matrix with MI values, evaluated by the DPI filter. MI values are 
+computed between regulators and targets, with regulators on cols and targets 
+on rows. Note that signals (+/-) are assigned to the inferred associations in 
+order to represent the 'mode of action', which is derived from Pearson's 
+correlation between regulators and targets.
 }
 \item{refnet}{
-A data matrix with MI values (not evaluated by the DPI filter). MI values are computed between regulators and targets, with regulators on cols and targets on rows. Note that signals (+/-) are assigned to the inferred associations in order to represent the 'mode of action', which is derived from Pearson's correlation between regulators and targets.
+A data matrix with MI values (not evaluated by the DPI filter). MI values are 
+computed between regulators and targets, with regulators on cols and targets 
+on rows. Note that signals (+/-) are assigned to the inferred associations in 
+order to represent the 'mode of action', which is derived from Pearson's 
+correlation between regulators and targets.
 }
 \item{regulons}{
 A list with regulons extracted from the 'tnet' data matrix.
@@ -73,10 +93,12 @@ A list with regulons extracted from the 'tnet' data matrix.
 A list with regulons extracted from the 'refnet' data matrix.
 }
 \item{regulons.and.mode}{
-A list with regulons extracted from the 'tnet' data matrix, including the assiged 'mode of action'.
+A list with regulons extracted from the 'tnet' data matrix, including the 
+assiged 'mode of action'.
 }
 \item{refregulons.and.mode}{
-A list with regulons extracted from the 'refnet' data matrix, including the assiged 'mode of action'.
+A list with regulons extracted from the 'refnet' data matrix, including the 
+assiged 'mode of action'.
 }
 \item{rowAnnotation}{
 A data frame with probe-to-gene annotation.
@@ -85,24 +107,17 @@ A data frame with probe-to-gene annotation.
 A data frame with sample annotation.
 }
 \item{mra}{
-A data frame with results from the \code{\link[RTN:tna.mra]{tna.mra}} analysis pipeline.
+A data frame with results from the \code{\link[RTN:tna.mra]{tna.mra}} 
+analysis pipeline.
 }
 \item{gsea1}{
-A data frame with results from the \code{\link[RTN:tna.gsea1]{tna.gsea1}} analysis pipeline.
+A data frame with results from the \code{\link[RTN:tna.gsea1]{tna.gsea1}} 
+analysis pipeline.
 }
 \item{gsea2}{
-A data frame with results from the \code{\link[RTN:tna.gsea2]{tna.gsea2}} analysis pipeline.
+A data frame with results from the \code{\link[RTN:tna.gsea2]{tna.gsea2}} 
+analysis pipeline.
 }
-\item{overlap}{
-A data frame with results from the \code{\link[RTN:tna.overlap]{tna.overlap}} analysis pipeline.
-}
-\item{synergy}{
-A data frame with results from the \code{\link[RTN:tna.synergy]{tna.synergy}} analysis pipeline.
-}
-\item{shadow}{
-A data frame with results from the \code{\link[RTN:tna.shadow]{tna.shadow}} analysis pipeline.
-}
-
 }
 
 }

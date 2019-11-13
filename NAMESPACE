@@ -21,11 +21,7 @@ exportMethods(
   "tna.mra",
   "tna.gsea1",
   "tna.gsea2",
-  "tna.overlap",
-  "tna.synergy",
-  "tna.shadow",
   "tna.get",
-  "tna.graph",
   "avs.vse",
   "avs.evse",
   "avs.pevse",
@@ -58,5 +54,6 @@ importFrom(utils, data, setTxtProgressBar, txtProgressBar)
 importFrom(mixtools,normalmixEM)
 importFrom(viper,aREA)
 importFrom(SummarizedExperiment, assays, rowData, colData)
+importFrom(car, powerTransform, yjPower)
 
 

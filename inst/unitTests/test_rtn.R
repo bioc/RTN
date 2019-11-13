@@ -25,8 +25,8 @@ test_tni <- function(){
   res<-tni.get(rtni,what="cdt")
   checkTrue(is.list(res))
   #tni.graph
-  # res<-tni.graph(rtni, gtype="rmap", tfs=tfs4test)
-  # checkTrue(is.igraph(res))
+  #res<-tni.graph(rtni, gtype="rmap", tfs=tfs4test)
+  #checkTrue(is.igraph(res))
 }
 # Unit tests fot TNA-class methods
 test_tna <- function(){
@@ -45,27 +45,12 @@ test_tna <- function(){
   rtna <- tna.mra(rtna, minRegulonSize=1)
   res<-tna.get(rtna,what="mra")
   checkTrue(is.data.frame(res) && ncol(res)==8)
-  #tna.overlap
-  rtna <- tna.overlap(rtna, minRegulonSize=1)
-  res<-tna.get(rtna,what="overlap")
-  checkTrue(is.data.frame(res) && ncol(res)==9)
   #tna.gsea1
-  rtna <- tna.gsea1(rtna, nPermutations=10, minRegulonSize=1, stepFilter=FALSE)
+  rtna <- tna.gsea1(rtna, nPermutations=10, minRegulonSize=1)
   res <- tna.get(rtna,what="gsea1")
   checkTrue(is.data.frame(res) && ncol(res)==5)
   #tna.gsea2
-  rtna <- tna.gsea2(rtna, nPermutations=10, minRegulonSize=1, stepFilter=FALSE)
+  rtna <- tna.gsea2(rtna, nPermutations=10, minRegulonSize=1)
   res<-tna.get(rtna,what="gsea2")
   checkTrue(is.list(res) && length(res)==3)
-  #tna.synergy
-  rtna <- tna.synergy(rtna,nPermutations=10, minRegulonSize=1, stepFilter=FALSE)
-  res<-tna.get(rtna,what="synergy")
-  checkTrue(is.data.frame(res) && ncol(res)==9)
-  #tna.shadow
-  rtna <- tna.shadow(rtna,nPermutations=10, minRegulonSize=1, stepFilter=FALSE)
-  res<-tna.get(rtna,what="shadow")
-  checkTrue(is.data.frame(res) && ncol(res)==9)
-  #tna.graph
-  # res<-tna.graph(rtna, tnet="ref", gtype="amap", tfs=names(tfs4test))
-  # checkTrue(is.igraph(res))
 }

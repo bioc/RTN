@@ -1546,6 +1546,7 @@ treemap<-function(hc){
     Phit <- cumsum(Phit/NR)
     Pmiss <- cumsum(Pmiss)
     runningES <- Phit-Pmiss
+    runningES[is.nan(runningES)] <- 0
     ESmax <- max(runningES)
     ESmin <- min(runningES)
     if(alternative=="greater"){

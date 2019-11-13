@@ -274,6 +274,7 @@ gseaScores4RTN <- function(geneList, geneSet, exponent=1,
     Phit=cumsum(Phit/NR)
     Pmiss=cumsum(Pmiss)
     runningES<-Phit-Pmiss
+    runningES[is.nan(runningES)] <- 0
     ESmax<-max(runningES)
     ESmin<-min(runningES)
     ES<-ifelse(abs(ESmin)>abs(ESmax), ESmin, ESmax)
@@ -307,6 +308,7 @@ gseaScoresBatch4RTN <- function(geneList, geneNames.perm, geneSet,
     Phit <- sapply(1:(nPermutations+1), function(i) cumsum(Phit[, i])/NR[i])		
     Pmiss <- sapply(1:(nPermutations+1), function(i) cumsum(Pmiss[, i]))
     runningES <- Phit-Pmiss		
+    runningES[is.nan(runningES)] <- 0
     ES <- sapply(1:(nPermutations+1), function(i){
       tp <- runningES[,i]
       tp[which.max(abs(tp))]	

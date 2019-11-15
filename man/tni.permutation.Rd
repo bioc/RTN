@@ -47,8 +47,7 @@ a single logical value specifying to run the permutation analysis with pooled re
 (when pooledNullDistribution=TRUE) or not (when pooledNullDistribution=FALSE).
 }
 \item{boxcox}{
-a single logical value specifying to use Box-Cox procedure to find a transformation of inferred associations that approaches normality (when boxcox=TRUE) or not (when boxcox=FALSE). Dam et al. (2018) have acknowledged that different RNA-seq normalization methods introduce different biases in co-expression analysis, usually towards positive correlation, possibly affected by read-depth differences between samples and the large abundance of 0 values present in RNA-seq-derived expression matrices. In order to correct this positive correlation bias we suggest using this box-cox correction strategy.
-See \code{\link[car:powerTransform]{powerTransform}} and \code{\link[car:yjPower]{yjPower}}.
+a single logical value specifying to use Box-Cox procedure to find a transformation of inferred associations that approaches normality (when boxcox=TRUE) or not (when boxcox=FALSE). Dam et al. (2018) have acknowledged that different RNA-seq normalization methods introduce different biases in co-expression analysis, usually towards positive correlation, possibly affected by read-depth differences between samples and the large abundance of 0 values present in RNA-seq-derived expression matrices. In order to correct this positive correlation bias we suggest using this box-cox correction strategy. See \code{\link[car:powerTransform]{powerTransform}} and \code{\link[car:bcPower]{bcPower}}.
 }
 \item{parChunks}{
 an optional single integer value specifying the number of permutation chunks to 

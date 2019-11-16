@@ -2,12 +2,11 @@
 \alias{tna.overlap}
 
 \title{
-Overlap analysis over a list of regulons.
+Overlap analysis over a list of regulons (deprecated function).
 }
 
 \description{
-This function takes a TNA object and returns the results of the overlap analysis among 
-regulons in a transcriptional network (with multiple hypothesis testing corrections).
+This function is provided for compatibility with older versions of \sQuote{RTN} only, and will be defunct at the next release (see details).
 }
 
 \usage{
@@ -46,38 +45,12 @@ verbose=TRUE) or not (when verbose=FALSE).
 }
 }
 
+\details{
+The 'tna.overlap' function is deprecated and will be made defunct. For pairwise regulon analysis, please consider using the 'RTNduals' package.
+}
+
 \value{
-a data frame in the slot "results", see 'overlap' option in \code{\link[RTN:tna.get]{tna.get}}.
-}
-
-\author{Mauro Castro}
-
-\seealso{
-\code{\link[RTN:TNA-class]{TNA-class}}
-}
-
-\examples{
-
-data(tniData)
-data(tnaData)
-
-\dontrun{
-
-rtni <- tni.constructor(expData=tniData$expData, 
-        regulatoryElements=c("PTTG1","E2F2","FOXM1","E2F3","RUNX2"), 
-        rowAnnotation=tniData$rowAnnotation)
-rtni <- tni.permutation(rtni)
-rtni <- tni.bootstrap(rtni)
-rtni <- tni.dpi.filter(rtni)
-rtna <- tni2tna.preprocess(rtni, phenotype=tnaData$phenotype, 
-        hits=tnaData$hits, phenoIDs=tnaData$phenoIDs)
-
-#run overlap analysis pipeline
-rtna <- tna.overlap(rtna)
-
-#get results
-tna.get(rtna,what="overlap")
-}
+a data frame in the slot "results".
 }
 
 \keyword{overlap}

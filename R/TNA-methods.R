@@ -652,6 +652,10 @@ setMethod(
   function(object, pValueCutoff=0.05, pAdjustMethod="BH", minRegulonSize=15, 
            tnet="ref", tfs=NULL, verbose=TRUE) {  
     
+    tp1 <- "The 'tna.overlap' function is deprecated.\n"
+    tp2 <- "For pairwise regulon analysis, please consider using the 'RTNduals' package."
+    .Deprecated(msg=paste0(tp1,tp2))
+    
     #---check compatibility
     object <- upgradeTNA(object)
     
@@ -725,6 +729,10 @@ setMethod(
   function(object, pValueCutoff=0.05, pAdjustMethod="BH", minRegulonSize=15, 
            minIntersectSize=1, nPermutations=1000, exponent=1, tnet="ref", 
            orderAbsValue=TRUE, stepFilter=TRUE, tfs=NULL, verbose=TRUE) {
+    
+    tp1 <- "The 'tna.synergy' function is deprecated.\n"
+    tp2 <- "For pairwise regulon analysis, please consider using the 'RTNduals' package."
+    .Deprecated(msg=paste0(tp1,tp2))
     
     #---check compatibility
     object <- upgradeTNA(object)
@@ -854,6 +862,10 @@ setMethod(
   function(object, pValueCutoff=0.05, pAdjustMethod="BH", minRegulonSize=15, 
            minIntersectSize=1, nPermutations=1000, exponent=1, tnet="ref", 
            orderAbsValue=TRUE, stepFilter=TRUE, tfs=NULL, verbose=TRUE) {
+    
+    tp1 <- "The 'tna.shadow' function is deprecated.\n"
+    tp2 <- "For pairwise regulon analysis, please consider using the 'RTNduals' package."
+    .Deprecated(msg=paste0(tp1,tp2))
     
     #---check compatibility
     object <- upgradeTNA(object)
@@ -989,6 +1001,10 @@ setMethod(
   function(object, tnet="dpi", gtype="rmap", minRegulonSize=15, tfs=NULL, 
            amapFilter="quantile", amapCutoff=NULL, 
            mask=FALSE){
+    
+    tp1 <- "The 'tna.graph' function is deprecated.\n"
+    tp2 <- "Please consider using the 'tni.graph' function instead."
+    .Deprecated(msg=paste0(tp1,tp2))
     
     #---check compatibility
     object <- upgradeTNA(object)

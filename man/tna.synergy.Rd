@@ -2,13 +2,11 @@
 \alias{tna.synergy}
 
 \title{
-Synergy analysis over a list of regulons.
+Synergy analysis over a list of regulons (deprecated function).
 }
 
 \description{
-This function takes a TNA object and returns the results of the synergy analysis 
-over a list of regulons in a transcriptional network
-(with multiple hypothesis testing corrections).
+This function is provided for compatibility with older versions of \sQuote{RTN} only, and will be defunct at the next release (see details).
 }
 
 \usage{
@@ -70,45 +68,12 @@ verbose=TRUE) or not (when verbose=FALSE).
 }
 }
 
+\details{
+The 'tna.synergy' function is deprecated and will be made defunct. For pairwise regulon analysis, please consider using the 'RTNduals' package.
+}
+
 \value{
-a data frame in the slot "results", see 'synergy' in \code{\link[RTN:tna.get]{tna.get}}.
-}
-
-\author{Mauro Castro}
-
-\seealso{
-\code{\link[RTN:TNA-class]{TNA-class}}
-\code{\link[RTN:tna.shadow]{tna.shadow}}
-}
-
-\examples{
-
-data(tniData)
-data(tnaData)
-
-\dontrun{
-
-rtni <- tni.constructor(expData=tniData$expData, 
-        regulatoryElements=c("PTTG1","E2F2","FOXM1","E2F3","RUNX2"), 
-        rowAnnotation=tniData$rowAnnotation)
-rtni <- tni.permutation(rtni)
-rtni <- tni.bootstrap(rtni)
-rtni <- tni.dpi.filter(rtni)
-rtna <- tni2tna.preprocess(rtni, phenotype=tnaData$phenotype, 
-        hits=tnaData$hits, phenoIDs=tnaData$phenoIDs)
-
-#run synergy analysis pipeline
-rtna <- tna.synergy(rtna, stepFilter=FALSE)
-
-#get results
-tna.get(rtna, what="synergy")
-
-# run parallel version with SNOW package!
-library(snow)
-options(cluster=makeCluster(4, "SOCK"))
-rtna <- tna.synergy(rtna,stepFilter=FALSE)
-stopCluster(getOption("cluster"))
-}
+a data frame in the slot "results".
 }
 
 \keyword{synergy}

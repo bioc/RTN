@@ -2,11 +2,11 @@
 \alias{tna.graph}
 
 \title{
-Compute a graph from TNA objects.
+Compute a graph from TNA objects (deprecated function).
 }
 
 \description{
-Extract results from a TNA object and compute a graph.
+This function is provided for compatibility with older versions of \sQuote{RTN} only, and will be defunct at the next release (see details).
 }
 
 \usage{
@@ -48,45 +48,23 @@ a JC threshold.
 \item{...}{ additional arguments passed to tna.graph function. } 
 }
 
+\details{
+
+  The following function is deprecated and will be made defunct; use
+  the replacement indicated below:
+  \itemize{
+
+    \item{tna.graph: \code{\link{tni.graph}}}
+
+  }
+}
+
 \value{
 a graph object.
 }
 
 \author{
 Mauro Castro
-}
-
-\examples{
-
-data(tniData)
-data(tnaData)
-
-\dontrun{
-
-rtni <- tni.constructor(expData=tniData$expData, 
-        regulatoryElements=c("PTTG1","E2F2","FOXM1","E2F3","RUNX2"), 
-        rowAnnotation=tniData$rowAnnotation)
-rtni <- tni.permutation(rtni)
-rtni <- tni.bootstrap(rtni)
-rtni <- tni.dpi.filter(rtni)
-rtna <- tni2tna.preprocess(rtni, phenotype=tnaData$phenotype, 
-        hits=tnaData$hits, phenoIDs=tnaData$phenoIDs)
-rtna <- tna.mra(rtna)
-
-# get the regulatory map
-g1 <- tna.graph(rtna, tnet="dpi", gtype="rmap", tfs=c("PTTG1","E2F2","FOXM1"))
-
-# get the association map
-g2 <- tna.graph(rtna, tnet="ref", gtype="amap")
-
-# option: plot the igraph objects using RedeR
-#library(RedeR)
-#rdp <- RedPort()
-#calld(rdp)
-#addGraph(rdp,g1)
-#relax(rdp, ps=TRUE)
-
-}
 }
 
 \keyword{methods}

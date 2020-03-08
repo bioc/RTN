@@ -34,8 +34,8 @@ a single logical value specifying to run global p.value adjustments (when
 globalAdjustment=TRUE) or not (when globalAdjustment=FALSE).
 }
 \item{estimator}{
-a character string indicating which estimator to be used for mutual information 
-computation. One of "pearson", "kendall", or "spearman" (default).
+a character string specifying the mutual information estimator. 
+One of "pearson", "kendall", or "spearman" (default).
 }
 \item{nPermutations}{
 a single integer value specifying the number of permutations for deriving TF-target 

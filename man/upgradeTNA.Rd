@@ -17,6 +17,10 @@ this argument is an object of class \code{\link[RTN:TNI-class]{TNI-class}}.
 }
 }
 
+\value{
+An updated TNA-class object.
+}
+
 \author{Mauro Castro}
 
 \examples{

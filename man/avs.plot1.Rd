@@ -6,7 +6,8 @@ Plot results from AVS methods, single plots.
 }
 
 \description{
-This function takes an AVS object and plots results from the VSE and EVSE methods.
+This function takes an AVS object and plots results from the VSE 
+and EVSE methods.
 }
 
 \usage{
@@ -20,7 +21,8 @@ maxy=200, pValueCutoff=1e-2, width=8, height=3)
 an object of class 'AVS' \code{\link[RTN:AVS-class]{AVS-class}}.
 }
 \item{what}{
-a character value specifying which analysis should be used. Options: "vse" and "evse".
+a character value specifying which analysis should be used. 
+Options: "vse" and "evse".
 }
 \item{fname}{
 a character value specifying the name of output file.
@@ -47,6 +49,10 @@ a numeric value specifying the width of the graphics region in inches.
 a numeric value specifying the height of the graphics region in inches.
 }
 
+}
+
+\value{
+A plot showing results from the VSE and EVSE methods.
 }
 
 \author{

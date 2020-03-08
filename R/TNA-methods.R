@@ -1,5 +1,5 @@
 ################################################################################
-##########################         TNA Class        ############################
+##########################     TNA Class Methods    ############################
 ################################################################################
 
 ##------------------------------------------------------------------------------
@@ -85,9 +85,9 @@ setMethod("initialize",
 			                                  "exponent", "tnet")
 			rownames(sum.info.para$gsea2) <- "Parameters"
 			##-----results
-			sum.info.results<-matrix(,4,1)
+			sum.info.results<-matrix(,3,1)
 			colnames(sum.info.results)<-"TNA"
-			rownames(sum.info.results)<-c("MRA","Overlap", "GSEA1", "GSEA2")
+			rownames(sum.info.results)<-c("MRA", "GSEA1", "GSEA2")
 			##-----summary info
 			.Object@summary<-list(tar=sum.info.tar, rgc=sum.info.rgc, hts=sum.info.hits, 
 			                      gl=sum.info.gl, para=sum.info.para, 
@@ -96,8 +96,8 @@ setMethod("initialize",
 			.Object@status<-list()
 			.Object@status$preprocess <- rep("[ ]", 1, 3)
 			names(.Object@status$preprocess) <- c("integration","phenotype", "hits")
-			.Object@status$analysis <- rep("[ ]", 1, 4)
-			names(.Object@status$analysis) <- c("MRA", "Overlap", "GSEA1", "GSEA2")
+			.Object@status$analysis <- rep("[ ]", 1, 3)
+			names(.Object@status$analysis) <- c("MRA", "GSEA1", "GSEA2")
 			return(.Object)
 		}
 )
@@ -459,14 +459,12 @@ setMethod(
     object@summary$rgc[,"above.min.size"]<-sum(gs.size>=minRegulonSize)
     
     ##-----filter 'rgcs' by 'minRegulonSize'
-    if(all(gs.size<minRegulonSize)){
-      tp<-" overlapped genes with the universe!\n The largest number of overlapped genes is: "
-      stop(paste("NOTE: no regulon has >= ", minRegulonSize, tp, 
-                 max(gs.size), sep=""), call.=FALSE)
+    if(all(gs.size<minRegulonSize)){ 
+      stop("NOTE: no regulon passed the 'minRegulonSize' requirement!")
     }
     rgcs <- rgcs[which(gs.size >= minRegulonSize)]
     
-    ##-----remove genes not listed in phenotype
+    ##-----remove genes not listed in the phenotype
     for(i in names(rgcs)){
       regs <- rgcs[[i]]
       rgcs[[i]] <- regs[regs %in% names(object@phenotype)]
@@ -477,7 +475,6 @@ setMethod(
       listOfRegulons=rgcs,
       phenotype=object@phenotype,
       pAdjustMethod=object@para$gsea1$pAdjustMethod,
-      pValueCutoff=object@para$gsea1$pValueCutoff,
       nPermutations=object@para$gsea1$nPermutations,
       exponent=object@para$gsea1$exponent,
       orderAbsValue=object@para$gsea1$orderAbsValue,
@@ -589,7 +586,7 @@ setMethod(
     
     ##-----stop when no regulon passes the size requirement
     if(length(listOfRegulonsAndMode)==0){
-      stop("NOTE: no regulon has passed the 'minRegulonSize' requirement!")
+      stop("NOTE: no regulon passed the 'minRegulonSize' requirement!")
     }
     object@summary$rgc[,"above.min.size"] <- length(listOfRegulonsAndMode)
     
@@ -604,7 +601,6 @@ setMethod(
       listOfRegulonsAndMode=listOfRegulonsAndMode,
       phenotype=object@phenotype,
       pAdjustMethod=object@para$gsea2$pAdjustMethod,
-      pValueCutoff=object@para$gsea2$pValueCutoff,
       nPermutations=object@para$gsea2$nPermutations, 
       exponent=object@para$gsea2$exponent,
       verbose=verbose
@@ -632,7 +628,7 @@ setMethod(
 ##------------------------------------------------------------------------------
 #---check compatibility and upgrade tna objects
 upgradeTNA <- function(object){
-  if(class(object)[1]=="TNA"){
+  if(is(object,"TNA")){
     if(.hasSlot(object, "transcriptionFactors")){
       object@regulatoryElements <- object@transcriptionFactors
       object@rowAnnotation <- object@annotation
@@ -1016,8 +1012,8 @@ data.integration<-function(object, verbose){
 ##vector, and returns the results of gene set enrichment analysis for all 
 ##regulons (with multiple hypothesis testing correction).
 run.gsea1 <- function(listOfRegulons, phenotype, pAdjustMethod="BH", 
-                     pValueCutoff=0.05, nPermutations=1000, 
-                     exponent=1, orderAbsValue=TRUE, verbose=TRUE) {
+                      nPermutations=1000, exponent=1, 
+                      orderAbsValue=TRUE, verbose=TRUE) {
   
   ##-----get ordered phenotype
   if(orderAbsValue) phenotype <- abs(phenotype)
@@ -1072,8 +1068,7 @@ run.gsea1 <- function(listOfRegulons, phenotype, pAdjustMethod="BH",
 ##vector, and returns the results of gene set enrichment analysis for all 
 ##regulons (with multiple hypothesis testing correction).
 run.gsea2 <- function(listOfRegulonsAndMode, phenotype, pAdjustMethod="BH", 
-                      pValueCutoff=0.05, nPermutations=1000, 
-                      exponent=1, verbose=TRUE) {
+                      nPermutations=1000, exponent=1, verbose=TRUE) {
   
   ##-----get ordered phenotype
   phenotype<-phenotype[order(phenotype,decreasing=TRUE)]

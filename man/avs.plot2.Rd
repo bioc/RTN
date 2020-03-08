@@ -51,6 +51,10 @@ an optional vector with annotation identifiers (e.g. transcription factor).
 }
 }
 
+\value{
+A plot showing results from the VSE and EVSE methods.
+}
+
 \author{
 Mauro Castro
 }

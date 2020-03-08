@@ -11,17 +11,6 @@ Reconstruction and Analysis of Transcriptional Networks.
 A transcriptional regulatory network (TRN) consists of a collection of transcription factors (TFs) and the regulated target genes. TFs are regulators that recognize specific DNA sequences and guide the expression of the genome, either activating or repressing the expression the target genes. The set of genes controlled by the same TF forms a regulon. This package provides classes and methods for the reconstruction of TRNs and analysis of regulons.
 }
 
-\details{
-\tabular{ll}{
-Package: \tab RTN\cr
-Type: \tab Package\cr
-Depends: \tab R, methods\cr
-Imports: \tab RedeR, minet, viper, mixtools, snow, limma, data.table, IRanges, igraph, S4Vectors, SummarizedExperiment, car\cr
-Suggests: \tab RUnit, BiocGenerics, BiocStyle, knitr, rmarkdown\cr
-License: \tab Artistic-2.0\cr
-}
-}
-
 \section{Index}{
 
 \tabular{ll}{
@@ -33,7 +22,13 @@ License: \tab Artistic-2.0\cr
 \link[RTN:tni.conditional]{tni.conditional}: \tab conditional mutual information analysis.\cr
 \link[RTN:tni.get]{tni.get}: \tab get information from individual slots in a TNI object.\cr
 \link[RTN:tni.graph]{tni.graph}: \tab compute a graph from TNI objects.\cr
+\link[RTN:tni.gsea2]{tni.gsea2}: \tab compute regulon activity.\cr
+\link[RTN:tni.prune]{tni.prune}: \tab prune regulons to remove redundant targets for regulon activity analysis.\cr
+\link[RTN:tni.sre]{tni.sre}: \tab subgroup regulon difference analysis.\cr
+\link[RTN:tni.plot.sre]{tni.plot.sre}: \tab plot subgroup regulon rnrichment .\cr
 \link[RTN:tni.regulon.summary]{tni.regulon.summary}: \tab return a summary of network and regulons. \cr
+\link[RTN:tni.plot.checks]{tni.plot.checks}: \tab plot regulon target counts.\cr
+\link[RTN:tni.alpha.adjust]{tni.alpha.adjust}: \tab adjust the significance level for two datasets.\cr
 \link[RTN:tni.replace.samples]{tni.replace.samples}: \tab replace samples of an existing TNI-class objects. \cr
 \link[RTN:tni2tna.preprocess]{tni2tna.preprocess}: \tab a preprocessing method for objects of class TNI.\cr
 \link[RTN:TNA-class]{TNA-class}: \tab an S4 class for Transcriptional Network Analysis.\cr
@@ -53,7 +48,7 @@ License: \tab Artistic-2.0\cr
 }
                    
 Further information is available in the vignettes by typing \code{vignette("RTN")}. Documented 
-topics are also available in HTML by typing \code{help.start()} and selecting the RTN package 
+topics are also available by typing \code{help.start()} and selecting the RTN package 
 from the menu.
 
 }

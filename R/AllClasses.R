@@ -4,6 +4,7 @@ setClass(
   representation(
     gexp="matrix",
     regulatoryElements="character",
+    targetElements="character",
     modulators="char_Or_null",
     rowAnnotation="data.frame",
     colAnnotation="data.frame",
@@ -15,6 +16,7 @@ setClass(
   prototype=list(
     gexp=matrix(),
     regulatoryElements=character(),
+    targetElements=character(),
     modulators=character(),
     rowAnnotation=data.frame(),
     colAnnotation=data.frame(),

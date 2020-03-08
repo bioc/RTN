@@ -6,7 +6,9 @@ One-tailed Gene Set Enrichment Analysis (GSEA) over a list of regulons.
 }
 
 \description{
-This function takes a TNA object and returns the results of the GSEA analysis over a list of regulons in a transcriptional network (with multiple hypothesis testing corrections).
+This function takes a TNA object and returns the results of the GSEA analysis 
+over a list of regulons in a transcriptional network (with multiple hypothesis 
+testing corrections).
 }
 
 \usage{
@@ -42,12 +44,12 @@ a single integer or numeric value used in weighting phenotypes in GSEA
 (see 'gseaScores' function at HTSanalyzeR).
 }
 \item{tnet}{
-a single character value specifying which transcriptional network should to used to 
-compute the GSEA analysis. Options: "dpi" and "ref".
+a single character value specifying which transcriptional network should to 
+used to compute the GSEA analysis. Options: "dpi" and "ref".
 }
 \item{orderAbsValue}{
-a single logical value indicating whether the values should be converted to absolute values and then 
-ordered (if TRUE), or ordered as they are (if FALSE).
+a single logical value indicating whether the values should be converted to 
+absolute values and then ordered (if TRUE), or ordered as they are (if FALSE).
 }
 \item{tfs}{
 an optional vector with transcription factor identifiers.
@@ -59,7 +61,8 @@ verbose=TRUE) or not (when verbose=FALSE).
 }
 
 \value{
-a data frame in the slot "results", see 'gsea1' option in \code{\link[RTN:tna.get]{tna.get}}.
+a data frame in the slot "results", see 'gsea1' option in 
+\code{\link[RTN:tna.get]{tna.get}}.
 }
 
 \author{

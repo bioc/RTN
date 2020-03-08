@@ -1,11 +1,11 @@
 Package: RTN
 Type: Package
 Title: RTN: Reconstruction of Transcriptional regulatory Networks and analysis of regulons
-Version: 2.11.3
+Version: 2.11.4
 Author: Clarice Groeneveld [ctb], Gordon Robertson [ctb], Xin Wang [aut], Michael Fletcher [aut], Florian Markowetz [aut], Kerstin Meyer [aut], and Mauro Castro [aut]
 Maintainer: Mauro Castro <mauro.a.castro@gmail.com>
-Depends: R (>= 3.5.0), methods
-Imports: RedeR, minet, viper, mixtools, snow, limma, data.table, IRanges, igraph, S4Vectors, SummarizedExperiment, car
+Depends: R (>= 3.5.0), methods,
+Imports: RedeR, minet, viper, mixtools, snow, stats, limma, data.table, IRanges, igraph, S4Vectors, SummarizedExperiment, car, pwr, pheatmap, grDevices, graphics, utils
 Suggests: RUnit, BiocGenerics, BiocStyle, knitr, rmarkdown
 Description: A transcriptional regulatory network (TRN) consists of a collection of transcription factors (TFs) and the regulated target genes. TFs are regulators that recognize specific DNA sequences and guide the expression of the genome, either activating or repressing the expression the target genes. The set of genes controlled by the same TF forms a regulon. This package provides classes and methods for the reconstruction of TRNs and analysis of regulons.
 License: Artistic-2.0
@@ -22,9 +22,12 @@ Collate:
   AllSupplementsAVS.R
   AllPlotsTNA.R
   AllPlotsAVS.R
+  AllPlotsTNI.R
   TNA-methods.R
   TNI-methods.R
   AVS-methods.R
   TNI-pruning.R
+  TNI-annotation.R
+  TNI-subgroups.R
 LazyLoad: yes
 

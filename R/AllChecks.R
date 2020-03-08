@@ -1,17 +1,21 @@
 ##This function is used for argument checking
 tnai.checks <- function(name, para, supp) {
   if(name=="alpha") {
-    if(!(is.integer(para) || is.numeric(para)) || length(para)!=1 || para>1 || para<0)
-      stop("'alpha' should be an integer or numeric value <=1 and >=0 !\n",call.=FALSE)
+    if(!(is.integer(para) || is.numeric(para)) || length(para)!=1 || 
+       para>1 || para<0)
+      stop("'alpha' should be an integer or numeric value <=1 and >=0 !\n",
+           call.=FALSE)
   }
   else if(name=="maxgap") {
-    if(!(is.integer(para) || is.numeric(para)) || length(para)!=1 || para<0 || as.integer(para)<para)
+    if(!(is.integer(para) || is.numeric(para)) || length(para)!=1 || para<0 ||
+       as.integer(para)<para)
       stop("'maxgap' should be an integer value >=0!\n",call.=FALSE)
   }
   else if(name=="sizeFilterMethod") {
     opts <- c("posPLUSneg","posORneg","posANDneg")
     if(!is.singleString(para) || !(para %in% opts))
-      stop(paste("'sizeFilterMethod' should be any one of the options: \n", opts ),call.=FALSE )
+      stop(paste("'sizeFilterMethod' should be any one of the options: \n", 
+                 opts ),call.=FALSE )
   }
  else if(name=="tna.what"){
     opts<-c("summary","status","para",
@@ -23,52 +27,62 @@ tnai.checks <- function(name, para, supp) {
             "rowAnnotation", "colAnnotation",
             "mra","gsea1", "gsea2","gsea2summary",
             "overlap","synergy","shadow")
-    supps <- c("nondpiregulons.and.mode","regulons.and.pheno","refregulons.and.pheno")
+    supps <- c("nondpiregulons.and.mode","regulons.and.pheno",
+               "refregulons.and.pheno")
     if(!is.character(para) || length(para)!=1 || !(para %in% c(opts,supps)))
-      stop(paste("'what' should be any one of the options: ", paste(opts,collapse = ", ") ),call.=FALSE )
+      stop(paste("'what' should be any one of the options: ", 
+                 paste(opts,collapse = ", ") ),call.=FALSE )
   }
  else if(name=="tni.what"){
-    opts<-c("summary","status", "para",
-            "gexp","regulatoryElements",
-            "tnet","refnet",
+    opts<-c("summary","status","para",
+            "gexp","regulatoryElements","targetElements",
+            "tnet","refnet","modulators",
             "regulonSize","refregulonSize",
             "regulons","refregulons",
             "regulons.and.mode", "refregulons.and.mode",
-            "rowAnnotation", "colAnnotation", "cdt","cdtrev")
+            "rowAnnotation", "colAnnotation", "cdt.list","cdt.table",
+            "subgroupEnrichment")
     supps <- c("regulons.and.mode.gmm","refregulons.and.mode.gmm")
     if(!is.character(para) || length(para)!=1 || !(para %in% c(opts,supps)))
-      stop(paste("'what' should be any one of the options: ", paste(opts,collapse = ", ") ) ,call.=FALSE )
+      stop(paste("'what' should be any one of the options: ", 
+                 paste(opts,collapse = ", ") ) ,call.=FALSE )
   }
  else if(name=="avs.what"){
     opts<-c("markers","validatedMarkers","variantSet","randomSet","summary",
             "status","linkedMarkers","randomMarkers","vse","evse","pevse",
             "annotation.vse","annotation.evse","annotation.pevse")
     if(!is.character(para) || length(para)!=1 || !(para %in% opts))
-      stop(paste("'what' should be any one of the options: ", paste(opts,collapse = ", ") ),call.=FALSE )
+      stop(paste("'what' should be any one of the options: ", 
+                 paste(opts,collapse = ", ") ),call.=FALSE )
   }
  else if(name=="avs.plot.what"){
     opts<-c("vse","evse","pevse")
     if(!is.character(para) || length(para)!=1 || !(para %in% opts))
-      stop(paste("'avs.plot.what' should be any one of the options: \n", paste(opts,collapse = ", ") ),call.=FALSE )
+      stop(paste("'avs.plot.what' should be any one of the options: \n", 
+                 paste(opts,collapse = ", ") ),call.=FALSE )
   }
  else if(name=="reldata"){
-    opts<-c("RTNdata.LDrel27","RTNdata.LDHapMapRel27","RTNdata.LD1000gRel20130502")
+    opts<-c("RTNdata.LDrel27","RTNdata.LDHapMapRel27",
+            "RTNdata.LD1000gRel20130502")
     if(!is.character(para) || length(para)!=1 || !(para %in% opts))
-      stop(paste("available 'reldata':", paste(opts,collapse = ", ") ),call.=FALSE)
+      stop(paste("available 'reldata':", paste(opts,collapse = ", ") ),
+           call.=FALSE)
   }
  else if(name=="tni.gtype"){
     opts<-c("rmap","amap","amapDend","mmap","mmapDetailed")
     if(!is.character(para) || length(para)!=1 || !(para %in% opts))
-      stop(paste("'gtype' should be any one of the options:", paste(opts,collapse = ", ") ),call.=FALSE )
+      stop(paste("'gtype' should be any one of the options:", 
+                 paste(opts,collapse = ", ") ),call.=FALSE )
   }
  else if(name=="hcl"){
-    if( !is.null(para) && !class(para)=="hclust" )
+    if( !is.null(para) && !is(para,"hclust") )
       stop("'hcl' should be an 'hclust' object whith TF's IDs!",call.=FALSE)
   }
  else if(name=="tna.gtype"){
     opts<-c("rmap","amap")
     if(!is.character(para) || length(para)!=1 || !(para %in% opts))
-      stop(paste("'gtype' should be any one of the options:", paste(opts,collapse = ", ") ),call.=FALSE )
+      stop(paste("'gtype' should be any one of the options:", 
+                 paste(opts,collapse = ", ") ),call.=FALSE )
   }
  else if(name=="order") {
     if(!is.logical(para) || length(para)!=1)
@@ -77,17 +91,23 @@ tnai.checks <- function(name, para, supp) {
  else if(name=="regulon.order") {
     opts<-c('name','score','size', 'pvalue','adj.pvalue','none')
     if(!is.character(para) || length(para)!=1 || !(para %in% opts))
-      stop(paste("'regulon.order' should be any one of the options:", paste(opts,collapse = ", ") ),call.=FALSE )
-    para<-switch(which(opts%in%para),'Regulon','Observed.Score','Regulon.Size','Pvalue','Adjusted.Pvalue','none')
+      stop(paste("'regulon.order' should be any one of the options:", 
+                 paste(opts,collapse = ", ") ),call.=FALSE )
+    para<-switch(which(opts%in%para),'Regulon','Observed.Score',
+                 'Regulon.Size','Pvalue','Adjusted.Pvalue','none')
     return(para)
   }
  else if(name=="ntop") {
-    if(!is.null(para) && ( !(is.numeric(para) || is.integer(para)) || length(para)!=1 || round(para,0)!=para) )
+    if(!is.null(para) && ( !(is.numeric(para) || is.integer(para)) || 
+                           length(para)!=1 || round(para,0)!=para) )
       stop("'ntop' should be an integer value!",call.=FALSE)
   }
  else if(name=="estimator"){
-    if(!is.character(para) || length(para)!=1 || !(para %in% c("pearson", "kendall", "spearman")))
-      stop("'estimator' should be any one of 'pearson', 'kendall' and 'spearman'!",call.=FALSE)
+    if(!is.character(para) || length(para)!=1 || 
+       !(para %in% c("pearson", "kendall", "spearman")))
+      stop(
+        "'estimator' should be any one of 'pearson', 'kendall' and 'spearman'!",
+           call.=FALSE)
   }
  else if(name=="pwtransform"){
     if(!is.logical(para) || length(para)!=1)
@@ -98,14 +118,19 @@ tnai.checks <- function(name, para, supp) {
       stop("'medianEffect' should be a logical value!",call.=FALSE)
   }
  else if(name=="mdStability.custom"){ 
-    if( (!is.numeric(para) && !is.integer(para)) || length(para)<1 || length(para)>2){
-      stop("custom 'mdStability' should be a numeric value, or a vector of length = 2!",call.=FALSE)
+    if( (!is.numeric(para) && !is.integer(para)) || length(para)<1 || 
+        length(para)>2){
+      stop("custom 'mdStability' should be a numeric value, or a vector 
+           of length = 2!",
+           call.=FALSE)
     }
     if(length(para)==1){
       para<-c(-abs(para),abs(para))
     } else {
       para<-sort(para)
-      if(sum(para>0)!=1)stop("custom 'mdStability' upper and lower bounds should have different signals!")
+      if(sum(para>0)!=1)
+        stop("custom 'mdStability' upper and lower bounds should have 
+             different signals!")
     }
     return(para)
   }
@@ -130,119 +155,173 @@ tnai.checks <- function(name, para, supp) {
       stop("'tnet' should be any one of 'dpi' and 'ref'!",call.=FALSE)
   }
  else if(name=="TNI"){
-    if(!class(para)=="TNI")
+    if(!is(para,"TNI"))
       stop("'object' should be an object of class 'TNI'!",call.=FALSE)
     if( sum(names(para@results)%in%c("tn.ref", "tn.dpi") )<2 )
       stop("'object' should contain results in the slot 'result'!",call.=FALSE)
     if(!is.character(para@regulatoryElements) || 
       any(is.na(para@regulatoryElements)) || any(para@regulatoryElements==""))
-      stop("'object' should contain names of regulatory elements in the slot 'regulatoryElements'!",call.=FALSE)
+      stop("'object' should contain names of regulatory elements in the slot 
+           'regulatoryElements'!",
+           call.=FALSE)
   }
  else if(name=="transcriptionalNetwork") {
     if( !is.matrix(para) )
-      stop(" 'transcriptionalNetwork' should be a matrix with targets on rows and TFs on cols!",call.=FALSE)
+      stop("'transcriptionalNetwork' should be a matrix with targets on rows 
+           and TFs on cols!",
+           call.=FALSE)
     if( is.null(colnames(para)) || is.null(rownames(para)) || 
         any(duplicated(rownames(para))) || any(duplicated(colnames(para))) )
-      stop("'transcriptionalNetwork' should be a matrix of named rows and cols, witg unique names!",call.=FALSE)  
+      stop("'transcriptionalNetwork' should be a matrix of named rows and cols, 
+           with unique names!",
+           call.=FALSE)  
     if(sum(is.na(para))>0)
       stop("'transcriptionalNetwork' matrix should have no NAs!",call.=FALSE)
   }
  else if(name=="referenceNetwork") {
     if( !is.matrix(para) )
-      stop("'referenceNetwork' should be a matrix with targets on rows and TFs on cols!",call.=FALSE)
+      stop("'referenceNetwork' should be a matrix with targets on rows and 
+           TFs on cols!",
+           call.=FALSE)
     if(  is.null(colnames(para)) || is.null(rownames(para)) || 
          any(duplicated(rownames(para))) || any(duplicated(colnames(para))) )
-      stop("'referenceNetwork' should be a matrix of named rows and cols (unique names)!",call.=FALSE)  
+      stop("'referenceNetwork' should be a matrix of named rows and cols 
+           (unique names)!",
+           call.=FALSE)  
     if(sum(is.na(para))>0)
       stop("'referenceNetwork' matrix should have no NAs!",call.=FALSE)
   }  
  else if(name=="expData") {
     if( !is.matrix(para) || !is.numeric(para[1,]))
-      stop("'expData' should be a numeric matrix with genes on rows and samples on cols!",call.=FALSE)
+      stop("'expData' should be a numeric matrix with genes on rows and 
+           samples on cols!",
+           call.=FALSE)
     if(  is.null(colnames(para)) || is.null(rownames(para)) || 
          any(duplicated(rownames(para))) || any(duplicated(colnames(para))) )
-      stop("the 'expData' matrix should be named on rows and cols (unique names)!",call.=FALSE)
+      stop(
+        "the 'expData' matrix should be named on rows and cols (unique names)!",
+           call.=FALSE)
   } else if(name=="gxdata") {
     if( !is.matrix(para) || !is.numeric(para[1,]))
-      stop("'gxdata' should be a numeric matrix with genes on rows and samples on cols!",call.=FALSE)
+      stop(
+        "'gxdata' should be a numeric matrix with genes on rows and 
+        samples on cols!",
+           call.=FALSE)
     if(  is.null(colnames(para)) || is.null(rownames(para)) || 
          any(duplicated(rownames(para))) || any(duplicated(colnames(para))) )
-      stop("the 'gxdata' matrix should be named on rows and cols (unique names)!",call.=FALSE)
+      stop(
+        "the 'gxdata' matrix should be named on rows and cols (unique names)!",
+           call.=FALSE)
   } else if(name=="regulatoryElements") {
     if(!is.null(para)){
       if(!is.character(para) || any(is.na(para)) || any(para==""))
-        stop("'regulatoryElements' should be a character vector, without 'NA' or empty names!",call.=FALSE)
+        stop("'regulatoryElements' should be a character vector, without 'NA' 
+             or empty names!",
+             call.=FALSE)
+    }
+  } else if(name=="targetElements") {
+    if(!is.null(para)){
+      if(!is.character(para) || any(is.na(para)) || any(para==""))
+        stop("'targetElements' should be a character vector, without 'NA' or 
+             empty names!",
+             call.=FALSE)
     }
   } else if(name=="samples") {
     if(!is.null(para)){
       if(!all.characterValues(para)){
-        stop("'samples' should be a character vector, without 'NA'!",call.=FALSE)
+        stop("'samples' should be a character vector, without 'NA'!",
+             call.=FALSE)
       }
     }
   } else if(name=="features") {
     if(!is.null(para)){
       if(!all.characterValues(para)){
-        stop("'features' should be a character vector, without 'NA'!",call.=FALSE)
+        stop("'features' should be a character vector, without 'NA'!",
+             call.=FALSE)
       }
     }
   } else if(name == "refsamp"){
     if(!is.null(para)){
       if(!all.characterValues(para)){
-        stop("'refsamp' should be a character vector, without 'NA'!",call.=FALSE)
+        stop("'refsamp' should be a character vector, without 'NA'!",
+             call.=FALSE)
       }
     }
   } else if(name=="tfs") {
     if(!is.null(para)){
     if( !is.character(para) || any(is.na(para)) || any(para==""))
-      stop("'tfs' should be a character vector, without 'NA' or empty names!",call.=FALSE)
+      stop("'tfs' should be a character vector, without 'NA' or empty names!",
+           call.=FALSE)
     }
   } else if(name=="mds") {
     if(!is.null(para)){
       if( !is.character(para) || any(is.na(para)) || any(para==""))
-        stop("'mds' should be a character vector, without 'NA' or empty names!",call.=FALSE)
+        stop("'mds' should be a character vector, without 'NA' or empty names!",
+             call.=FALSE)
     }
   } else if(name=="modulators") {
-    if(!is.null(para)){
-      if( !is.character(para) || any(is.na(para)) || any(para==""))
-        stop("'modulators' should be a character vector, without 'NA' or empty names!",call.=FALSE) 
-    }
+    if( is.null(para) || !is.character(para) || any(is.na(para)) || 
+        any(para==""))
+      stop(
+        "'modulators' should be a character vector, without 'NA' or 
+        empty names!",
+           call.=FALSE) 
   } else if(name=="sampling") {
-    if( !(is.integer(para) || is.numeric(para)) || length(para)!=1 || para>100 || para<1 || round(para,0)!=para )
-      stop("'sampling' should be an integer value >= 1 and <= 100 !",call.=FALSE)
+    if( !(is.integer(para) || is.numeric(para)) || length(para)!=1 || 
+        para>100 || para<1 || round(para,0)!=para )
+      stop("'sampling' should be an integer value >= 1 and <= 100 !",
+           call.=FALSE)
   } else if(name=="probs") {
-    if( !(is.integer(para) || is.numeric(para)) || length(para)!=1 || para>1 || para<0)
+    if( !(is.integer(para) || is.numeric(para)) || length(para)!=1 || 
+        para>1 || para<0)
       stop("'probs' should be a numeric value >= 0 and <= 1 !",call.=FALSE)
   } else if(name=="minRegCor") {
-    if( !(is.integer(para) || is.numeric(para)) || length(para)!=1 || para>1 || para<0)
-        stop("'minRegCor' should be a numeric value >= 0 and <= 1 !",call.=FALSE)
+    if( !(is.integer(para) || is.numeric(para)) || length(para)!=1 || 
+        para>1 || para<0)
+        stop("'minRegCor' should be a numeric value >= 0 and <= 1 !",
+             call.=FALSE)
   } else if(name=="prob") {
-    if( !(is.integer(para) || is.numeric(para)) || length(para)!=1 || para>1 || para<0)
+    if( !(is.integer(para) || is.numeric(para)) || length(para)!=1 || 
+        para>1 || para<0)
       stop("'prob' should be a numeric value >= 0 and <= 1 !",call.=FALSE)
   } else if(name=="amapCutoff") {
-    if(!is.null(para) && (!is.numeric(para) || length(para)!=1 || para>1 || para<0))
+    if(!is.null(para) && (!is.numeric(para) || length(para)!=1 || 
+                          para>1 || para<0))
       stop("'amapCutoff' should be a numeric value >=0 and <=1!",call.=FALSE)
   } else if(name=="amapFilter"){
-    if(!is.character(para) || length(para)!=1 || !(para %in% c("phyper","quantile","custom")))
-      stop("'amapFilter' should be any one of 'quantile', 'phyper' and 'custom'!",call.=FALSE)
+    if(!is.character(para) || length(para)!=1 || 
+       !(para %in% c("phyper","quantile","custom")))
+      stop(
+        "'amapFilter' should be any one of 'quantile', 'phyper' and 'custom'!",
+           call.=FALSE)
   } else if(name=="listOfRegulons") {
     if(!is.list(para))
       stop("'listOfRegulons' should be a list of gene sets!\n")
-    if(  is.null(names(para)) || length(unique(names(para)))<length(names(para))  )
-      stop("'listOfRegulons' should be a named list (unique names)!",call.=FALSE)
+    if(  is.null(names(para)) || 
+         length(unique(names(para)))<length(names(para))  )
+      stop("'listOfRegulons' should be a named list (unique names)!",
+           call.=FALSE)
     junk<-lapply(para,function(reg){
       if(!is.character(reg))
-        stop("'listOfRegulons' should include character vectors!",call.=FALSE)
+        stop("'listOfRegulons' should include character vectors!",
+             call.=FALSE)
     })
   } else if(name=="listOfRegulonsAndMode") {
     if(!is.list(para))
       stop("'listOfRegulonsAndMode' should be a list of gene sets!\n")
-    if(  is.null(names(para)) || length(unique(names(para)))<length(names(para))  )
-      stop("'listOfRegulonsAndMode' should be a named list (unique names)!",call.=FALSE)
+    if(  is.null(names(para)) || 
+         length(unique(names(para)))<length(names(para))  )
+      stop("'listOfRegulonsAndMode' should be a named list (unique names)!",
+           call.=FALSE)
     junk<-lapply(para,function(reg){
       if( !( is.numeric(reg) || is.integer(reg) ) )
-        stop("'listOfRegulonsAndMode' should include named numeric or integer vectors!",call.=FALSE)
+        stop("'listOfRegulonsAndMode' should include named numeric or 
+             integer vectors!",
+             call.=FALSE)
       if(is.null(names(reg)) || any(is.na(names(reg))) || any(names(reg)==""))
-        stop("'listOfRegulonsAndMode' should include named vectors, without 'NA' or empty names!",call.=FALSE)
+        stop("'listOfRegulonsAndMode' should include named vectors, 
+             without 'NA' or empty names!",
+             call.=FALSE)
     })
   } else if(name=="glist") {
     if(!is.null(para)){
@@ -259,26 +338,51 @@ tnai.checks <- function(name, para, supp) {
     }
   } else if(name=="pAdjustMethod") {
     if(!is.character(para) || length(para)!=1 || 
-      !(para %in% c("holm", "hochberg", "hommel", "bonferroni", "BH", "BY", "fdr")))
-      stop("'pAdjustMethod' should be any one of 'holm','hochberg','hommel','bonferroni','BH','BY' and 'fdr'!",call.=FALSE)
+      !(para %in% c("holm", "hochberg", "hommel", "bonferroni", 
+                    "BH", "BY", "fdr")))
+      stop("'pAdjustMethod' should be any one of 'holm','hochberg','hommel',
+           'bonferroni','BH','BY' and 'fdr'!",call.=FALSE)
   } else if(name=="coverage") {
     if(!is.character(para) || length(para)!=1 || 
          !(para %in% c("tnet", "all")))
       stop("'coverage' should be any one of 'tnet' and 'all'!",call.=FALSE)
   } else if(name=="pValueCutoff") {
-    if(!(is.integer(para) || is.numeric(para)) || length(para)!=1 || para>1 || para<0)
-      stop("'pValueCutoff' should be an integer or numeric value >=0 and <=1  !",call.=FALSE)
+    if(!(is.numeric(para)) || length(para)!=1 || para>1 || para<0)
+      stop("'pValueCutoff' should be a numeric value >=0 and <=1  !",
+           call.=FALSE)
+  } else if(name=="betaA") {
+    if(!(is.numeric(para)) || length(para)!=1 || para>0.99 || para<0.001)
+      stop("'betaA' should be a numeric value >=0.01 and <=0.99  !",
+           call.=FALSE)
+  } else if(name=="alphaA") {
+    if(!(is.numeric(para)) || length(para)!=1 || para>0.99 || para<1e-100)
+      stop("'alphaA' should be a numeric value >=1e-100 and <=0.99  !",
+           call.=FALSE)
+  } else if(name=="nA") {
+    if(!is.singleInteger(para) || para<1)
+      stop("'nA' should be a single integer value >0 !",call.=FALSE)
+  } else if(name=="nB") {
+    if(!is.singleInteger(para) || para<1)
+      stop("'nB' should be a single integer value >0 !",call.=FALSE)
   } else if(name=="miThreshold") {
     if(is.character(para)){
-      if(!is.character(para) || length(para)!=1 || !(para %in% c("md","md.tf")))
-        stop("'miThreshold' should be any one of 'md' and 'md.tf''!",call.=FALSE)
+      if(!is.character(para) || length(para)!=1 || 
+         !(para %in% c("md","md.tf")))
+        stop("'miThreshold' should be any one of 'md' and 'md.tf''!",
+             call.=FALSE)
     } else {
-      if( !(is.integer(para) || is.numeric(para)) || length(para)<1 || length(para)>2)
-        stop("custom 'miThreshold' should be a numeric value, or a vector of length = 2!",call.=FALSE)
+      if( !(is.integer(para) || is.numeric(para)) || length(para)<1 || 
+          length(para)>2)
+        stop(
+          "custom 'miThreshold' should be a numeric value, 
+          or a vector of length = 2!",
+             call.=FALSE)
     }
   } else if(name=="consensus") {
-    if(!(is.integer(para) || is.numeric(para)) || length(para)!=1 || para>100 || para<1)
-      stop("'consensus' should be an integer or numeric value <=100 and >=1 !",call.=FALSE)
+    if(!(is.integer(para) || is.numeric(para)) || length(para)!=1 || 
+       para>100 || para<1)
+      stop("'consensus' should be an integer or numeric value <=100 and >=1 !",
+           call.=FALSE)
   } else if(name=="pooledNullDistribution") {
     if(!is.singleLogical(para))
       stop("'pooledNullDistribution' should be a logical value!",call.=FALSE)
@@ -298,47 +402,69 @@ tnai.checks <- function(name, para, supp) {
     if(!is.singleLogical(para))
       stop("'scale' should be a logical value!",call.=FALSE)
   } else if(name=="nPermutations") {
-    if(!(is.integer(para) || is.numeric(para)) || length(para)!=1 || para<1 || round(para,0)!=para)
+    if(!(is.integer(para) || is.numeric(para)) || length(para)!=1 || 
+       para<1 || round(para,0)!=para)
       stop("'nPermutations' should be an integer >=1 !",call.=FALSE)
   } else if(name=="parChunks") {
     if(!is.null(para)){
-      if(!(is.integer(para) || is.numeric(para)) || length(para)!=1 || para<2 || round(para,0)!=para)
+      if(!(is.integer(para) || is.numeric(para)) || length(para)!=1 || 
+         para<2 || round(para,0)!=para)
         stop("'parChunks' should be an integer >=2 !",call.=FALSE)
     }
   } else if(name=="nBootstraps") {
-    if(!(is.integer(para) || is.numeric(para)) || length(para)!=1 || para<1 || round(para,0)!=para)
+    if(!(is.integer(para) || is.numeric(para)) || length(para)!=1 || 
+       para<1 || round(para,0)!=para)
       stop("'nBootstraps' should be an integer >=1 !",call.=FALSE)
   } else if(name=="minRegulonSize") {
-    if(!(is.integer(para) || is.numeric(para)) || length(para)!=1 || para<1 || round(para,0)!=para)
+    if(!(is.integer(para) || is.numeric(para)) || length(para)!=1 || 
+       para<1 || round(para,0)!=para)
       stop("'minRegulonSize' should be an integer >=1 !",call.=FALSE) 
+  } else if(name=="minGeneSetSize") {
+    if(!(is.integer(para) || is.numeric(para)) || length(para)!=1 || 
+       para<1 || round(para,0)!=para)
+      stop("'minGeneSetSize' should be an integer >=1 !",call.=FALSE) 
   } else if(name=="minPrunedSize") {
-    if(!(is.integer(para) || is.numeric(para)) || length(para)!=1 || para<1 || round(para,0)!=para)
+    if(!(is.integer(para) || is.numeric(para)) || length(para)!=1 || 
+       para<1 || round(para,0)!=para)
         stop("'minPrunedSize' should be an integer >=1 !",call.=FALSE) 
   } else if(name=="activityMethod") {
-    if(!is.character(para) || length(para)!=1 || !(para %in% c("gsea2", "GSEA2", "area3", "AREA3")))
-    stop("'activityMethod' should be 'GSEA2' or 'AREA3'!",call.=FALSE)
+    if(!is.character(para) || length(para)!=1 || 
+       !(para %in% c("gsea2", "GSEA2", "area3", "AREA3")))
+    stop("'activityMethod' should be 'GSEA2' or 'AREA3'!",
+         call.=FALSE)
   } else if(name=="minSize") {
-    if(!(is.integer(para) || is.numeric(para)) || length(para)!=1 || para<1 || round(para,0)!=para)
+    if(!(is.integer(para) || is.numeric(para)) || length(para)!=1 || 
+       para<1 || round(para,0)!=para)
       stop("'minSize' should be an integer >=1 !",call.=FALSE) 
   } else if(name=="evse.minSize") {
-    if(!(is.integer(para) || is.numeric(para)) || any(para<1) || any(round(para,0)!=para) )
+    if(!(is.integer(para) || is.numeric(para)) || any(para<1) || 
+       any(round(para,0)!=para) )
       stop("'minSize' should be integer >=1 !",call.=FALSE)
     if( length(para)<1 || length(para)>2)
-      stop("'minSize' should either be a single value or a vector of length = 2 !",call.=FALSE)
+      stop(
+        "'minSize' should either be a single value or a vector of length = 2 !",
+           call.=FALSE)
     if(length(para)==1)para<-c(para,para)
     return(para)
   } else if(name=="minIntersectSize") {
-    if(!(is.integer(para) || is.numeric(para)) || length(para)!=1 || para<0 || para>100)
-      stop("'minIntersectSize' should be an integer >=0 and <=100 !",call.=FALSE)
+    if(!(is.integer(para) || is.numeric(para)) || length(para)!=1 || 
+       para<0 || para>100)
+      stop("'minIntersectSize' should be an integer >=0 and <=100 !",
+           call.=FALSE)
   } else if(name=="minAgreement") {
-    if(!(is.integer(para) || is.numeric(para)) || length(para)!=1 || para<1 || para>100)
+    if(!(is.integer(para) || is.numeric(para)) || length(para)!=1 || 
+       para<1 || para>100)
       stop("'minAgreement' should be an integer >=1 and <=100 !",call.=FALSE)
   } else if(name=="statFilter") {
-    if(!is.character(para) || length(para)!=1 || !(para %in% c("phyper","pchisq")))
-      stop("'statFilter' should be any one of 'phyper' and 'pchisq'!",call.=FALSE)
+    if(!is.character(para) || length(para)!=1 || 
+       !(para %in% c("phyper","pchisq")))
+      stop("'statFilter' should be any one of 'phyper' and 'pchisq'!",
+           call.=FALSE)
   } else if(name=="statUniverse") {
-    if(!is.character(para) || length(para)!=1 || !(para %in% c("all","tnet","reg")))
-      stop("'statUniverse' should be any one of 'all' and 'tnet'!",call.=FALSE)
+    if(!is.character(para) || length(para)!=1 || 
+       !(para %in% c("all","tnet","reg")))
+      stop("'statUniverse' should be any one of 'all' and 'tnet'!",
+           call.=FALSE)
   } else if(name=="eps") {
     if(!is.na(para)){
       if(!is.numeric(para) || length(para)!=1 || para<0)
@@ -383,23 +509,31 @@ tnai.checks <- function(name, para, supp) {
   } else if(name=="phenotype") {
     if(!is.null(para)){
       if( !( is.numeric(para) || is.integer(para) ) || length(para)==0 )
-        stop("'phenotype' should be a named numeric or integer vector with length >0 !",call.=FALSE)
+        stop(
+          "'phenotype' should be a named numeric or integer vector 
+          with length >0 !",
+             call.=FALSE)
       if(is.null(names(para)))
-        stop("'phenotype' should be a named vector, without 'NA' or empty names!",call.=FALSE)
+        stop(
+          "'phenotype' should be a named vector, without 'NA' or empty names!",
+             call.=FALSE)
     }
   } else if(name=="hits") {
     if(!is.null(para)){
       if(!is.character(para) || length(para)==0 || !is.vector(para))
-        stop("'hits' should be a character vector with length >0 !",call.=FALSE)      
+        stop("'hits' should be a character vector with length >0 !",
+             call.=FALSE)      
     }
   } else if(name=="phenoIDs") {
     if(is.null(para)){
       return(para)
     } else {
       if( (!is.matrix(para) && !is.data.frame(para) ) || ncol(para)<2 ){
-        stop("'phenoIDs' should be a dataframe (or a matrix of characters) with ncol >=2 !",call.=FALSE)
+        stop("'phenoIDs' should be a dataframe (or a matrix of characters) 
+             with ncol >=2 !",
+             call.=FALSE)
       }
-      for(i in 1:ncol(para)){
+      for(i in seq_len(ncol(para))){
         tp<-para[,i]
         if(is.list(tp))tp<-unlist(tp)
         if(i<=2 || is.factor(tp))tp<-as.character(tp)
@@ -407,7 +541,8 @@ tnai.checks <- function(name, para, supp) {
       }
       rownames(para)<-para[,1]
       if( (any(is.na(para[,1])) || any(para[,1]=="") ) ){
-        stop("Col 1 in 'phenoIDs' matrix should have no 'NA' or empty values!",call.=FALSE)      
+        stop("Col 1 in 'phenoIDs' matrix should have no 'NA' or empty values!",
+             call.=FALSE)      
       }
       para<-as.data.frame(para,stringsAsFactors=FALSE)
       return(para)
@@ -449,10 +584,11 @@ tnai.checks <- function(name, para, supp) {
     }
     colnames(para)[1]<-"ID"
     #---
-    for(i in 1:ncol(para)){
+    for(i in seq_len(ncol(para))){
       tp<-para[,i]
       if( any( is.na(tp) || any(tp=="") ) ){
-        stop("'annotation' matrix should have no 'NA' or empty values!",call.=FALSE)      
+        stop("'annotation' matrix should have no 'NA' or empty values!",
+             call.=FALSE)      
       }
       if(is.list(tp))para[,i]<-unlist(tp)
     }
@@ -462,17 +598,19 @@ tnai.checks <- function(name, para, supp) {
     if(is.numeric(para$CHROM) || is.integer(para$CHROM)){
       para$CHROM <- paste("chr",para$CHROM,sep="")
     }
-    chrs<-c(paste("chr",1:22,sep=""),"chrX")
+    chrs<-c(paste("chr",seq_len(22),sep=""),"chrX")
     chrChecks<-!para$CHROM%in%chrs
     if( any(chrChecks) ){
       n<-sum(chrChecks)/length(chrChecks)
-      tp1<-paste("chromosome names in 'annotation' should be listed in ", sep="")
+      tp1<-paste("chromosome names in 'annotation' should be listed in ", 
+                 sep="")
       tp2<-"[chr1, chr2, chr3, ..., chr22, chrX]!"
       if(n>0.95){
         stop(tp1,tp2,call.=FALSE)
       } else {
         nonvalid <- unique(para$CHROM[chrChecks])
-        if(length(nonvalid)>1) nonvalid <- c(nonvalid[1],"...",nonvalid[length(nonvalid)])
+        if(length(nonvalid)>1) nonvalid <- c(nonvalid[1],"...",
+                                             nonvalid[length(nonvalid)])
         nonvalid <- paste(nonvalid,collapse=", ")
         tp3<-"\n...the following values were removed: "
         warning(tp1,tp2,tp3,nonvalid,call.=FALSE)
@@ -483,7 +621,9 @@ tnai.checks <- function(name, para, supp) {
     b1<-is.integer(para$START) || is.numeric(para$START)
     b2<-is.integer(para$END) || is.numeric(para$END)
     if( !(b1 && b2) ){
-      stop("Chromosome start/end positions in 'annotation' should be integer or numeric vectors!",call.=FALSE)
+      stop("Chromosome start/end positions in 'annotation' should be integer 
+           or numeric vectors!",
+           call.=FALSE)
     }
     rownames(para)<-para$ID
     return(para)
@@ -507,14 +647,17 @@ tnai.checks <- function(name, para, supp) {
     #---
     idlab<-colnames(para)[1]
     if(any(duplicated(para[,1]))){
-      stop(paste("Col '",idlab,"' in the 'annotation' data should have non-duplicated IDs!",sep=""),call.=FALSE)
+      stop(paste("Col '",idlab,
+                 "' in the 'annotation' data should have non-duplicated IDs!",
+                 sep=""),call.=FALSE)
     }
     colnames(para)[1]<-"ID"
     #---
-    for(i in 1:ncol(para)){
+    for(i in seq_len(ncol(para))){
       tp<-para[,i]
       if( any( is.na(tp) || any(tp=="") ) ){
-        stop("'annotation' matrix should have no 'NA' or empty values!",call.=FALSE)      
+        stop("'annotation' matrix should have no 'NA' or empty values!",
+             call.=FALSE)      
       }
       if(is.list(tp))para[,i]<-unlist(tp)
     }
@@ -528,13 +671,15 @@ tnai.checks <- function(name, para, supp) {
     chrChecks<-!para$CHROM%in%chrs
     if( any(chrChecks) ){
       n<-sum(chrChecks)/length(chrChecks)
-      tp1<-paste("chromosome values in 'annotation' should be listed in ", sep="")
+      tp1<-paste("chromosome values in 'annotation' should be listed in ", 
+                 sep="")
       tp2<-"[chr1, chr2, chr3, ..., chr22, chrX]!"
       if(n>0.95){
         stop(tp1,tp2,call.=FALSE)
       } else {
         nonvalid <- unique(para$CHROM[chrChecks])
-        if(length(nonvalid)>1) nonvalid <- c(nonvalid[1],"...",nonvalid[length(nonvalid)])
+        if(length(nonvalid)>1) nonvalid <- c(nonvalid[1],"...",nonvalid[
+          length(nonvalid)])
         nonvalid <- paste(nonvalid,collapse=", ")
         tp3<-"\n...the following values were removed: "
         warning(tp1,tp2,tp3,nonvalid,call.=FALSE)
@@ -545,7 +690,9 @@ tnai.checks <- function(name, para, supp) {
     b1<-is.integer(para$START) || is.numeric(para$START)
     b2<-is.integer(para$END) || is.numeric(para$END)
     if( !(b1 && b2) ){
-      stop("Chromosome start/end positions in 'annotation' should be integer or numeric vectors!",call.=FALSE)
+      stop("Chromosome start/end positions in 'annotation' should be integer 
+           or numeric vectors!",
+           call.=FALSE)
     }
     rownames(para)<-para$ID
     return(para)
@@ -555,7 +702,8 @@ tnai.checks <- function(name, para, supp) {
     }
     colnames(para)<-toupper(colnames(para))
     if(!all(c("RSID","GENEID") %in% colnames(para))){
-      stop("'eqtls' should include two columns named <RSID> and <GENEID> !",call.=FALSE)
+      stop("'eqtls' should include two columns named <RSID> and <GENEID> !",
+           call.=FALSE)
     }
     para$RSID <- as.character(para$RSID)
     para$GENEID <- as.character(para$GENEID)
@@ -565,10 +713,14 @@ tnai.checks <- function(name, para, supp) {
       return(para)
     } else {
       if( (!is.matrix(para) && !is.data.frame(para) ) || ncol(para)<2){
-        stop("'rowAnnotation' should be a data frame (or a matrix of characters) with ncol >=2 !",call.=FALSE)
+        stop(
+          "'rowAnnotation' should be a data frame (or a matrix of characters) 
+          with ncol >=2 !", call.=FALSE
+          )
       }
-      if(is.matrix(para))para <- data.frame(para,stringsAsFactors=FALSE, check.names=FALSE)
-      for(i in 1:ncol(para)){
+      if(is.matrix(para))para <- data.frame(para,stringsAsFactors=FALSE, 
+                                            check.names=FALSE)
+      for(i in seq_len(ncol(para))){
         tp<-para[,i]
         if(is.list(tp))tp<-unlist(tp)
         if(is.factor(tp))tp<-as.character(tp)
@@ -580,14 +732,17 @@ tnai.checks <- function(name, para, supp) {
       }
       colnames(para)<-toupper(colnames(para))
       if(any(duplicated(colnames(para)))){
-        stop("'rowAnnotation' should have unique colnames (not case sensitive)!")
+        stop(
+          "'rowAnnotation' should have unique colnames (not case sensitive)!"
+          )
       }
       #check rownames ('supp' is gexp's rownames)
       n1 <- sum(supp%in%para[,1])
       n2 <- sum(supp%in%rownames(para))
       if(n1>=n2){
         if(any(is.na(para[,1])) || any(para[,1]=="")){
-          stop("Col 1 in 'rowAnnotation' should have no NA or empty value!",call.=FALSE)
+          stop("Col 1 in 'rowAnnotation' should have no NA or empty value!",
+               call.=FALSE)
         }
         if(any(duplicated(para[,1])))
           stop("Col 1 in 'rowAnnotation' should have unique ids!",call.=FALSE)
@@ -602,12 +757,16 @@ tnai.checks <- function(name, para, supp) {
       return(para)
     } else {
       if((!is.matrix(para) && !is.data.frame(para)) || ncol(para)<2){
-        stop("'colAnnotation' should be a data frame (or a matrix of characters) with ncol >=2 !",call.=FALSE)
+        stop(
+          "'colAnnotation' should be a data frame (or a matrix of characters) 
+          with ncol >=2 !",
+          call.=FALSE
+          )
       }
       if(is.matrix(para)){
         para <- data.frame(para,stringsAsFactors=FALSE, check.names=FALSE)
       }
-      for(i in 1:ncol(para)){
+      for(i in seq_len(ncol(para))){
         column <- para[,i]
         if(is.list(column)){
           column <- sapply(column, paste, collapse = ", ")
@@ -627,7 +786,8 @@ tnai.checks <- function(name, para, supp) {
       if(n1>=n2){
         para[,1] <- as.character(para[,1])
         if(any(is.na(para[,1])) || any(para[,1]=="")){
-          stop("Col 1 in 'colAnnotation' should have no NA or empty value!",call.=FALSE)
+          stop("Col 1 in 'colAnnotation' should have no NA or empty value!",
+               call.=FALSE)
         }
         if(any(duplicated(para[,1])))
           stop("Col 1 in 'colAnnotation' should have unique ids!",call.=FALSE)
@@ -638,14 +798,24 @@ tnai.checks <- function(name, para, supp) {
       return(para)
     }
   } else if(name=="duplicateRemoverMethod") {
-    if(!is.character(para) || length(para) != 1 || !(para %in% c("max","min","average")))
-      stop("'duplicateRemoverMethod' should be one of the following character strings: 'max', 'min' and 'average'",call.=FALSE)
+    if(!is.character(para) || length(para) != 1 || 
+       !(para %in% c("max","min","average")))
+      stop(
+        "'duplicateRemoverMethod' should be one of the following 
+        character strings: 'max', 'min' and 'average'",
+        call.=FALSE)
   } else if(name=="gs") {
-    if(!is.character(para) || length(para)==0 || any(is.na(para)) || any(para==""))
-      stop("'geneSet/regulon' should be a character vector with length > 0, without 'NA' or empty names!",call.=FALSE)
+    if(!is.character(para) || length(para)==0 || 
+       any(is.na(para)) || any(para==""))
+      stop(
+        "'geneSet/regulon' should be a character vector with length > 0, 
+        without 'NA' or empty names!",
+        call.=FALSE)
   } else if(name=="universe") {
     if(!is.character(para) || any(is.na(para)) || any(para=="")) 
-      stop("'universe' should be a character vector without 'NA' or empty values!",call.=FALSE)
+      stop(
+        "'universe' should be a character vector without 'NA' or empty values!",
+           call.=FALSE)
   }  else if(name=="globalAdjustment") {
     if(!is.logical(para) || length(para)!=1)
       stop("'globalAdjustment' should be a logical value!",call.=FALSE)
@@ -657,10 +827,12 @@ tnai.checks <- function(name, para, supp) {
       stop("'file' should be a single character!",call.=FALSE)
   } else if(name=="ylimPanels") {
     if(!(is.numeric(para) || is.integer(para)) || length(para)!=4 )
-      stop("'ylimPanels' should be a numeric vector with length =4 !",call.=FALSE)
+      stop("'ylimPanels' should be a numeric vector with length =4 !",
+           call.=FALSE)
   } else if(name=="heightPanels") {
       if(!(is.numeric(para) || is.integer(para)) || length(para)!=3 )
-      stop("'heightPanels' should be a numeric vector with length =3 !",call.=FALSE)
+      stop("'heightPanels' should be a numeric vector with length =3 !",
+           call.=FALSE)
   } else if(name=="bxseq") {
     if(!(is.numeric(para) || is.integer(para)) || length(para)<2 )
       stop("'bxseq' should be a numeric vector with length >=2 !",call.=FALSE)
@@ -681,7 +853,8 @@ tnai.checks <- function(name, para, supp) {
       stop("'bxsp' should be an integer or numeric value >0 !",call.=FALSE)
   } else if(name=="ylabPanels"){
     if(!is.character(para) || length(para)!=3)
-      stop("'ylabPanels' should be a character vector with length=3 !",call.=FALSE)
+      stop("'ylabPanels' should be a character vector with length=3 !",
+           call.=FALSE)
   } else if(name=="xlab"){
     if(!is.character(para) || length(para)!=1)
       stop("'xlab' should be a character value with length=1 !",call.=FALSE)
@@ -702,7 +875,8 @@ tnai.checks <- function(name, para, supp) {
       stop("'lab' should be a character value with length=1 !",call.=FALSE)
   } else if(name=="labPheno") {
     if(!is.character(para) || length(para)!=1)
-      stop("'labPheno' should be a character value with length=1 !",call.=FALSE)
+      stop("'labPheno' should be a character value with length=1 !",
+           call.=FALSE)
   } else if(name=="idkey") {
     if(!is.null(para)){
       if(!is.character(para) || length(para)!=1)
@@ -711,8 +885,30 @@ tnai.checks <- function(name, para, supp) {
   } else if (name=="plotpdf") {
     if(!is.logical(para) || length(para)!=1)
       stop("'plotpdf' should be a logical value with length=1 !", call.=FALSE)
+  } else if (name=="geneSetList") {
+    if(!is.list(para))
+      stop("'geneSetList' should be a list!", call.=FALSE)
+  } else if (name=="sampleGroups") {
+    if(!is.list(para) && !is.singleString(para))
+      stop("'sampleGroups' should be either a list or a string", call.=FALSE)
+  } else if (name=="nGroupsEnriched") {
+    if(!is.null(para) && (!is.singleNumber(para) || para<=0))
+      stop("'nGroupsEnriched' should be a single integer value >=1", 
+           call.=FALSE)
+  } else if (name=="nTopEnriched") {
+    if(!is.null(para) && (!is.singleNumber(para) || para<=0))
+      stop("'nTopEnriched' should be a single integer value >=1", call.=FALSE)
+  } else if (name=="colorvec") {
+    if(!is.color(para))
+      stop("'colors' should be a vector with valid colors", call.=FALSE)
+  } else if (name=="breaks") {
+    if(!is.numeric(para))
+      stop("'breaks' should be a numeric vector")
+  } else if(name=="markEnriched") {
+    if(!is.logical(para) || length(para)!=1)
+      stop("'markEnriched' should be a logical value!",call.=FALSE)
   } else {
-    stop("...<",name,"> check is missing!!",call. = FALSE)
+    stop("...<",name,"> check is missing!!", call. = FALSE)
   }
 }
 ##------------------------------------------------------------------------------
@@ -753,20 +949,26 @@ is.color <- function(x){
   
   ##-----check input arguments
   tnai.checks(name="expData",expData)
-  rowAnnotation <- tnai.checks(name="rowAnnotation",rowAnnotation,rownames(expData))
-  colAnnotation <- tnai.checks(name="colAnnotation",colAnnotation,colnames(expData))
+  rowAnnotation <- tnai.checks(name="rowAnnotation",
+                               rowAnnotation,rownames(expData))
+  colAnnotation <- tnai.checks(name="colAnnotation",
+                               colAnnotation,colnames(expData))
   
   #----check NAs and NaNs in gexp
   na.check <- sum( is.na(expData) | is.nan(expData) )
   if(na.check>0){
-    stop("--NOTE: 'expression data' should be a positive numeric matrix, without NAs or NaNs! \n")
+    stop(
+      "'expression data' should be a positive numeric matrix, 
+      without NAs or NaNs! \n", 
+         call. = FALSE
+      )
   }
   
   ##-----check rowAnnotation if available
   if(!is.null(rowAnnotation)){
     if(verbose)cat("--Mapping 'expData' to 'rowAnnotation'...\n")
     if( any(!rownames(expData)%in%rownames(rowAnnotation)) ){
-      stop("NOTE: all rownames in the expression data matrix should be available
+      stop("all rownames in the expression data matrix should be available
            either in rownames or col1 of the row annotation!",
            call.=FALSE)
     }
@@ -781,8 +983,11 @@ is.color <- function(x){
       idx<-rowAnnotation$SYMBOL==""|rowAnnotation$SYMBOL=="NA"
       rowAnnotation$SYMBOL[idx]<-rownames(rowAnnotation)[idx]
     } else {
-      tp1<-paste("NOTE: to get better gene summary across the pipelines, 'rowAnnotation'\n")
-      tp2<-paste("should provide an extra column named SYMBOL!", sep="")       
+      tp1<-paste(
+        "NOTE: to get better gene summary across the pipelines,\n")
+      tp2<-paste(
+        "'rowAnnotation' should provide an extra column named SYMBOL!", 
+                 sep="")       
       if(verbose)warning(tp1,tp2,call.=FALSE)
     }
   } else {
@@ -794,7 +999,7 @@ is.color <- function(x){
   if(!is.null(colAnnotation)){
     if(verbose)cat("--Mapping 'expData' to 'colAnnotation'...\n")
     if( any(!colnames(expData)%in%rownames(colAnnotation)) ){
-      stop("NOTE: all colnames in the expression data matrix should be available
+      stop("all colnames in the expression data matrix should be available
            either in colnames or col1 of 'colAnnotation'!",
            call.=FALSE)
     }

@@ -13,8 +13,12 @@
 \alias{tni.area3,TNI-method}
 \alias{tni.regulon.summary,TNI-method}
 \alias{tni.replace.samples,TNI-method}
+\alias{tni.annotate.regulons,TNI-method}
+\alias{tni.annotate.samples,TNI-method}
+\alias{tni.overlap.genesets,TNI-method}
 \alias{tni2tna.preprocess,TNI-method}
 \alias{tni.prune,TNI-method}
+\alias{tni.sre,TNI-method}
 
 \title{Class \code{"TNI"}: an S4 class for Transcriptional Network Inference.}
 
@@ -28,9 +32,12 @@ for high-throughput gene expression.
     \item{\code{gexp}:}{Object of class \code{"matrix"},
     a gene expression matrix.
     }
-    \item{\code{regulatoryElements}:}{Object of class \code{"char_Or_NULL"},
+    \item{\code{regulatoryElements}:}{Object of class \code{"character"},
     a vector of regulatory elements (e.g. transcription factors).
     }
+    \item{\code{targetElements}:}{Object of class \code{"character"},
+    a vector of target elements (e.g. target genes).
+    }    
     \item{\code{modulators}:}{Object of class \code{"char_Or_NULL"},
     a vector with modulator identifiers.
     }
@@ -86,9 +93,17 @@ for high-throughput gene expression.
     \item{tni.prune}{\code{signature(object = "TNI")}: 
     see \code{\link[RTN:tni.prune]{tni.prune}} }
     \item{tni.replace.samples}{\code{signature(object = "TNI")}: 
-    see \code{\link[RTN:tni.replace.samples]{tni.replace.samples}} }    
+    see \code{\link[RTN:tni.replace.samples]{tni.replace.samples}} }
+    \item{tni.annotate.regulons}{\code{signature(object = "TNI")}: 
+    see \code{\link[RTN:tni.annotate.regulons]{tni.annotate.regulons}} } 
+    \item{tni.annotate.samples}{\code{signature(object = "TNI")}: 
+    see \code{\link[RTN:tni.annotate.samples]{tni.annotate.samples}} }   
+    \item{tni.overlap.genesets}{\code{signature(object = "TNI")}: 
+    see \code{\link[RTN:tni.overlap.genesets]{tni.overlap.genesets}} }
     \item{tni2tna.preprocess}{\code{signature(object = "TNI")}: 
     see \code{\link[RTN:tni2tna.preprocess]{tni2tna.preprocess}} }
+    \item{tni.sre}{\code{signature(object = "TNI")}: 
+    see \code{\link[RTN:tni.sre]{tni.sre}} }
 	 }
 }
 

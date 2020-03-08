@@ -13,8 +13,8 @@ Uses GSEA2 algorithm to compute regulon activity for
 
 \usage{
 tni.gsea2(object, minRegulonSize=15, sizeFilterMethod="posORneg", scale=FALSE, 
-exponent=1, tnet="dpi", regulatoryElements=NULL, samples=NULL, features=NULL, refsamp=NULL, log=FALSE, 
-alternative=c("two.sided", "less", "greater"), targetContribution=FALSE, 
+exponent=1, tnet="dpi", regulatoryElements=NULL, samples=NULL, features=NULL, refsamp=NULL, 
+log=TRUE, alternative=c("two.sided", "less", "greater"), targetContribution=FALSE, 
 additionalData=FALSE, verbose=TRUE, doSizeFilter=NULL)
 }
 
@@ -35,8 +35,7 @@ centered and scaled across samples (when verbose=TRUE) or
 not (when verbose=FALSE).
 }
 \item{exponent}{
-a single integer or numeric value used in weighting phenotypes in GSEA 
-(see 'gseaScores' function at HTSanalyzeR).
+a single integer or numeric value used in weighting phenotypes in GSEA.
 }
 \item{tnet}{
 can take values of 'refnet', 'dpi' or 'cdt'. It refers to the version of the 
@@ -58,8 +57,7 @@ differential expression calculations. If not provided, then the average of
 all samples will be used as reference.
 }
 \item{log}{
-a logical value. If TRUE, differential expression calculations will 
-be computed in log space.
+a logical value. If TRUE, it will check whether the expression values are provided as logged data; if not, it will performe a log2 transformation on expression values before the differential expression calculations.
 }
 \item{alternative}{
 a character string specifying the alternative hypothesis, must be one 
@@ -80,13 +78,32 @@ a single logical value specifying to display detailed messages (when verbose=TRU
 or not (when verbose=FALSE).
 }
 \item{doSizeFilter}{
-a logical value. If TRUE, negative and positive targets are independently 
-verified by the 'minRegulonSize' argument.
+'doSizeFilter' is deprecated, please use the 'sizeFilterMethod' parameter.
 }
 }
 
 \value{
-a list with enrichment scores for all samples in the TNI.
+a list with enrichment scores for all samples in the TNI. The list contains the following elements:
+  \describe{
+    \item{differential:}{
+      A numeric \code{"matrix"} with differential enrichment scores (dES).
+    }
+    \item{positive:}{
+      A numeric \code{"matrix"} with enrichment scores from positive targets.
+    }
+    \item{negative:}{
+      A numeric \code{"matrix"} with enrichment scores from negative targets.
+    }
+    \item{status:}{
+      A numeric \code{"matrix"} with discretized scores derived from the dES values.
+    } 
+    \item{regulatoryElements:}{
+      A character vector listing the regulatory elements assessed by the GSEA-2T algorithm.
+    }     
+    \item{sections:}{
+      A single numeric value used in internal plots.
+    }    
+  }
 }
 
 \author{

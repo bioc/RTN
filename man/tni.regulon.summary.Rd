@@ -2,7 +2,7 @@
 \alias{tni.regulon.summary}
 
 \title{
-Summary of regulon characteristics
+Summary of regulon characteristics.
 }
 
 \description{
@@ -16,7 +16,8 @@ tni.regulon.summary(object, regulatoryElements = NULL, verbose = TRUE)
 \arguments{
 
 \item{object}{
-a preprocessed object of class 'TNI' \code{\link[RTN:TNI-class]{TNI-class}}.
+a preprocessed object of class 'TNI' \code{\link[RTN:TNI-class]{TNI-class}} already evaluated by the 
+\code{\link[RTN:tni.dpi.filter]{tni.dpi.filter}} method.
 }
 \item{regulatoryElements}{
 a vector of valid regulatory elements (e.g. transcription factors).

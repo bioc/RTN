@@ -4,12 +4,13 @@
 \title{A preprocessing function for objects of class TNI.}
 
 \description{
-This is a generic function, provides all preprocessing methods for the 'tni.constructor' function.
+This is a generic function, provides all preprocessing methods for 
+the 'tni.constructor' function.
 }
 
 \usage{
 tni.preprocess(object, rowAnnotation=NULL, colAnnotation=NULL, cvfilter=FALSE, 
-verbose=TRUE)
+    verbose=TRUE)
 }
 
 \arguments{
@@ -17,24 +18,29 @@ verbose=TRUE)
 this argument is an object of class \code{\link[RTN:TNI-class]{TNI-class}}.
 }
 \item{rowAnnotation}{
-an optional data frame with gene annotation. Column 1 must provide all ids listed in the gene expression matrix. Ideally, col1 = <ID>, col2 = <GENEID>, and col3 = <SYMBOL>. Additional annotation can be included in the data frame and will be passed to the resulting TNI object. Furthermore, in order to eventually use the TNI object in \code{\link[RTN:AVS-class]{AVS-class}} methods, it should also include chromosome coordinates: columns <CHROM>, <START> and <END>. Values in <CHROM> should be listed in [chr1, chr2, chr3, ..., chrX], while <START> and <END> correspond to chromosome positions (see \code{\link[RTN:avs.evse]{avs.evse}}).
+an optional data frame with gene annotation.
 }
 \item{colAnnotation}{
 an optional data frame with sample annotation.
 }
 \item{cvfilter}{
-a single logical value specifying to remove duplicated genes in the gene expression matrix using the gene annotation. In this case, 'rowAnnotation' must be provided, with col1 = <ID> and col2 = <GENEID>. Genes duplicated in col2 will be collapsed; the decision is made based on the maximum dinamic range (i.e. keeping the gene with max coefficient of variation across all samples).
+a single logical value specifying to remove duplicated genes in the 
+gene expression matrix using the gene annotation.
 }
 \item{verbose}{
-a single logical value specifying to display detailed messages (when verbose=TRUE) 
-or not (when verbose=FALSE).
+a single logical value specifying to display detailed messages 
+(when verbose=TRUE) or not (when verbose=FALSE).
 }
+}
+
+\value{
+A pre-processed TNI-class object.
 }
 
 \author{Mauro Castro}
 
 \seealso{
-  \code{\link[RTN:TNI-class]{TNI-class}}
+  \code{\link[RTN:tni.constructor]{tni.constructor}}
 }
 
 \examples{

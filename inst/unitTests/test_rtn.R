@@ -22,7 +22,7 @@ test_tni <- function(){
   idx <- annot$SYMBOL%in%c("FGF2","ERBB2")
   mod4test<-annot$PROBEID[idx]
   rtni<-tni.conditional(rtni, modulators=mod4test, minRegulonSize=1)
-  res<-tni.get(rtni,what="cdt")
+  res<-tni.get(rtni,what="cdt.list")
   checkTrue(is.list(res))
   #tni.graph
   #res<-tni.graph(rtni, gtype="rmap", tfs=tfs4test)

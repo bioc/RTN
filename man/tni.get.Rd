@@ -19,7 +19,7 @@ idkey=NULL)
 an object of class \code{\link[RTN:TNI-class]{TNI-class}}.
 }
 \item{what}{
-a single character value specifying which information should be retrieved from the slots. Options: 'summary', 'status', 'para', 'gexp','regulatoryElements', 'tnet', 'refnet', 'regulons', 'refregulons', 'regulons.and.mode', 'refregulons.and.mode', 'rowAnnotation', 'colAnnotation', 'cdt', 'cdtrev').
+a single character value specifying which information should be retrieved from the slots. Options: 'summary', 'status', 'para', 'gexp','regulatoryElements', 'targetElements', 'modulators', 'tnet', 'refnet', 'regulons', 'refregulons', 'regulons.and.mode', 'refregulons.and.mode', 'rowAnnotation', 'colAnnotation', 'cdt.list', 'cdt.table', 'regulonSize').
 }
 \item{order}{
 a single logical value specifying whether or not the output data should be ordered by significance. Valid only for 'cdt' option.

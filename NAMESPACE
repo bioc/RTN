@@ -17,6 +17,10 @@ exportMethods(
   "tni.regulon.summary",
   "tni.prune",
   "tni.replace.samples",
+  "tni.overlap.genesets",
+  "tni.annotate.regulons",
+  "tni.annotate.samples",
+  "tni.sre",
   "tni2tna.preprocess",
   "tna.mra",
   "tna.gsea1",
@@ -35,25 +39,34 @@ export(
   "avs.plot1",
   "avs.plot2",
   "upgradeTNI",
-  "upgradeTNA"
+  "upgradeTNA",
+  "tni.alpha.adjust",
+  "tni.plot.checks"
 )
 import(methods)
 importFrom(minet, aracne)
 importFrom(snow, parSapply, parLapply, makeCluster, stopCluster, clusterExport)
 importFrom(limma, lmFit, makeContrasts, eBayes, contrasts.fit, decideTests)
 importFrom(RedeR, att.mapv, att.setv, att.sete)
-importFrom(igraph, is.igraph, ecount, vcount, degree, graph.empty, vertices, graph.edgelist, get.edgelist, remove.graph.attribute, E, V, 'V<-', 'E<-')
-importFrom(data.table, data.table, setkey, '%chin%')
+importFrom(igraph, vertices, graph.edgelist, get.edgelist, remove.graph.attribute, E, V, 'V<-', 'E<-')
+importFrom(igraph, is.igraph, ecount, vcount, degree, graph.empty)
+importFrom(data.table, data.table, setkey, '%chin%', rbindlist, dcast)
 importFrom(IRanges, IRanges, overlapsAny, findOverlaps, NCList, reduce)
 importFrom(S4Vectors, from, to)
-importFrom(stats, pchisq, complete.cases, optimize, var)
-importFrom(grDevices, col2rgb, colorRampPalette, dev.off, palette, pdf, rgb)
-importFrom(graphics, abline, axis, boxplot, hist, image, layout, legend, lines, mtext, par, plot, plot.new, points, polygon, segments, title)
-importFrom(stats, aggregate, anova, aov, as.dist, coef, cor, formula, hclust, ks.test, lm, manova, median, model.matrix, p.adjust, phyper, pnorm, qnorm, quantile, sd, shapiro.test)
-importFrom(utils, data, setTxtProgressBar, txtProgressBar)
+importFrom(stats, pchisq, complete.cases, optimize, var, fisher.test)
+importFrom(grDevices, col2rgb, colorRampPalette, dev.off, palette, pdf, rgb, adjustcolor)
+importFrom(graphics, lines, mtext, text, par, plot, plot.new, points, polygon, segments, title, legend)
+importFrom(graphics, plot.window, barplot, box, abline, axis, boxplot,hist, image, layout, grid)
+importFrom(stats, median, model.matrix, p.adjust, phyper, pnorm, qnorm, quantile, sd, shapiro.test, ecdf)
+importFrom(stats, aggregate, anova, aov, as.dist, coef, cor, formula ,hclust, ks.test, lm, manova)
+importFrom(utils, data, setTxtProgressBar, txtProgressBar, capture.output)
 importFrom(mixtools,normalmixEM)
 importFrom(viper,aREA)
 importFrom(SummarizedExperiment, assays, rowData, colData)
 importFrom(car, powerTransform, yjPower)
+importFrom(pwr, pwr.r.test)
+importFrom(pheatmap, pheatmap)
+
+
 
 

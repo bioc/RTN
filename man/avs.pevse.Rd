@@ -4,12 +4,17 @@
 \title{An EVSE pipeline using precomputed eQTLs.}
 
 \description{
-The VSE method (\code{\link[RTN:avs.vse]{avs.vse}}) provides a robust framework to cope with the heterogeneous structure of haplotype blocks, and has been designed to test enrichment in cistromes and epigenomes. In order to extend the variant set enrichment to genes this pipeline implements an additional step using precomputed expression quantitative trait loci (eQTLs).
+The VSE method (\code{\link[RTN:avs.vse]{avs.vse}}) provides a robust framework 
+to cope with the heterogeneous structure of haplotype blocks, and has been 
+designed to test enrichment in cistromes and epigenomes. In order to extend the 
+variant set enrichment to genes this pipeline implements an additional step 
+using precomputed expression quantitative trait loci (eQTLs).
 }
 
 \usage{
-avs.pevse(object, annotation, eqtls, maxgap=250, pValueCutoff=0.05, pAdjustMethod="bonferroni", 
-boxcox=TRUE, lab="annotation", glist=NULL, minSize=100, verbose=TRUE)
+avs.pevse(object, annotation, eqtls, maxgap=250, pValueCutoff=0.05, 
+pAdjustMethod="bonferroni", boxcox=TRUE, lab="annotation", glist=NULL, 
+minSize=100, verbose=TRUE)
 }
 
 \arguments{
@@ -17,37 +22,62 @@ boxcox=TRUE, lab="annotation", glist=NULL, minSize=100, verbose=TRUE)
 an object of class 'AVS' (see \code{\link[RTN:AVS-class]{AVS-class}}).
 }
 \item{annotation}{
-a data frame with genomic annotations listing chromosome coordinates to which a particular 
-property or function has been attributed. It should include the following columns: <CHROM>, <START>, <END> and <ID>. The <ID> column can be any genomic identifier, while values in <CHROM> should be listed in ['chr1', 'chr2', 'chr3' ..., 'chrX']. Both <START> and <END> columns correspond to chromosome positions mapped to the human genome assembly used to build the AVS object.
+a data frame with genomic annotations listing chromosome coordinates to which a 
+particular property or function has been attributed. It should include the 
+following columns: <CHROM>, <START>, <END> and <ID>. The <ID> column can be any 
+genomic identifier, while values in <CHROM> should be listed in 
+['chr1', 'chr2', 'chr3' ..., 'chrX']. Both <START> and <END> columns correspond 
+to chromosome positions mapped to the human genome assembly used to build the 
+AVS object.
 }
 \item{eqtls}{
-object of class 'data.frame' with at least two columns, including the following column names: <RSID> and <GENEID>. 
+object of class 'data.frame' with at least two columns, including the following 
+column names: <RSID> and <GENEID>. 
 }
 \item{maxgap}{
-a single integer value specifying the max distant (kb) used to assign the eQTLs in the 'eqtls' object.
+a single integer value specifying the max distant (kb) used to assign the eQTLs 
+in the 'eqtls' object.
 }
 \item{pValueCutoff}{
-a single numeric value specifying the cutoff for p-values considered significant.
+a single numeric value specifying the cutoff for p-values considered 
+significant.
 }
 \item{pAdjustMethod}{
-a single character value specifying the p-value adjustment method to be used (see 'p.adjust' for details).
+a single character value specifying the p-value adjustment method to be used 
+(see 'p.adjust' for details).
 }
 \item{boxcox}{
-a single logical value specifying to use Box-Cox procedure to find a transformation of the null that approaches normality (when boxcox=TRUE) or not (when boxcox=FALSE). See \code{\link[car:powerTransform]{powerTransform}} and \code{\link[car:bcPower]{bcPower}}.
+a single logical value specifying to use Box-Cox procedure to find a 
+transformation of the null that approaches normality (when boxcox=TRUE) or not 
+(when boxcox=FALSE). See \code{\link[car:powerTransform]{powerTransform}} 
+and \code{\link[car:bcPower]{bcPower}}.
 }
 \item{lab}{
-a single character value specifying a name for the annotation dataset (this option is overrided if 'glist' is used).
+a single character value specifying a name for the annotation dataset (this 
+option is overrided if 'glist' is used).
 }
 \item{glist}{
-an optional list with character vectors mapped to the 'annotation' data via <ID> column. This option can be used to run a batch mode for gene sets and regulons.
+an optional list with character vectors mapped to the 'annotation' data via 
+<ID> column. This option can be used to run a batch mode for gene sets and 
+regulons.
 }
 \item{minSize}{
-if 'glist' is provided, this argument is a single integer or numeric value specifying the minimum number of elements for each gene set in the 'glist'. Gene sets with fewer than this number are removed from the analysis. if 'fineMapping=FALSE', an alternative min size value can be provided as a vector of the form c(minSize1, minSize2) used to space the null distributions (see 'fineMapping').
+if 'glist' is provided, this argument is a single integer or numeric value 
+specifying the minimum number of elements for each gene set in the 'glist'. 
+Gene sets with fewer than this number are removed from the analysis. 
+if 'fineMapping=FALSE', an alternative min size value can be provided as a 
+vector of the form c(minSize1, minSize2) used to space the null distributions 
+(see 'fineMapping').
 }
 \item{verbose}{
-a single logical value specifying to display detailed messages (when verbose=TRUE) 
-or not (when verbose=FALSE).
+a single logical value specifying to display detailed messages 
+(when verbose=TRUE) or not (when verbose=FALSE).
 }
+}
+
+\value{
+a data frame in the slot "results", see 'what' options in 
+\code{\link[RTN:avs.get]{avs.get}}.
 }
 
 \author{Mauro Castro, Steve Booth}

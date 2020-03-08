@@ -42,7 +42,8 @@ setMethod(
     #-- creating effect list
     if (tarPriorityMethod == "TC"){
       dataActivity <- tni.gsea2(object, regulatoryElements = regulatoryElements, 
-                               targetContribution=TRUE, verbose=verbose, ...=...)
+                               targetContribution=TRUE, 
+                               verbose=verbose, ...=...)
       listOfTargetEffect <- dataActivity$data$listOfTargetContribution
     } else if (tarPriorityMethod == "EC"){
       dataActivity <- tni.gsea2(object, regulatoryElements = regulatoryElements, 
@@ -61,18 +62,26 @@ setMethod(
     nsamp <- ncol(dataActivity$data$phenoranks)
     if(length(regulatoryElements)>0){
       if (isParallel() && length(regulatoryElements) > 1){
-        if(verbose)cat("-Running pruning algorithm (parallel version - ProgressBar disabled)...\n")
-        if(verbose)cat("--For", length(regulatoryElements), "regulon(s) and", nsamp,'sample(s)...\n')
+        if(verbose)
+          cat("-Running pruning algorithm (parallel version - ProgressBar disabled)...\n")
+        if(verbose)
+          cat("--For", length(regulatoryElements), "regulon(s) and", 
+              nsamp,'sample(s)...\n')
         cl<-getOption("cluster")
-        snow::clusterExport(cl, list("minRegulonComputation",".gsea2.target.contribution",
-                               ".run.tni.gsea2.alternative",".fgseaScores4TNI","checkTars"), 
+        snow::clusterExport(cl, list("minRegulonComputation",
+                                     ".gsea2.target.contribution",
+                               ".run.tni.gsea2.alternative",
+                               ".fgseaScores4TNI","checkTars"), 
                             envir=environment())
-        prunedTarlist <- snow::parLapply(cl, regulatoryElements, minRegulonComputation, 
-                                   dataActivity, listOfTargetEffect, minPrunedSize, 
+        prunedTarlist <- snow::parLapply(cl, regulatoryElements, 
+                                         minRegulonComputation, 
+                                   dataActivity, listOfTargetEffect, 
+                                   minPrunedSize, 
                                    minRegCor, verbose=FALSE, ...=...)
       } else {
         if(verbose)cat("-Running pruning algorithm...\n")
-        if(verbose)cat("--For", length(regulatoryElements), "regulon(s) and", nsamp,'sample(s)...\n')
+        if(verbose)cat("--For", length(regulatoryElements), "regulon(s) and", 
+                       nsamp,'sample(s)...\n')
         prunedTarlist <- lapply(regulatoryElements, minRegulonComputation, 
                                 dataActivity, listOfTargetEffect, minPrunedSize, 
                                 minRegCor, verbose, ...=...)

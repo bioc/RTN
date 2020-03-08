@@ -16,7 +16,7 @@ tni.dpi.filter(object, eps = 0, sizeThreshold = TRUE, minRegulonSize = 15, verbo
 \arguments{
 
 \item{object}{
-a processed object of class 'TNI' \code{\link[RTN:TNI-class]{TNI-class}} evaluated by the methods 
+a preprocessed object of class 'TNI' \code{\link[RTN:TNI-class]{TNI-class}} evaluated by the methods 
 \code{\link[RTN:tni.permutation]{tni.permutation}} and \code{\link[RTN:tni.bootstrap]{tni.bootstrap}}.
 }
 \item{eps}{

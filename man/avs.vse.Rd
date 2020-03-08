@@ -4,47 +4,72 @@
 \title{Variant set enrichment (VSE) analysis.}
 
 \description{
-The VSE method tests the enrichment of an AVS for a particular trait in a genomic annotation.
+The VSE method tests the enrichment of an AVS for a particular trait 
+in a genomic annotation.
 }
 
 \usage{
-avs.vse(object, annotation, maxgap=0, pValueCutoff=0.05, pAdjustMethod="bonferroni", boxcox=TRUE, 
-lab="annotation", glist=NULL, minSize=100, verbose=TRUE)
+avs.vse(object, annotation, maxgap=0, pValueCutoff=0.05, 
+pAdjustMethod="bonferroni", boxcox=TRUE, lab="annotation", 
+glist=NULL, minSize=100, verbose=TRUE)
 }
 
 \arguments{
 \item{object}{
 an object. When this function is implemented as the S4 method of class 
-\code{\link[RTN:AVS-class]{AVS-class}}, this argument is an object of class 'AVS'.
+\code{\link[RTN:AVS-class]{AVS-class}}, this argument is an object 
+of class 'AVS'.
 }
 \item{annotation}{
-a data frame with genomic annotations listing chromosome coordinates to which a particular property or function has been attributed. It should include the following columns: <CHROM>, <START>, <END> and <ID>. The <ID> column can be any genomic identifier, while values in <CHROM> should be listed in ['chr1', 'chr2', 'chr3' ..., 'chrX']. Both <START> and <END> columns correspond to chromosome positions mapped to the human genome assembly used to build the AVS object.
+a data frame with genomic annotations listing chromosome coordinates to which 
+a particular property or function has been attributed. It should include the 
+following columns: <CHROM>, <START>, <END> and <ID>. The <ID> column can be 
+any genomic identifier, while values in <CHROM> should be listed in 
+['chr1', 'chr2', 'chr3' ..., 'chrX']. Both <START> and <END> columns 
+correspond to chromosome positions mapped to the human genome assembly 
+used to build the AVS object.
 }
 \item{maxgap}{
-a single integer value specifying the max distant (kb) between the AVS and the annotation used to compute the enrichment analysis.
+a single integer value specifying the max distant (kb) between the AVS and 
+the annotation used to compute the enrichment analysis.
 }
 \item{pValueCutoff}{
-a single numeric value specifying the cutoff for p-values considered significant.
+a single numeric value specifying the cutoff for p-values considered 
+significant.
 }
 \item{pAdjustMethod}{
-a single character value specifying the p-value adjustment method to be used (see 'p.adjust' for details).
+a single character value specifying the p-value adjustment method to be used 
+(see 'p.adjust' for details).
 }
 \item{boxcox}{
-a single logical value specifying to use Box-Cox procedure to find a transformation of the null that approaches normality (when boxcox=TRUE) or not (when boxcox=FALSE). See \code{\link[car:powerTransform]{powerTransform}} and \code{\link[car:bcPower]{bcPower}}.
+a single logical value specifying to use Box-Cox procedure to find a 
+transformation of the null that approaches normality (when boxcox=TRUE) or not 
+(when boxcox=FALSE). See \code{\link[car:powerTransform]{powerTransform}} 
+and \code{\link[car:bcPower]{bcPower}}.
 }
 \item{lab}{
-a single character value specifying a name for the annotation dataset (this option is overrided if 'glist' is used).
+a single character value specifying a name for the annotation dataset 
+(this option is overrided if 'glist' is used).
 }
 \item{glist}{
-an optional list with character vectors mapped to the 'annotation' data via <ID> column. This option can be used to run a batch mode for gene sets and regulons.
+an optional list with character vectors mapped to the 'annotation' data 
+via <ID> column. This option can be used to run a batch mode for gene 
+sets and regulons.
 }
 \item{minSize}{
-if 'glist' is provided, this argument is a single integer or numeric value specifying the minimum number of elements for each gene set in the 'glist'. Gene sets with fewer than this number are removed from the analysis.
+if 'glist' is provided, this argument is a single integer or numeric value 
+specifying the minimum number of elements for each gene set in the 'glist'. 
+Gene sets with fewer than this number are removed from the analysis.
 }
 \item{verbose}{
-a single logical value specifying to display detailed messages (when verbose=TRUE) 
-or not (when verbose=FALSE).
+a single logical value specifying to display detailed messages 
+(when verbose=TRUE) or not (when verbose=FALSE).
 }
+}
+
+\value{
+a data frame in the slot "results", see 'what' options in 
+\code{\link[RTN:avs.get]{avs.get}}.
 }
 
 \author{Mauro Castro}
@@ -87,8 +112,10 @@ data(bcavs, package="RTNdata.LDHapMapRel27.hg18")
 data(miscellaneous)
 
 #--- step 3: run the avs.vse pipeline
-bcavs <- avs.vse(bcavs, annotation=ESR1bdsites$bdsites, pValueCutoff=0.001, lab="ERa")
-bcavs <- avs.vse(bcavs, annotation=FOXA1bdsites$bdsites, pValueCutoff=0.001, lab="FOXA1")
+bcavs <- avs.vse(bcavs, annotation=ESR1bdsites$bdsites, 
+                 pValueCutoff=0.001, lab="ERa")
+bcavs <- avs.vse(bcavs, annotation=FOXA1bdsites$bdsites, 
+                 pValueCutoff=0.001, lab="FOXA1")
 
 #--- step 4: generate the VSE plots
 avs.plot2(bcavs,"vse",height=2.2)
@@ -107,10 +134,11 @@ genemap <- genemap[,c("seqnames","start","end","gene_id")]
 colnames(genemap) <- c("CHROM","START","END","ID")
 
 #--- step 3: load a TNI object, or any other source of regulons (e.g. gene sets)
-#--- and prepare a gene set list (gene ids should be the same as in the 'genemap' object)
+#--- and prepare a gene set list 
+#--- (gene ids should be the same as in the 'genemap' object)
 data("rtni1st")
 glist <- tni.get(rtni1st,what="refregulons",idkey="ENTREZ")
-glist <- glist[ c("FOXA1","GATA3","ESR1") ] #reduce the list just for demonstration!
+glist <- glist[ c("FOXA1","GATA3","ESR1") ] #reduce the list for demonstration!
 
 #--- step 4: run the avs.vse pipeline
 bcavs<-avs.vse(bcavs, annotation=genemap, glist=glist, pValueCutoff=0.05)

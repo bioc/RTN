@@ -104,8 +104,10 @@ gsea2tna <- function(listOfRegulons, phenotype, exponent=1,
         observedScores[i]<-unlist(scores["observedScores",i])
       }
     } else {
-      if(verbose1 && verbose2) cat("-Performing two-tailed GSEA analysis...\n")
-      if(verbose1 && verbose2) cat("--For", length(listOfRegulons), "regulons...\n")
+      if(verbose1 && verbose2) 
+        cat("-Performing two-tailed GSEA analysis...\n")
+      if(verbose1 && verbose2) 
+        cat("--For", length(listOfRegulons), "regulons...\n")
       if(verbose1) pb <- txtProgressBar(style=3)
       for(i in 1:nRegulons) {
         scores <- gseaScoresBatch4RTN(geneList=phenotype, 

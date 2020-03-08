@@ -13,11 +13,12 @@
 ##and all potential targets. Sig. mi values are inferred by permutation 
 ##analysis.
 tni.pmin<-function(x, tfs, estimator="spearman", 
-                   boxcox=FALSE, boxcox.sample=FALSE, 
+                   boxcox=FALSE, isboot=FALSE, 
                    setdg=0, simplified=FALSE, getadj=FALSE){
   x <- t(x)
-  pmim <- suppressWarnings(cor(x[,tfs],x, method=estimator, use="complete.obs"))
-  if(boxcox) pmim <- .boxcox.adj(pmim, boxcox.sample)
+  pmim <- suppressWarnings(cor(x[,tfs],x, method=estimator, 
+                               use="complete.obs"))
+  if(boxcox) pmim <- .boxcox.adj(pmim, isboot)
   pmim <- pmim^2
   pmim[is.na(pmim)] <- 0
   if(length(tfs)>1){
@@ -47,17 +48,19 @@ tni.pmin<-function(x, tfs, estimator="spearman",
 #We have observed that transcription factor (TF) regulons reconstructed from 
 #the RTN package exhibit different proportions of positive and negative targets. 
 #While the proportion can vary between different regulons, we have observed a 
-#consistent higher proportion of positive targets, specially when using RNA-seq data. 
-#RTN uses mutual information (MI) to assess TF-target associations, assigning 
-#the direction of the inferred associations by Spearman's correlation. Dam et al. (2017) 
-#have acknowledged that different normalization methods introduce different biases 
-#in co-expression analysis, usually towards positive correlation, possibly affected by 
-#read-depth differences between samples and the large abundance of 0 values present 
-#in RNA-seq-derived expression matrices. In order to correct this positive correlation 
-#bias we suggest using this box-cox correction strategy.
-.boxcox.adj <- function(xmat, boxcox.sample=FALSE){
+#consistent higher proportion of positive targets, specially when using RNA-seq 
+#data. RTN uses mutual information (MI) to assess TF-target associations, 
+#assigning the direction of the inferred associations by Spearman's correlation. 
+#Dam et al. (2017) have acknowledged that different normalization methods 
+#introduce different biases in co-expression analysis, usually towards positive 
+#correlation, possibly affected by read-depth differences between samples and 
+#the large abundance of 0 values present in RNA-seq-derived expression matrices. 
+#In order to correct this positive correlation bias we suggest using this 
+#box-cox correction strategy.
+.boxcox.adj <- function(xmat, isboot=FALSE){
   xvec <- as.numeric(xmat)
-  if(boxcox.sample){
+  if(isboot){
+    #only used to speed the bootstrep rounds
     nn <- max( min(1e+5,length(xvec)), length(xvec)*0.1)
     xvec <- sample(xvec, round(nn))
   }
@@ -130,15 +133,16 @@ tni.perm.separate<-function(object,verbose=TRUE){
     if(verbose)cat("--For", length(object@regulatoryElements), "regulons...\n")
   }
   ##compute partial mi matrix
-  pmim<-tni.pmin(object@gexp,object@regulatoryElements,object@para$perm$estimator, 
+  gexp <- object@gexp[object@targetElements,]
+  pmim<-tni.pmin(gexp,object@regulatoryElements,object@para$perm$estimator, 
                  object@para$perm$boxcox)
   ##compute null distributions
   if(ispar){
     cl<-getOption("cluster")
     snow::clusterExport(cl, list(".perm.pmin.separate"),envir=environment())
     mipval <- snow::parSapply(cl, object@regulatoryElements, function(tf){
-      pi<-which(tf==rownames(object@gexp))
-      midist <- .perm.pmin.separate(object@gexp, pi, object@para$perm$estimator, 
+      pi<-which(tf==rownames(gexp))
+      midist <- .perm.pmin.separate(gexp, pi, object@para$perm$estimator, 
                                     object@para$perm$nPermutations)
       midist<-sort(midist, na.last = NA)
       np<-length(midist)
@@ -150,8 +154,8 @@ tni.perm.separate<-function(object,verbose=TRUE){
     if(verbose) pb <- txtProgressBar(style=3)
     mipval<-sapply(1:length(object@regulatoryElements), function(i){
       tf<-object@regulatoryElements[i]
-      pi<-which(tf==rownames(object@gexp))
-      midist <- .perm.pmin.separate(object@gexp, pi, object@para$perm$estimator, 
+      pi<-which(tf==rownames(gexp))
+      midist <- .perm.pmin.separate(gexp, pi, object@para$perm$estimator, 
                                     object@para$perm$nPermutations)
       midist<-sort(midist, na.last = NA)
       np<-length(midist)
@@ -189,9 +193,10 @@ tni.perm.pooled<-function(object, parChunks=10, verbose=TRUE){
     if(verbose)cat("--For", length(object@regulatoryElements), "regulons...\n")
   }
   ##compute partial mi matrix and get unique values
-  uniqueVec<-tni.pmin(object@gexp,object@regulatoryElements,
+  gexp <- object@gexp[object@targetElements,]
+  uniqueVec<-tni.pmin(gexp,object@regulatoryElements,
                       object@para$perm$estimator,
-                      object@para$perm$boxcox)
+                      object@para$perm$boxcox) 
   uniqueVec<-sort(unique(as.numeric(uniqueVec)))
   ##initialize permutation count
   ctsum<-numeric(length(uniqueVec))
@@ -214,7 +219,7 @@ tni.perm.pooled<-function(object, parChunks=10, verbose=TRUE){
     if(verbose)pb<-txtProgressBar(style=3)
     for(i in 1:parChunks){
       permdist <- snow::parLapply(cl,1:nperChunks[i],function(j){
-        permt <- .perm.pmin.pooled(object@gexp,length(object@regulatoryElements),
+        permt <- .perm.pmin.pooled(gexp,length(object@regulatoryElements),
                                    object@para$perm$estimator)
         permt <- sort(permt, na.last = NA)
         length(permt)-findInterval(uniqueVec,permt)
@@ -228,7 +233,7 @@ tni.perm.pooled<-function(object, parChunks=10, verbose=TRUE){
   } else {
     if(verbose)pb<-txtProgressBar(style=3)
     for(i in 1:object@para$perm$nPermutations){
-      permt <- .perm.pmin.pooled(object@gexp,length(object@regulatoryElements),
+      permt <- .perm.pmin.pooled(gexp,length(object@regulatoryElements),
                                  object@para$perm$estimator)
       permt <- sort(permt, na.last = NA)
       permt <- length(permt)-findInterval(uniqueVec,permt)
@@ -238,7 +243,7 @@ tni.perm.pooled<-function(object, parChunks=10, verbose=TRUE){
   }
   if(verbose)close(pb)
   ##compute pvals
-  pmim<-tni.pmin(object@gexp,object@regulatoryElements,object@para$perm$estimator,
+  pmim<-tni.pmin(gexp,object@regulatoryElements,object@para$perm$estimator,
                  object@para$perm$boxcox)
   np <- object@para$perm$nPermutations * 
     ( prod(dim(pmim)) - length(object@regulatoryElements) )
@@ -255,8 +260,9 @@ tni.perm.pooled<-function(object, parChunks=10, verbose=TRUE){
   dimnames(mipval) <- dimnames(miadjpv) <- dimnames(pmim)
   ##decide on the significance
   if(object@para$perm$pValueCutoff <= 1/np){
-    tp1 <- "NOTE: the input 'pValueCutoff' is below the current permutation resolution (> "
-    tp2 <- ")\n...a larger number of permutations is required to accurately estimate this threshold!"
+    tp1 <- "The input 'pValueCutoff' is below the permutation resolution (>"
+    tp2 <- ")\n...a larger number of permutations is required to accurately 
+    estimate this threshold!"
     warning(tp1,signif(1/np,1),tp2,call.=FALSE)
   }
   pmim[miadjpv>object@para$perm$pValueCutoff]=0.0
@@ -286,11 +292,14 @@ tni.boot<-function(object, parChunks=10, verbose=TRUE){
   })
   mimark<-rep(median(mimark),length(mimark))
   ##initialize bootstrap matrix
-  bcount<-matrix(0,ncol=ncol(object@results$tn.ref),nrow=nrow(object@results$tn.ref))
+  bcount<-matrix(0,ncol=ncol(object@results$tn.ref),
+                 nrow=nrow(object@results$tn.ref))
+  gexp <- object@gexp[object@targetElements,]
   ##run bootstrap
   if(ispar){
     cl<-getOption("cluster")
-    snow::clusterExport(cl, list("tni.pmin",".boxcox.adj","powerTransform","yjPower"),
+    snow::clusterExport(cl, list("tni.pmin",".boxcox.adj",
+                                 "powerTransform","yjPower"),
                         envir=environment())
     nboot <- object@para$boot$nBootstraps
     if(is.null(parChunks)){
@@ -308,7 +317,7 @@ tni.boot<-function(object, parChunks=10, verbose=TRUE){
     for(i in 1:parChunks){
       bootdist <- snow::parLapply(cl,1:nbootChunks[i],function(j){
         #--- get bootstrap sample
-        x <- object@gexp[,sample(ncol(object@gexp),replace=TRUE)]
+        x <- gexp[,sample(ncol(gexp),replace=TRUE)]
         #--- add a null dist to deal with eventual sd==0
         idx <- which(apply(x,1,sd)==0)
         if(length(idx)>0) x[idx,] <- sample(x,length(idx)*ncol(x))
@@ -316,7 +325,7 @@ tni.boot<-function(object, parChunks=10, verbose=TRUE){
         boott<-tni.pmin(x, tfs=object@regulatoryElements, 
                         estimator=object@para$boot$estimator,
                         boxcox=object@para$boot$boxcox, 
-                        boxcox.sample=TRUE, simplified=TRUE)
+                        isboot=TRUE, simplified=TRUE)
         sapply(1:ncol(boott),function(k){as.numeric(boott[,k]>mimark[k])})
       })
       for(j in 1:length(bootdist)){
@@ -330,7 +339,7 @@ tni.boot<-function(object, parChunks=10, verbose=TRUE){
     for(i in 1:object@para$boot$nBootstraps){
       if(verbose) setTxtProgressBar(pb, i/object@para$boot$nBootstraps)
       #--- get bootstrap sample
-      x <- object@gexp[,sample(ncol(object@gexp),replace=TRUE)]
+      x <- gexp[,sample(ncol(gexp),replace=TRUE)]
       #--- add a null dist to deal with eventual sd==0
       idx <- which(apply(x,1,sd)==0)
       if(length(idx)>0) x[idx,] <- sample(x,length(idx)*ncol(x))
@@ -338,7 +347,7 @@ tni.boot<-function(object, parChunks=10, verbose=TRUE){
       bootdist<-tni.pmin(x, tfs=object@regulatoryElements,
                          estimator=object@para$boot$estimator,
                          boxcox=object@para$boot$boxcox, 
-                         boxcox.sample=TRUE, simplified=TRUE)
+                         isboot=TRUE, simplified=TRUE)
       bootdist<-sapply(1:ncol(bootdist),function(j){
         as.numeric(bootdist[,j]>mimark[j])
         })
@@ -347,8 +356,8 @@ tni.boot<-function(object, parChunks=10, verbose=TRUE){
   }
   if(verbose)close(pb)
   ##decide on the stability of the inferred associations
-  cons<-as.integer( object@para$boot$nBootstraps * 
-                      (object@para$boot$consensus/100) )
+  cons<-as.integer(object@para$boot$nBootstraps * 
+                     (object@para$boot$consensus/100) )
   object@results$tn.ref[bcount<=cons]<-0
   return(object@results$tn.ref)
 }
@@ -384,9 +393,52 @@ tni.cor<-function(x,tnet,estimator="spearman",dg=0, asInteger=TRUE,
   pcorm<-t(pcorm)
   colnames(pcorm)<-tfs
   if(mapAssignedAssociation)pcorm[tnet==0]=0
-  pcorm
+  return(pcorm)
 }
 
+##------------------------------------------------------------------------
+# .alpha.adjust(nB=90, nA=900, alphaA = 0.001, betaA = 0.5)
+.alpha.adjust <- function(nB, nA, alphaA, betaA){
+  #--- find the effect size given nA, alphaA, and betaA
+  pw <- 1-betaA
+  rA <- tryCatch({
+    pwr.r.test(n=nA, r=NULL, sig.level=alphaA, power=pw)$r
+  }, error=function(e){ NULL })
+  if(is.null(rA)){
+    tp1 <- "NOTE: 'uniroot' could not find a root for the input arguments; "
+    tp2 <- "please see 'tni.alpha.adjust' function documentation."
+    stop(tp1, tp2, call. = FALSE)
+  }
+  #--- get a sequence of alpha values
+  alpha <- c(seq(0.01, 0.1, by = 0.001), seq(0.11, 0.99, by = 0.01) )
+  if(alphaA < 0.01){
+    alpha <- c(alpha, seq(0.1, 0.5, by = 0.1) %o% 10^(-2:log10(alphaA)))
+  }
+  alpha <- sort(unique(alpha), decreasing = FALSE)
+  #--- find size for each alpha value
+  size <- round(sapply(alpha, function(a){
+    tryCatch({
+      pwr.r.test(n=NULL, r=rA, sig.level=a, power=pw)$n
+    }, error=function(e){ NA })
+  }))
+  alpha <- alpha[!is.na(size)]
+  size <- size[!is.na(size)]
+  if(length(alpha)==0){
+    tp1 <- "NOTE: 'uniroot' could not find a root for the input arguments; "
+    tp2 <- "please see 'tni.alpha.adjust' function documentation."
+    stop(tp1, tp2, call. = FALSE)
+  }
+  #--- find alpha for nB
+  alphaB <- alpha[which.min(abs(size-nB))]
+  return(alphaB)
+}
+
+# .alpha.adjust <- function(nB, nA, alphaA, betaA){
+#   esizeA <- pwr.r.test(n=nA, r = NULL, sig.level=alphaA, power=1-betaA)$r
+#   alphaB <- pwr.r.test(n=nB, r = esizeA, sig.level=NULL, 
+#             power=1-betaA)$sig.level
+#   return(alphaB)
+# }
 
 ##------------------------------------------------------------------------
 ##------------------------------------------------------------------------
@@ -516,7 +568,8 @@ miMdTfStats<-function(gexp, regulons, nsamples, nPermutations=1000,
 #2) only one modulator each time
 #3) intends to remove evident unstable modulations of selected modulators
 cdt.stability<-function(gexp,estimator,mrkboot,miThreshold,spsz,md,tfs,
-                        sigDelta, nboot=100,consensus=95, verbose=TRUE){
+                        targetElements, sigDelta, nboot=100, consensus=95, 
+                        verbose=TRUE){
   bcount<-sigDelta;bcount[,]<-0
   if(verbose)pb<-txtProgressBar(style=3)
   for(i in 1:nboot){
@@ -527,8 +580,10 @@ cdt.stability<-function(gexp,estimator,mrkboot,miThreshold,spsz,md,tfs,
     idx<-sort.list(gxtemp[md,])
     idxl<-idx[idxl]
     idxh<-idx[idxh]
-    mil<-tni.pmin(gxtemp[,idxl],tfs,estimator=estimator,simplified=TRUE)
-    mih<-tni.pmin(gxtemp[,idxh],tfs,estimator=estimator,simplified=TRUE)
+    mil<-tni.pmin(gxtemp[targetElements,idxl],tfs,estimator=estimator,
+                  simplified=TRUE)
+    mih<-tni.pmin(gxtemp[targetElements,idxh],tfs,estimator=estimator,
+                  simplified=TRUE)
     mid<-mih-mil
     if(miThreshold=="md.tf" && length(tfs)>1){
       stabt<-t(apply(mid,1,"<",mrkboot[,1])) | 
@@ -548,11 +603,14 @@ checkModuationEffect<-function(gexp,tfs,modregulons,modulatedTFs,glstat,spsz,
                                estimator,pAdjustMethod, count,verbose){
   for(md in names(modregulons)){
     mdreg<-modregulons[[md]][modulatedTFs]
-    glstat$observed[[md]]$sig2noise<-glstat$observed[[md]]$sig2noise[modulatedTFs]
+    glstat$observed[[md]]$sig2noise<-
+      glstat$observed[[md]]$sig2noise[modulatedTFs]
     #null dist
     glstat$null[[md]]<-miMdTfStats(gexp,regulons=mdreg, nsamples=spsz,
-                                   nPermutations=nPermutations, estimator=estimator, 
-                                   minRegulonSize=minRegulonSize,verbose=verbose)
+                                   nPermutations=nPermutations, 
+                                   estimator=estimator, 
+                                   minRegulonSize=minRegulonSize,
+                                   verbose=verbose)
     glstat$null[[md]]$ci<-qnorm(1-(pValueCutoff/length(modulatedTFs)))
     #observed scores
     zscore<-glstat$observed[[md]]$sig2noise
@@ -572,7 +630,8 @@ checkModuationEffect<-function(gexp,tfs,modregulons,modulatedTFs,glstat,spsz,
     for(tf in modulatedTFs){
       glstatrev$observed[[tf]]<-rbind(glstatrev$observed[[tf]],observed[tf,])
       glstatrev$null[[tf]]$dist<-rbind(glstatrev$null[[tf]]$dist,null$dist[tf,])
-      glstatrev$null[[tf]]$median<-c(glstatrev$null[[tf]]$median,null$median[tf])
+      glstatrev$null[[tf]]$median<-c(
+        glstatrev$null[[tf]]$median,null$median[tf])
       glstatrev$null[[tf]]$sd<-c(glstatrev$null[[tf]]$sd,null$sd[tf])
       glstatrev$null[[tf]]$zscore<-rbind(glstatrev$null[[tf]]$zscore,
                                          null$zscore[tf,])
@@ -645,11 +704,12 @@ cv.filter<-function(gexp, ids){
 ##------------------------------------------------------------------------
 ##Simplified version of cv.filter
 ##This function takes a gene expression matrix and remove duplicated genes 
-##using the coefficient variation (CV) to decide for the most informative probes.
+##using the coeff. variation (CV) to decide for the most informative probes.
 ##Input format -> rownames: probeID; col[1]: geneID, Col[2...n]:numeric data
 # cv.filter.simp<-function(gexp){
 #   x<-as.matrix(gexp[,-1])
-#   ids<-data.frame(ProbeID=rownames(gexp),geneID=gexp[,1],stringsAsFactors=FALSE)
+#   ids<-data.frame(ProbeID=rownames(gexp),geneID=gexp[,1],
+#                   stringsAsFactors=FALSE)
 #   rownames(ids)<-ids$ID1
 #   # compute CV
 #   meangx<-apply(x,1,mean,na.rm=TRUE)
@@ -903,7 +963,8 @@ setregs1<-function(object,g,testedtfs,modulators){
   V(g)$nodeLineColor<-"grey"
   V(g)$nodeFontSize[V(g)$tfs==1]=25
   #set node shape and legend
-  g<-att.setv(g=g, from="tfs", to='nodeShape',shapes=c("DIAMOND","ELLIPSE"),title="", 
+  g<-att.setv(g=g, from="tfs", to='nodeShape',shapes=c("DIAMOND","ELLIPSE"),
+              title="", 
               categvec=c(0,1))
   g$legNodeShape$legend<-c("Modulator","TF")
   if(ecount(g)>0){
@@ -1132,46 +1193,51 @@ tni.phyper<-function(tnet){
 }
 
 #---------------------------------------------------------------
-#reverse results from conditional analyses, from TF-MD to MD-TF
-cdt.getReverse<-function(cdt,pAdjustMethod="bonferroni"){
-  cdtrev<-list()
-  for(i in 1:length(cdt)){
-    tf<-names(cdt)[i]
-    tp<-cdt[[i]]
-    if(nrow(tp)>0){
-      mds<-rownames(tp)
-      for(md in mds){
-        tpp<-tp[md,c(2,1,3:ncol(tp))]
-        rownames(tpp)<-tf
-        cdtrev[[md]]<-rbind(cdtrev[[md]],tpp)
-      }
-    }
+cdt.table <- function(cdt){
+  cdt.tb <- NULL
+  for(i in names(cdt)){
+    tp <- cdt[[i]]
+    cdt.tb <- rbind(cdt.tb,tp)
   }
-  if(length(cdtrev)>0){
-    cdtrev<-p.adjust.cdt(cdt=cdtrev,pAdjustMethod=pAdjustMethod, 
-                         p.name="PvFET",adjp.name="AdjPvFET")
-    cdtrev<-p.adjust.cdt(cdt=cdtrev,pAdjustMethod=pAdjustMethod, 
-                         p.name="PvKS",adjp.name="AdjPvKS",sort.name="PvKS")
-    cdtrev<-p.adjust.cdt(cdt=cdtrev,pAdjustMethod=pAdjustMethod, 
-                         p.name="PvSNR",adjp.name="AdjPvSNR",
-                         sort.name="PvSNR",global=FALSE)
-  }
-  cdtrev
+  rownames(cdt.tb)<-NULL
+  return(cdt.tb)
 }
-cdt.get<-function(cdt,pAdjustMethod="bonferroni"){
-  cdt<-p.adjust.cdt(cdt=cdt,pAdjustMethod=pAdjustMethod, 
-                    p.name="PvFET",adjp.name="AdjPvFET")
-  cdt<-p.adjust.cdt(cdt=cdt,pAdjustMethod=pAdjustMethod, 
-                    p.name="PvKS",adjp.name="AdjPvKS",sort.name="PvKS")
-  cdt<-p.adjust.cdt(cdt=cdt,pAdjustMethod=pAdjustMethod, 
-                    p.name="PvSNR",adjp.name="AdjPvSNR",sort.name="PvSNR",
-                    global=FALSE)
+p.adjust.cdt.table <- function(cdt.tb, pAdjustMethod="bonferroni"){
+  cdt.tb$AdjPvFET <- p.adjust(cdt.tb$PvFET, method=pAdjustMethod)
+  cdt.tb$AdjPvKS <- p.adjust(cdt.tb$PvKS, method=pAdjustMethod)
+  if(!is.null(cdt.tb$PvSNR)){
+    cdt.tb$AdjPvSNR <- p.adjust(cdt.tb$PvSNR, method=pAdjustMethod)
+  }
+  return(cdt.tb)
+}
+p.format.cdt.table <- function(cdt.tb, pAdjustMethod="bonferroni"){
+  cdt.tb$PvFET <- format(cdt.tb$PvFET, digits = 3)
+  cdt.tb$AdjPvFET <- format(cdt.tb$AdjPvFET, digits = 3)
+  cdt.tb$PvKS <- format(cdt.tb$PvKS, digits = 3)
+  cdt.tb$AdjPvKS <- format(cdt.tb$AdjPvKS, digits = 3)
+  if(!is.null(cdt.tb$PvSNR)){
+    cdt.tb$PvSNR <- format(cdt.tb$PvSNR, digits = 3)
+    cdt.tb$AdjPvSNR <- format(cdt.tb$AdjPvSNR, digits = 3)
+  }
+  return(cdt.tb)
+}
+
+#---------------------------------------------------------------
+cdt.list<-function(cdt,pAdjustMethod="bonferroni"){
+  cdt<-p.adjust.cdt.list(cdt=cdt,pAdjustMethod=pAdjustMethod,
+                         p.name="PvFET",adjp.name="AdjPvFET")
+  cdt<-p.adjust.cdt.list(cdt=cdt,pAdjustMethod=pAdjustMethod,
+                         p.name="PvKS",adjp.name="AdjPvKS",sort.name="PvKS")
+  if(!is.null(cdt$PvSNR)){
+    cdt<-p.adjust.cdt.list(cdt=cdt,pAdjustMethod=pAdjustMethod,
+                           p.name="PvSNR",adjp.name="AdjPvSNR",
+                           sort.name="PvSNR",
+                           global=FALSE)
+  }
   cdt
 }
-#---------------------------------------------------------------
-#compute global p.adjustment for conditional analysis
-p.adjust.cdt<-function(cdt,pAdjustMethod="bonferroni",p.name="Pvalue",
-                       adjp.name="AdjustedPvalue",sort.name=NULL, 
+p.adjust.cdt.list<-function(cdt,pAdjustMethod="bonferroni",p.name="Pvalue",
+                       adjp.name="AdjustedPvalue",sort.name=NULL,
                        decreasing=FALSE, roundpv=TRUE, global=TRUE){
   if(global){
     #get pvalues
@@ -1214,13 +1280,13 @@ p.adjust.cdt<-function(cdt,pAdjustMethod="bonferroni",p.name="Pvalue",
       tp<-cdt[[i]]
       if(nrow(tp)>0 && !is.null(tp[[p.name]])){
         tp<-tp[sort.list(tp[[sort.name]],decreasing=decreasing),]
-        cdt[[i]]<-tp 
+        cdt[[i]]<-tp
       }
-    } 
+    }
   }
   cdt
 }
-sortblock.cdt<-function(cdt,coln="PvFET"){
+sortblock.cdt.list<-function(cdt,coln="PvFET"){
   #sort blocks
   idx1<-unlist(lapply(cdt,nrow))
   idx1<-idx1/max(idx1)+1
@@ -1239,10 +1305,56 @@ sortblock.cdt<-function(cdt,coln="PvFET"){
   cdt<-cdt[idx]
   cdt
 }
+
+##------------------------------------------------------------------------------
+# GEO2R auto-detect checks and log2 transformation
+.isUnloggedData <- function(gexp){
+  qx <- as.numeric(quantile(gexp, c(0., 0.25, 0.5, 0.75, 0.99, 1.0), 
+                            na.rm=TRUE))
+  LogC <- (qx[5] > 100) || (qx[6]-qx[1] > 50 && qx[2] > 0) || 
+    (qx[2] > 0 && qx[2] < 1 && qx[4] > 1 && qx[4] < 2)
+  LogC
+}
+.log2transform<-function(gexp){
+  gexp[which(gexp <= 0)] <- NaN
+  gexp <- log2(gexp) 
+  gexp[is.nan(gexp)] <- 0
+  gexp
+}
+
+#---------------------------------------------------------------
+#reverse results from conditional analyses, from TF-MD to MD-TF
+# cdt.list.rev<-function(cdt,pAdjustMethod="bonferroni"){
+#   cdtrev<-list()
+#   for(i in 1:length(cdt)){
+#     tf<-names(cdt)[i]
+#     tp<-cdt[[i]]
+#     if(nrow(tp)>0){
+#       mds<-rownames(tp)
+#       for(md in mds){
+#         tpp<-tp[md,c(2,1,3:ncol(tp))]
+#         rownames(tpp)<-tf
+#         cdtrev[[md]]<-rbind(cdtrev[[md]],tpp)
+#       }
+#     }
+#   }
+#   if(length(cdtrev)>0){
+#     cdtrev<-p.adjust.cdt.list(cdt=cdtrev,pAdjustMethod=pAdjustMethod, 
+#                               p.name="PvFET",adjp.name="AdjPvFET")
+#     cdtrev<-p.adjust.cdt.list(cdt=cdtrev,pAdjustMethod=pAdjustMethod, 
+#                               p.name="PvKS",adjp.name="AdjPvKS",
+#                               sort.name="PvKS")
+#     cdtrev<-p.adjust.cdt.list(cdt=cdtrev,pAdjustMethod=pAdjustMethod, 
+#                               p.name="PvSNR",adjp.name="AdjPvSNR",
+#                               sort.name="PvSNR",global=FALSE)
+#   }
+#   cdtrev
+# }
+
 ##-----------------------------------------------------------------------------
 ##build an igraph object from hclust
 hclust2igraph<-function(hc){
-  if(class(hc)!="hclust")stop("'hc' should be an 'hclust' object!")
+  if(!is(hc,"hclust"))stop("'hc' should be an 'hclust' object!")
   if(is.null(hc$labels))hc$labels=as.character(sort(hc$order))
   #options to remove nests
   rmnodes<-NULL
@@ -1276,8 +1388,9 @@ hclust2igraph<-function(hc){
 ##-----------------------------------------------------------------------------
 ##build an igraph object from pvclust
 # pvclust2igraph<-function(hc,alpha=0.95,max.only=FALSE){
-#   if(class(hc)!="pvclust")stop("'hc' should be an 'pvclust' object!")
-#   if(is.null(hc$hclust$labels))hc$hclust$labels=as.character(sort(hc$hclust$order))
+#   if(!is(hc,"pvclust"))stop("'hc' should be an 'pvclust' object!")
+#   if(is.null(hc$hclust$labels))hc$hclust$labels=as.character(
+#        sort(hc$hclust$order))
 #   keep<-pvpick(hc,alpha=alpha,max.only=max.only)$edges
 #   ids<-as.numeric(hc$hclust$merge)
 #   ids<-sort(ids[ids>0])
@@ -1506,10 +1619,10 @@ treemap<-function(hc){
   }
   GSEA2.results.up <- sapply(listOfRegulonsUp, .fgseaScores4TNI, 
                              phenotype=phenotype, phenorank=phenorank, 
-                             exponent=exponent, alternative=alternative)
+                             exponent=exponent, alternative=alternative_up)
   GSEA2.results.down <- sapply(listOfRegulonsDown, .fgseaScores4TNI, 
                                phenotype=phenotype, phenorank=phenorank, 
-                               exponent=exponent, alternative=alternative)
+                               exponent=exponent, alternative=alternative_down)
   b1<-length(GSEA2.results.up)>0 && length(GSEA2.results.down)>0
   b2<-length(GSEA2.results.up)==length(GSEA2.results.down)
   if(b1 && b2) {
@@ -1520,12 +1633,26 @@ treemap<-function(hc){
     GSEA2.results.both <- numeric()
   }
   #-----format, pack and return results
-  GSEA2.results.up<-round(GSEA2.results.up,2)
-  GSEA2.results.down<-round(GSEA2.results.down,2)
-  GSEA2.results.both<-round(GSEA2.results.both,2)
+  GSEA2.results.up<-round(GSEA2.results.up,4)
+  GSEA2.results.down<-round(GSEA2.results.down,4)
+  GSEA2.results.both<-round(GSEA2.results.both,4)
   GSEA2.results<-list(positive=GSEA2.results.up,
                       negative=GSEA2.results.down,
                       differential=GSEA2.results.both)
+  return( GSEA2.results )
+}
+
+##-----------------------------------------------------------------------------
+.run.tni.gsea1.alternative <- function(geneSetList, phenotype, phenorank, 
+                                       exponent, alternative){
+  GSEA2.results <- sapply(geneSetList, .fgseaScores4TNI, 
+                          phenotype=phenotype, phenorank=phenorank, 
+                          exponent=exponent, alternative=alternative)
+  if(length(GSEA2.results)==0) {
+    GSEA2.results <- numeric()
+  }
+  #-----format, pack and return results
+  GSEA2.results <- round(GSEA2.results,4)
   return( GSEA2.results )
 }
 
@@ -1563,32 +1690,36 @@ treemap<-function(hc){
 }
 
 #---------------------------------------------------------------
-.get.regulon.summary <- function(obj){
-  ref <- tni.get(obj, what = "refregulons")
+.get.regulon.summary <- function(object){
+  ref <- tni.get(object, what = "refregulons")
   if(length(ref)>0){
     ref <- summary(unlist(lapply(ref, length)))
   } else {
     ref <- summary(0)
+    ref[] <- NA
   }
-  dpi <- tni.get(obj, what = "regulons")
+  dpi <- tni.get(object, what = "regulons")
   if(length(dpi)>0){
     dpi <- summary(unlist(lapply(dpi, length)))
   } else {
     dpi <- summary(0)
+    dpi[] <- NA
   }
   rbind(tnet.ref=ref,tnet.dpi=dpi)
 }
 #---------------------------------------------------------------
 .get.tnet.summary <- function(object){
   tnetsumm <- object@summary$results$tnet
-  #---
-  bin<-object@results$tn.ref
-  bin[bin!=0]<-1
-  tnetsumm[1,]<-c(ncol(bin),sum(rowSums(bin)>0),sum(bin))
-  #---
-  bin<-object@results$tn.dpi
-  bin[bin!=0]<-1
-  tnetsumm[2,]<-c(ncol(bin),sum(rowSums(bin)>0),sum(bin))
+  if(object@status["Permutation"]=="[x]"){
+    bin<-object@results$tn.ref
+    bin[bin!=0]<-1
+    tnetsumm[1,]<-c(ncol(bin),sum(rowSums(bin)>0),sum(bin))
+  }
+  if(object@status["DPI.filter"]=="[x]"){
+    bin<-object@results$tn.dpi
+    bin[bin!=0]<-1
+    tnetsumm[2,]<-c(ncol(bin),sum(rowSums(bin)>0),sum(bin))
+  }
   return(tnetsumm)
 }
 
@@ -1670,7 +1801,8 @@ treemap<-function(hc){
   #--- set input
   regs <- tni.get(object, what="regulatoryElements", idkey=idkey)
   #--- get tf-tar mi
-  tftar_mi <- lapply(tni.get(object, what="regulons.and.mode", idkey=idkey), abs)
+  tftar_mi <- lapply(tni.get(object, what="regulons.and.mode", 
+                             idkey=idkey), abs)
   #--- get tf-tar correlation
   object@results$tn.dpi <- tni.cor(object@gexp, object@results$tn.dpi, 
                                    asInteger=FALSE,
@@ -1825,8 +1957,8 @@ treemap<-function(hc){
   counts <- lapply(regulonsAndMode, function(reg){
     c(length(reg),sum(reg>0),sum(reg<0))
   })
-  counts <- data.frame(t(data.frame(counts, check.names = F)), 
-                       check.names = F)
+  counts <- data.frame(t(data.frame(counts, check.names = FALSE)), 
+                       check.names = FALSE)
   colnames(counts) <- c("Size","Positive", "Negative")
   return(counts)
 }
@@ -1883,10 +2015,10 @@ treemap<-function(hc){
 #   pmat
 # }
 
-# ##-----------------------------------------------------------------------------
+# ##----------------------------------------------------------------------------
 # ##build an igraph object from hclust
 # hclust2igraph<-function(hc,length.cutoff=NULL){
-#   if(class(hc)!="hclust")stop("'hc' should be an 'hclust' object!")
+#   if(!is(hc,"hclust"))stop("'hc' should be an 'hclust' object!")
 #   if(is.null(hc$labels))hc$labels=as.character(sort(hc$order))
 #   #get treemap
 #   tmap<-treemap(hc)

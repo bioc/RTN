@@ -29,7 +29,7 @@ getMarkers.vset<-function(variantSet,getlinked=TRUE){
   markers<-NULL
   lkmarkers<-unique(unlist(
     lapply(variantSet,function(vset){
-      if(class(vset)=="IRanges"){
+      if(is(vset,"IRanges")){
         markers<<-c(markers,names(vset@metadata$blocks))
         tp<-lapply(vset@metadata$blocks,names)
       } else {
@@ -166,8 +166,8 @@ getAnnotRanges<-function(annotation,maxgap=0, getTree=TRUE, getReduced=FALSE){
 
 ##------------------------------------------------------------------------
 ##get markers and genes from computed evse
-##return a named character vector with the RiskAssociatedSNPs mapped in the VSE analysis
-##..names indicate the LD cluster (i.e. the RiskSNP assignment) 
+##return a named character vector with the RiskAssociatedSNPs mapped in the 
+##VSE analysis names indicate the LD cluster (i.e. the RiskSNP assignment) 
 getMappedClusters<-function(object){
   MarkerIDs<-NULL
   for(vset in object@variantSet){
@@ -206,7 +206,8 @@ vsea<-function(vSet,rSet,annot,verbose=TRUE){
   #compute null
   if(isParallel()){
     cl<-getOption("cluster")
-    snow::clusterExport(cl, list("get.avsdist","IRanges","overlapsAny",".mtdata"),
+    snow::clusterExport(cl, list("get.avsdist","IRanges","overlapsAny",
+                                 ".mtdata"),
                         envir=environment())
     resrset <- snow::parSapply(cl, 1:length(rSet), function(i) {
       sum(get.avsdist(rSet[[i]],annot))
@@ -364,13 +365,15 @@ get.pre_eqtldist<-function(vSet,annot,eqtls){
 
 ##-------------------------------------------------------------------------
 ##run evsea for observed and random variant sets
-evsea<-function(vSet, rSet, annot, gxdata, snpdata, pValueCutoff=0.01,verbose=TRUE){
+evsea<-function(vSet, rSet, annot, gxdata, snpdata, pValueCutoff=0.01,
+                verbose=TRUE){
   #compute evse
   mtally<-get.eqtldist(vSet, annot, gxdata, snpdata, pValueCutoff)
   #compute null
   if(isParallel()){
     cl<-getOption("cluster")
-    snow::clusterExport(cl, list("get.eqtldist","eqtlTest","IRanges","overlapsAny",
+    snow::clusterExport(cl, list("get.eqtldist","eqtlTest","IRanges",
+                                 "overlapsAny",
                                  "findOverlaps",".mtdata"),
                         envir=environment())
     resrset <- snow::parSapply(cl, 1:length(rSet), function(i) {
@@ -389,7 +392,8 @@ evsea<-function(vSet, rSet, annot, gxdata, snpdata, pValueCutoff=0.01,verbose=TR
 
 ##-------------------------------------------------------------------------
 ##run evsea for observed and random variant sets
-evseaproxy<-function(rSet, annot, gxdata, snpdata, pValueCutoff=0.01,verbose=TRUE){
+evseaproxy<-function(rSet, annot, gxdata, snpdata, pValueCutoff=0.01,
+                     verbose=TRUE){
   #compute null
   if(isParallel()){
     cl<-getOption("cluster")
@@ -430,7 +434,8 @@ get.eqtldist<-function(vSet,annot,gxdata,snpdata,pValueCutoff=0.01){
           ov<-unique(S4Vectors::to(overlaps)[ov])
           gList<-geneList[ov]
           if(length(gList)>0){
-            res<-eqtlTest(geneList=as.character(gList),snpList=as.integer(snpList),gxdata,snpdata)
+            res<-eqtlTest(geneList=as.character(gList),
+                          snpList=as.integer(snpList),gxdata,snpdata)
           } else {
             res<-1.0
           }
@@ -484,7 +489,8 @@ getUniverseCounts1<-function(vSet,annotation,maxgap){
     unlist(lapply(vSet[[i]]@metadata$blocks,length))
   }))
   #count tested genes, overlap
-  annot<-getAnnotRanges(annotation,maxgap=maxgap,getTree=FALSE, getReduced=FALSE)
+  annot<-getAnnotRanges(annotation,maxgap=maxgap,getTree=FALSE, 
+                        getReduced=FALSE)
   # mapping tally
   geneCounts<-lapply(1:length(vSet),function(i){
     chr<-names(vSet[i])
@@ -520,7 +526,8 @@ getUniverseCounts2<-function(vSet,annotation,maxgap){
     unlist(lapply(vSet[[i]]@metadata$mappedMarkers,length))
   })))
   #count tested genes, overlap
-  annot<-getAnnotRanges(annotation=annotation,maxgap=maxgap,getTree=FALSE, getReduced=FALSE)
+  annot<-getAnnotRanges(annotation=annotation,maxgap=maxgap,getTree=FALSE, 
+                        getReduced=FALSE)
   # mapping tally
   geneCounts<-sapply(1:length(vSet),function(i){
     chr<-names(vSet[i])
@@ -671,7 +678,8 @@ vseformat<-function(resavs, pValueCutoff=0.01,
   nr <- nrow(Y)
   xqr <- qr(w * X)
   llik <- function(lambda){
-    (nr/2)*log(((nr - 1)/nr) * det(var(qr.resid(xqr, w*fam(Y, lambda, j=TRUE)))))
+    (nr/2)*log(((nr - 1)/nr) * det(var(
+      qr.resid(xqr, w*fam(Y, lambda, j=TRUE)))))
   }
   llik1d <- function(lambda,Y){
     (nr/2)*log(((nr - 1)/nr) * var(qr.resid(xqr, w*fam(Y, lambda, j=TRUE))))
@@ -699,7 +707,10 @@ vsereport<-function(obj){
   pvalue<-obj$pvalue
   null<-t(boxplot(obj$nulldist, plot = FALSE)$stats)
   colnames(null)<-paste("q",1:5,sep="")
-  report<-data.frame(Annotation=names(score),Pvalue=format(round(-log10(pvalue),3)), Score=format(round(score,3)), format(round(null,3)), mtally, stringsAsFactors = FALSE)
+  report<-data.frame(Annotation=names(score),
+                     Pvalue=format(round(-log10(pvalue),3)), 
+                     Score=format(round(score,3)), 
+                     format(round(null,3)), mtally, stringsAsFactors = FALSE)
   rownames(report)<-NULL
   tp<-rowSums(mtally);tp<-tp/sum(tp)
   idx<-sort.list(score+tp,decreasing=TRUE)
@@ -724,7 +735,8 @@ isParallel<-function(){
     cl<-getOption("cluster")
     cl.check<-FALSE
     if(is(cl, "cluster")){
-      cl.check <- all( sapply(1:length(cl),function(i)isOpen(cl[[i]]$con) ) == TRUE )
+      cl.check <- all( sapply(
+        1:length(cl),function(i)isOpen(cl[[i]]$con) ) == TRUE )
     }
     cl.check
   }, error=function(e){ FALSE 
@@ -759,7 +771,8 @@ eqtlExtractFull<-function(vSet,annot,gxdata,snpdata){
         ov<-unique(S4Vectors::to(overlaps)[ov])
         gList<-geneList[ov]
         if(length(gList)>0 && length(snpList)>0){
-          res<-eqtlTestDetailed(geneList=as.character(gList),snpList=as.integer(snpList),gxdata,snpdata)
+          res<-eqtlTestDetailed(geneList=as.character(gList),
+                                snpList=as.integer(snpList),gxdata,snpdata)
           rownames(res)<-rownames(snpdata)[snpList]
         } else {
           res<-matrix(NA,nrow=length(snpList),ncol=2)
@@ -796,7 +809,9 @@ eqtlExtractFull<-function(vSet,annot,gxdata,snpdata){
     Pstat<-tp[,2,drop=FALSE]
     geneid<-colnames(tp)[-c(1,2)]
     for(associatedSNP in rownames(Fstat)){
-      tpp<-data.frame(riskSNP,associatedSNP,geneid,Fstat[associatedSNP,],Pstat[associatedSNP,],stringsAsFactors=FALSE)
+      tpp<-data.frame(riskSNP,associatedSNP,geneid,
+                      Fstat[associatedSNP,],
+                      Pstat[associatedSNP,],stringsAsFactors=FALSE)
       summ<-rbind(summ,tpp)
     }
   }
@@ -833,7 +848,8 @@ eqtlTestDetailed<-function(geneList,snpList,gxdata,snpdata){
     resf<-resf[,c("F value","Pr(>F)")]
   }
   #library('gplots')
-  #plotmeans(G2 ~ S6, data=cbind(gxdata,snpdata), col="red", barcol="blue",connect=FALSE,pch=15, las=1)
+  #plotmeans(G2 ~ S6, data=cbind(gxdata,snpdata), col="red", 
+  #barcol="blue",connect=FALSE,pch=15, las=1)
   #get SNP stats
   colnames(resf)<-c("F","Pr(>F)")
   #get gene stats
@@ -868,9 +884,11 @@ eqtlExtractAnova<-function(vSet,annot,gxdata,snpdata){
         ov<-unique(S4Vectors::to(overlaps)[ov])
         gList<-geneList[ov]
         if(length(gList)>0 && length(snpList)>0){
-          res<-eqtlTestDetailedAnova(geneList=as.character(gList),snpList=as.integer(snpList),gxdata,snpdata)
+          res<-eqtlTestDetailedAnova(geneList=as.character(gList),
+                                     snpList=as.integer(snpList),gxdata,snpdata)
           res$RiskAssociatedSNP<-rownames(snpdata)[res$RiskAssociatedSNP]
-          res<-data.frame(RiskSNP=query@metadata$markers[j],res,stringsAsFactors=FALSE)
+          res<-data.frame(RiskSNP=query@metadata$markers[j],res,
+                          stringsAsFactors=FALSE)
           resfit<-rbind(resfit,res)
         }
       }
@@ -885,7 +903,8 @@ eqtlExtractAnova<-function(vSet,annot,gxdata,snpdata){
     summ<-rbind(summ,clusterMapping[[i]])
   }
   if(nrow(summ)>0){
-    colnames(summ)<-c(".RiskSNP",".RiskAssociatedSNP",".GeneID",".F",".Pr(>F)",".Coef",".R2")
+    colnames(summ)<-c(".RiskSNP",".RiskAssociatedSNP",".GeneID",
+                      ".F",".Pr(>F)",".Coef",".R2")
   }
   summ
 }
@@ -914,7 +933,8 @@ eqtlTestDetailedAnova<-function(geneList,snpList,gxdata,snpdata){
       rownames(sf)<-c("F","Prob")
       colnames(sf)<-names(cf)
       sf<-t(sf)
-      raov<-data.frame(RiskAssociatedSNP=S,GeneID=rownames(sf),sf,Coef=cf,stringsAsFactors=FALSE)
+      raov<-data.frame(RiskAssociatedSNP=S,GeneID=rownames(sf),sf,
+                       Coef=cf,stringsAsFactors=FALSE)
       resfit<-rbind(resfit,raov)
     }
   } else {
@@ -924,7 +944,8 @@ eqtlTestDetailedAnova<-function(geneList,snpList,gxdata,snpdata){
       cf<-raov$coefficients[2]
       sf<-as.data.frame(summary(raov)[[1]])
       sf<-sf[1,4:5]
-      raov<-data.frame(RiskAssociatedSNP=S,GeneID=colnames(gxdata),F=sf[,1],Prob=sf[,2],Coef=cf,stringsAsFactors=FALSE)
+      raov<-data.frame(RiskAssociatedSNP=S,GeneID=colnames(gxdata),
+                       F=sf[,1],Prob=sf[,2],Coef=cf,stringsAsFactors=FALSE)
       resfit<-rbind(resfit,raov)
     }
   }
@@ -938,7 +959,8 @@ eqtlTestDetailedAnova<-function(geneList,snpList,gxdata,snpdata){
   rownames(R2)<-geneList
   summ<-NULL
   for(i in colnames(R2)){
-    tp<-data.frame(RiskAssociatedSNP=i,GeneID=rownames(R2),R2=R2[,i],stringsAsFactors=FALSE)
+    tp<-data.frame(RiskAssociatedSNP=i,GeneID=rownames(R2),R2=R2[,i],
+                   stringsAsFactors=FALSE)
     summ<-rbind(summ,tp)
   }
   rownames(summ)<-NULL
@@ -994,13 +1016,16 @@ getEvseEqtls<-function(object,tfs=NULL){
 ##report markers and linked markers from computed variantSet
 report.vset<-function(variantSet){
   lkmarkers<-lapply(variantSet,function(vset){
-    if(class(vset)=="IRanges"){
+    if(is(vset,"IRanges")){
       res<-lapply(names(vset@metadata$blocks),function(rs){
         linked_rs<-names(vset@metadata$blocks[[rs]])
         cbind(rs,rev(linked_rs))
       })
     } else {
-      stop("Please, check 'vset' class! Method implemented for 'IRanges' objects only!")
+      stop(
+        "Please, check 'vset' class! Method implemented for 'IRanges' 
+        objects only!"
+        )
     }
     res
   })

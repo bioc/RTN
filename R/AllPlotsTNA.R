@@ -4,13 +4,18 @@
 
 ##------------------------------------------------------------------------------
 ##Plot enrichment analysis from TNA objects.
-tna.plot.gsea1<-function(object,  labPheno="", file="tna_gsea1", filepath=".", regulon.order="size", 
-                         ntop=NULL, tfs=NULL, ylimPanels=c(0.0,3.5,0.0,0.8), heightPanels=c(1,1,3), 
-                         width=4.4, height=4, ylabPanels=c("Phenotype","Regulon","Enrichment score"), 
-                         xlab="Position in the ranked list of genes", alpha=0.5, sparsity=10, 
-                         autoformat=TRUE, plotpdf = TRUE, ...) {
+tna.plot.gsea1<-function(
+  object,  labPheno="", file="tna_gsea1", filepath=".", 
+  regulon.order="size", 
+  ntop=NULL, tfs=NULL, ylimPanels=c(0.0,3.5,0.0,0.8), 
+  heightPanels=c(1,1,3), 
+  width=4.4, height=4, 
+  ylabPanels=c("Phenotype","Regulon","Enrichment score"), 
+  xlab="Position in the ranked list of genes", 
+  alpha=0.5, sparsity=10, 
+  autoformat=TRUE, plotpdf = TRUE, ...) {
   #checks
-  if(class(object)!="TNA" || object@status$analysis["GSEA1"]!="[x]"){
+  if(!is(object,"TNA") || object@status$analysis["GSEA1"]!="[x]"){
     cat("-invalid 'GSEA1' status! \n")
     stop("NOTE: gsea plot requires results from 'tna.gsea1' analysis!")
   }
@@ -57,30 +62,33 @@ tna.plot.gsea1<-function(object,  labPheno="", file="tna_gsea1", filepath=".", r
   exponent<-object@para$gsea1$exponent
     
   ##-----send to a common plot function
-  plot.gsea1(resgsea=resgsea, rgcs=rgcs, phenotype=phenotype, 
-             orderAbsValue=orderAbsValue, nPermutations=nPermutations, 
-             exponent=exponent, labPheno=labPheno, file=file, filepath=filepath, 
-             regulon.order=regulon.order,ylimPanels=ylimPanels,   
-             heightPanels=heightPanels, width=width, height=height,
-             ylabPanels=ylabPanels,xlab=xlab,alpha=alpha, sparsity=sparsity, 
-             autoformat=autoformat, plotpdf=plotpdf, ...=...)
+  plot.gsea1(
+    resgsea=resgsea, rgcs=rgcs, phenotype=phenotype, 
+    orderAbsValue=orderAbsValue, nPermutations=nPermutations, 
+    exponent=exponent, labPheno=labPheno, file=file, filepath=filepath, 
+    regulon.order=regulon.order,ylimPanels=ylimPanels,   
+    heightPanels=heightPanels, width=width, height=height,
+    ylabPanels=ylabPanels,xlab=xlab,alpha=alpha, sparsity=sparsity, 
+    autoformat=autoformat, plotpdf=plotpdf, ...=...)
 }
 
-#-------------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
 #--subfunction for tna.plot.gsea1
-plot.gsea1<-function(resgsea, rgcs, phenotype, orderAbsValue, nPermutations, exponent,
-                     labPheno="tna", file=labPheno, filepath=".", regulon.order="size",  
-                     ylimPanels=c(0.0,3.5,0.0,0.8), heightPanels=c(1,1,3), width=6, 
-                     height=5, ylabPanels=c("Phenotype","Regulon","Enrichment score"), 
-                     xlab="Position in the ranked list of genes", alpha=0.5, sparsity=10, 
-                     autoformat=TRUE, plotpdf = TRUE, ...) {
+plot.gsea1<-function(resgsea, rgcs, phenotype, orderAbsValue, nPermutations, 
+                     exponent, labPheno="tna", file=labPheno, filepath=".", 
+                     regulon.order="size", ylimPanels=c(0.0,3.5,0.0,0.8), 
+                     heightPanels=c(1,1,3), width=6, height=5, 
+                     ylabPanels=c("Phenotype","Regulon","Enrichment score"), 
+                     xlab="Position in the ranked list of genes", alpha=0.5, 
+                     sparsity=10, autoformat=TRUE, plotpdf = TRUE, ...) {
   ##return valid arg
   regulon.order=tnai.checks(name="regulon.order",regulon.order)
   ##-----check available results
   if(!is.null(resgsea) && nrow(resgsea)>0){
     if(regulon.order!='none'){
       decreasing<-ifelse(regulon.order=='Observed.Score',TRUE,FALSE)
-      resgsea<-resgsea[sort.list(resgsea[,regulon.order],decreasing=decreasing),]
+      resgsea<-resgsea[sort.list(resgsea[,regulon.order],
+                                 decreasing=decreasing),]
     }
     gs.names<-rownames(resgsea)
     names(gs.names)<-resgsea$Regulon
@@ -92,7 +100,8 @@ plot.gsea1<-function(resgsea, rgcs, phenotype, orderAbsValue, nPermutations, exp
   phenotype<-phenotype[order(phenotype,decreasing=TRUE)]
   ##----get stat resolution
   pvresolu<-signif(1/(nPermutations+1), digits=5)
-  pvcutoff<-paste("< ",as.character(format(pvresolu,scientific=TRUE,digits=2)),collapse="",sep="")
+  pvcutoff<-paste("< ",as.character(format(pvresolu,scientific=TRUE,digits=2)),
+                  collapse="",sep="")
   ##-----get merged data
   tests<-get.merged.data1(gs.names,phenotype,rgcs,resgsea,exponent)
   ##-----fix pvalue report for the resolution
@@ -101,12 +110,13 @@ plot.gsea1<-function(resgsea, rgcs, phenotype, orderAbsValue, nPermutations, exp
   ##-----check format
   if(autoformat)ylimPanels<-check.format1(tests)
   ##-----make plot
-  make.plot1(tests,labPheno,file,filepath,heightPanels,ylimPanels,ylabPanels,xlab,width, 
+  make.plot1(tests,labPheno,file,filepath,heightPanels,ylimPanels,
+             ylabPanels,xlab,width, 
              height,alpha,sparsity,plotpdf, ...=...)
   
 }
 
-#-------------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
 #--subfunction for tna.plot.gsea1
 get.merged.data1<-function(gs.names,phenotype,rgcs,resgsea,exponent){
   res<-list()
@@ -121,16 +131,18 @@ get.merged.data1<-function(gs.names,phenotype,rgcs,resgsea,exponent){
   }
   tests<-list()
   tests[["enrichmentScores"]]<-res$enrichmentScores 
-  tests[["runningScores"]]<-as.data.frame(res$runningScores,stringsAsFactors=FALSE)
+  tests[["runningScores"]]<-as.data.frame(res$runningScores,
+                                          stringsAsFactors=FALSE)
   tests[["positions"]]<-as.data.frame(res$positions,stringsAsFactors=FALSE)
   tests[["pv"]]<-res$pvals
-  tests[["adjpv"]]<-paste("= ",as.character(format(res$adjpvals,scientific=TRUE,digits=2)),sep="")
+  tests[["adjpv"]]<-paste("= ",as.character(
+    format(res$adjpvals,scientific=TRUE,digits=2)),sep="")
   tests[["geneList"]]<-phenotype
   tests[["labels"]]<-names(gs.names)
   tests
 }
 
-#-------------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
 #--subfunction for tna.plot.gsea1
 check.format1<-function(tests){
   ylimPanels<-rep(0,4)
@@ -151,24 +163,29 @@ check.format1<-function(tests){
   ylimPanels
 }
 
-#-------------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
 #--subfunction for tna.plot.gsea1
-make.plot1 <- function(tests, labPheno, file, filepath, heightPanels, ylimPanels, ylabPanels,
-                       xlab, width, height, alpha, sparsity, plotpdf, ...) {
+make.plot1 <- function(tests, labPheno, file, filepath, heightPanels, 
+                       ylimPanels, ylabPanels,
+                       xlab, width, height, alpha, sparsity, 
+                       plotpdf, ...) {
   if (plotpdf){
-    pdf(file=file.path(filepath, paste(file,".pdf", sep="")), width=width, height=height)
+    pdf(file=file.path(filepath, paste(file,".pdf", sep="")), width=width, 
+        height=height)
   }
-  gsplot1(tests$runningScore, tests$enrichmentScore, tests$positions, tests$adjpv, tests$geneList, 
-          tests$labels, heightPanels, ylimPanels, ylabPanels, xlab, labPheno, alpha, sparsity, 
+  gsplot1(tests$runningScore, tests$enrichmentScore, tests$positions, 
+          tests$adjpv, tests$geneList, 
+          tests$labels, heightPanels, ylimPanels, ylabPanels, xlab, 
+          labPheno, alpha, sparsity, 
           ...=... )
   if (plotpdf)dev.off()
 }
 
-#-------------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
 #--subfunction for tna.plot.gsea1
 gsplot1 <- function(runningScore, enrichmentScore, positions, adjpv, 
-                       geneList, labels, heightPanels, ylimPanels, ylabPanels, xlab, 
-                       labPheno, alpha, sparsity, ...) {
+                    geneList, labels, heightPanels, ylimPanels, 
+                    ylabPanels, xlab, labPheno, alpha, sparsity, ...) {
   #-------------------------------------------------
   #set text size levels
   cexlev=c(1.3,1.2,1.1,0.9,0.8)
@@ -206,24 +223,27 @@ gsplot1 <- function(runningScore, enrichmentScore, positions, adjpv,
   if(heightPanels[1]>0){
     par(mar=c(0.5, 6.5, 1.5, 1.0),mgp=c(4.5,0.5,0),tcl=-0.2)
     plot(x=c(1,max(rsc.vec[,1])),y=c(min(geneList),max(geneList)), type="n", 
-         axes= FALSE,xlab="", ylab=ylabPanels[1], cex.lab=cexlev[1], ylim=ylimPanels[1:2], ...=...)
+         axes= FALSE,xlab="", ylab=ylabPanels[1], cex.lab=cexlev[1], 
+         ylim=ylimPanels[1:2], ...=...)
     if(min(geneList)<0)abline(h=0,lwd=0.6)
     sq<-c(1:length(geneList))%%sparsity;sq[sq>1]<-0
     sq<-as.logical(sq)
     lines(x=c(1:length(geneList))[sq],y=geneList[sq],col="grey75",lwd=1.4)
     nn=ifelse(min(geneList)<0,4,2)
     pp<-pretty(c(geneList,ylimPanels[1:2]),n=nn)
-    axis(2,line=0, cex.axis=cexlev[2], las=2, at=pp, lwd=1.2, labels=pp,...=...)
+    axis(2,line=0, cex.axis=cexlev[2], las=2, at=pp, lwd=1.2, 
+         labels=pp,...=...)
     if(!is.null(labPheno)){
       legend("topright", legend=labPheno, col="grey75", pch="---", 
-             bty="n",cex=cexlev[3], pt.cex=1.5, ...=...)   	
+             bty="n",cex=cexlev[3], pt.cex=1.5, ...=...)
     }
   }
   #-------------------------------------------------
   # plot2
   if(heightPanels[2]>0){
     par(mar=c(0.0, 6.5, 0.0, 1.0),mgp=c(4.5,0.5,0),tcl=-0.2)
-    plot(x=c(1,max(rsc.vec[,1])),y=c(0,max(rsc.vec[,2])), type="n", axes=FALSE, xlab="",
+    plot(x=c(1,max(rsc.vec[,1])),y=c(0,max(rsc.vec[,2])), type="n", 
+         axes=FALSE, xlab="",
          ylab=ylabPanels[2],cex.lab=cexlev[1], ...=...)
     for(i in 1:ng){
       idx<-rsc.vec[,2]==i
@@ -231,7 +251,8 @@ gsplot1 <- function(runningScore, enrichmentScore, positions, adjpv,
       yy<-rsc.vec[idx,2]
       segments(xx,yy-0.9,xx, yy-0.1, col=rev(rsc.colors)[i],lwd=0.2)
     }
-    axis(2,las=2, at=c(1:ng)-0.5,labels=rev(labels), line=0, cex.axis=cexlev[5],lwd=1.2 , ...=...)
+    axis(2,las=2, at=c(1:ng)-0.5,labels=rev(labels), line=0, 
+         cex.axis=cexlev[5],lwd=1.2 , ...=...)
   }
   #-------------------------------------------------
   # plot3
@@ -240,7 +261,8 @@ gsplot1 <- function(runningScore, enrichmentScore, positions, adjpv,
     par(mar=c(5, 6.5, 0.0, 1.0),mgp=c(4.5,0.5,0),tcl=-0.2)
     cc<-as.matrix(runningScore)
     plot(x=c(1,nrow(cc)),y=c(min(cc),max(cc)), type="n", axes=FALSE, xlab="",
-         ylim=ylimPanels[c(3,4)],ylab=ylabPanels[3], cex.lab=cexlev[1], ...=...)
+         ylim=ylimPanels[c(3,4)],ylab=ylabPanels[3], 
+         cex.lab=cexlev[1], ...=...)
     par(mgp=c(3.0,0.5,0))
     title(xlab=xlab, cex.lab=cexlev[1], ...=...)
     if(min(cc)<0)abline(h=0,lwd=1.2)
@@ -259,9 +281,11 @@ gsplot1 <- function(runningScore, enrichmentScore, positions, adjpv,
     }
     axis(1,cex.axis=cexlev[2], lwd=1.2, ...=...)
     axis(2,las=2,cex.axis=cexlev[2], lwd=1.2, ...=...)
-    labels<-paste(labels," (adj.p ",format(adjpv,scientific=TRUE,digits=2),")",sep="")
+    labels<-paste(labels," (adj.p ",format(adjpv,scientific=TRUE,digits=2),")",
+                  sep="")
     #labels=sub("=","<",labels)
-    legend("topright", legend=labels, col=rsc.colors, pch="---", bty="n",cex=cexlev[4], 
+    legend("topright", legend=labels, col=rsc.colors, pch="---", bty="n",
+           cex=cexlev[4], 
            pt.cex=1.2, title=ylabPanels[2], title.adj = 0, ...=...)
   }
 }
@@ -273,13 +297,17 @@ gsplot1 <- function(runningScore, enrichmentScore, positions, adjpv,
 
 ##------------------------------------------------------------------------------
 ##Plot 2-tailed enrichment analysis from TNA objects.
-tna.plot.gsea2<-function(object, labPheno="", file="tna_gsea2", filepath=".", regulon.order="size", 
-                         ntop=NULL, tfs=NULL, ylimPanels=c(-3.0,3.0,-0.5,0.5), heightPanels=c(2.0,0.8,5.0), 
-                         width=2.8, height=3.0, ylabPanels=c("Phenotype","Regulon","Enrichment score"), 
-                         xlab="Position in the ranked list of genes", 
-                         alpha=1.0, sparsity=10, autoformat=TRUE, plotpdf = TRUE, ...) {
+tna.plot.gsea2<-function(
+  object, labPheno="", file="tna_gsea2", filepath=".", 
+  regulon.order="size", ntop=NULL, tfs=NULL, 
+  ylimPanels=c(-3.0,3.0,-0.5,0.5), 
+  heightPanels=c(2.0,0.8,5.0), width=2.8, height=3.0, 
+  ylabPanels=c("Phenotype","Regulon","Enrichment score"), 
+  xlab="Position in the ranked list of genes", 
+  alpha=1.0, sparsity=10, autoformat=TRUE, 
+  plotpdf = TRUE, ...) {
   #checks
-  if(class(object)!="TNA" || object@status$analysis["GSEA2"]!="[x]"){
+  if(!is(object,"TNA") || object@status$analysis["GSEA2"]!="[x]"){
     cat("-invalid 'GSEA2' status! \n")
     stop("NOTE: gsea plot requires results from 'tna.gsea2' analysis!")
   }
@@ -300,7 +328,8 @@ tna.plot.gsea2<-function(object, labPheno="", file="tna_gsea2", filepath=".", re
   ##-----get gsea2 results
   if(!is.null(tfs)){
     resgsea<-tna.get(object, what="gsea2", ntop=-1, reportNames=TRUE)
-    idx<-(rownames(resgsea$differential)%in%tfs+resgsea$differential$Regulon%in%tfs)>0
+    idx<-(rownames(resgsea$differential)%in%tfs+
+            resgsea$differential$Regulon%in%tfs)>0
     if(all(!idx)){
       stop("one or more input 'tfs' not found in the 'gsea2' results!")
     }
@@ -342,9 +371,11 @@ tna.plot.gsea2<-function(object, labPheno="", file="tna_gsea2", filepath=".", re
 ##------------------------------------------------------------------------------
 ##Plot 2-tailed enrichment analysis from TNA objects.
 plot.gsea2<-function(resgsea, rgcs, phenotype, nPermutations, exponent,
-                     labPheno="tna", file=labPheno, filepath=".", regulon.order="Regulon.Size", 
-                     ntop=NULL, tfs=NULL, ylimPanels=c(-3.0,3.0,-0.5,0.5), heightPanels=c(1.5,0.7,5.0), 
-                     width=4, height=3.5, ylabPanels=c("Phenotype","Regulon","Enrichment score"), 
+                     labPheno="tna", file=labPheno, filepath=".", 
+                     regulon.order="Regulon.Size", ntop=NULL, tfs=NULL, 
+                     ylimPanels=c(-3.0,3.0,-0.5,0.5), 
+                     heightPanels=c(1.5,0.7,5.0), width=4, height=3.5, 
+                     ylabPanels=c("Phenotype","Regulon","Enrichment score"), 
                      xlab="Position in the ranked list of genes", alpha=1.0, 
                      sparsity=10, autoformat=TRUE, plotpdf=TRUE, ...) {
   ##return valid arg
@@ -353,7 +384,8 @@ plot.gsea2<-function(resgsea, rgcs, phenotype, nPermutations, exponent,
   if(!is.null(resgsea) && nrow(resgsea$differential)>0){
     if(regulon.order!='none'){
       decreasing<-ifelse(regulon.order=='Observed.Score',TRUE,FALSE)
-      idx<-sort.list(resgsea$differential[,regulon.order],decreasing=decreasing)
+      idx<-sort.list(resgsea$differential[,regulon.order],
+                     decreasing=decreasing)
       resgsea$differential<-resgsea$differential[idx,]
       resgsea$positive<-resgsea$positive[idx,]
       resgsea$negative<-resgsea$negative[idx,]
@@ -367,18 +399,22 @@ plot.gsea2<-function(resgsea, rgcs, phenotype, nPermutations, exponent,
   phenotype<-phenotype[order(phenotype,decreasing=TRUE)]
   ##----get stat resolution
   pvresolu<-signif(1/(nPermutations+1), digits=5)
-  pvcutoff<-paste("< ",as.character(format(pvresolu,scientific=TRUE,digits=2)),collapse="",sep="")
+  pvcutoff<-paste("< ",as.character(format(pvresolu,scientific=TRUE,digits=2)),
+                  collapse="",sep="")
   ##----plot
   for(i in 1:length(gs.names)){
     ##-----get merged data
-    tests<-get.merged.data2(gs.names[i],phenotype,rgcs,resgsea$differential[i,,drop=FALSE],exponent)
+    tests<-get.merged.data2(
+      gs.names[i],phenotype,rgcs,resgsea$differential[i,,drop=FALSE],exponent)
     tests$pv[["up"]]<-resgsea$positive[i,"Pvalue"]
     tests$adjpv[["up"]]<-resgsea$positive[i,"Adjusted.Pvalue"]
     tests$pv[["down"]]<-resgsea$negative[i,"Pvalue"]
     tests$adjpv[["down"]]<-resgsea$negative[i,"Adjusted.Pvalue"]
-    tests$adjpv[]<-paste("= ",as.character(format(tests$adjpv,scientific=TRUE,digits=2)),sep="")
+    tests$adjpv[]<-paste("= ",as.character(
+      format(tests$adjpv,scientific=TRUE,digits=2)),sep="")
     tests$dES<-resgsea$differential[i,"Observed.Score"]
-    tests$regsizes <- c(resgsea$negative[i,"Regulon.Size"],resgsea$positive[i,"Regulon.Size"])
+    tests$regsizes <- c(resgsea$negative[i,"Regulon.Size"],
+                        resgsea$positive[i,"Regulon.Size"])
     names(tests$regsizes) <- c("neg","pos")
     ##-----fix pvalue report for the resolution
     idx<-tests$pv==pvresolu
@@ -391,7 +427,7 @@ plot.gsea2<-function(resgsea, rgcs, phenotype, nPermutations, exponent,
   }
 }
 
-#-------------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
 #--subfunction for tna.plot.gsea2
 get.merged.data2<-function(gs.name,phenotype,rgcs,resgsea,exponent){
   res<-list()
@@ -411,9 +447,11 @@ get.merged.data2<-function(gs.name,phenotype,rgcs,resgsea,exponent){
   res$testdown$runningScores[[gs.name]]<-testdown$runningScore
   tests<-list()
   tests$testup[["enrichmentScores"]]<-res$testup$enrichmentScores
-  tests$testup[["runningScores"]]<-as.data.frame(res$testup$runningScores,stringsAsFactors=FALSE)
+  tests$testup[["runningScores"]]<-as.data.frame(res$testup$runningScores,
+                                                 stringsAsFactors=FALSE)
   tests$testdown[["enrichmentScores"]]<-res$testdown$enrichmentScores
-  tests$testdown[["runningScores"]]<-as.data.frame(res$testdown$runningScores,stringsAsFactors=FALSE)
+  tests$testdown[["runningScores"]]<-as.data.frame(res$testdown$runningScores,
+                                                   stringsAsFactors=FALSE)
   tests[["positions"]]<-as.data.frame(res$positions,stringsAsFactors=FALSE)  
   tests[["geneList"]]<-phenotype
   tests[["label"]]<-names(gs.name)
@@ -422,7 +460,7 @@ get.merged.data2<-function(gs.name,phenotype,rgcs,resgsea,exponent){
   tests
 }
 
-#-------------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
 #--subfunction for tna.plot.gsea2
 check.format2<-function(tests){
   ylimPanels<-rep(0,4)
@@ -432,8 +470,10 @@ check.format2<-function(tests){
   if(tp[2]>tpp[2])tpp[2]=tpp[2]+1
   ylimPanels[1:2]<-tpp
   tp<-sapply(1:length(tests$label),function(i){
-    tp1<-min(c(tests$testup$runningScores[,i],tests$testdown$runningScores[,i]))
-    tp2<-max(c(tests$testup$runningScores[,i],tests$testdown$runningScores[,i]))
+    tp1<-min(
+      c(tests$testup$runningScores[,i],tests$testdown$runningScores[,i]))
+    tp2<-max(
+      c(tests$testup$runningScores[,i],tests$testdown$runningScores[,i]))
     c(tp1,tp2)
   })
   tp<-c(min(tp),max(tp))
@@ -447,26 +487,32 @@ check.format2<-function(tests){
   ylimPanels
 }
 
-#-------------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
 #--subfunction for tna.plot.gsea2
-make.plot2 <- function(tests, labPheno, file, filepath, heightPanels, ylimPanels, ylabPanels,
+make.plot2 <- function(tests, labPheno, file, filepath, heightPanels, 
+                       ylimPanels, ylabPanels,
                        xlab, width, height, alpha, sparsity, plotpdf,...) {
   if (plotpdf){
     pdf(file=file.path(filepath, paste(file,"_",tests$label,".pdf", sep="")), 
       width=width, height=height)
   }
   gsplot2(tests$testup$runningScore, tests$testup$enrichmentScore, 
-          tests$testdown$runningScore, tests$testdown$enrichmentScore,tests$dES, 
-          tests$positions, tests$adjpv, tests$geneList, tests$label, tests$regsizes, 
-          heightPanels, ylimPanels, ylabPanels, xlab, labPheno, alpha, sparsity, ...=... )
+          tests$testdown$runningScore, 
+          tests$testdown$enrichmentScore,tests$dES, 
+          tests$positions, tests$adjpv, tests$geneList, tests$label,
+          tests$regsizes, 
+          heightPanels, ylimPanels, ylabPanels, xlab, labPheno, alpha, 
+          sparsity, ...=... )
   if (plotpdf)dev.off()
 }
 
-#-------------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
 #--subfunction for tna.plot.gsea2
-gsplot2 <- function(runningScoreUp, enrichmentScoreUp, runningScoreDown, enrichmentScoreDown,
-                    dES, positions, adjpv, geneList, label, regsizes, heightPanels, 
-                    ylimPanels, ylabPanels, xlab, labPheno, alpha, sparsity, ...) {
+gsplot2 <- function(runningScoreUp, enrichmentScoreUp, runningScoreDown, 
+                    enrichmentScoreDown, dES, positions, adjpv, 
+                    geneList, label, 
+                    regsizes, heightPanels, ylimPanels, ylabPanels, xlab, 
+                    labPheno, alpha, sparsity, ...) {
   #-------------------------------------------------
   positions<-as.matrix(positions)
   positions[positions==1]=2
@@ -506,14 +552,17 @@ gsplot2 <- function(runningScoreUp, enrichmentScoreUp, runningScoreDown, enrichm
     ylim<-ylimPanels[1:2]
     par(mar=c(0.1, 5.0, 1.5, 1.5),mgp=c(2.2,0.6,0),tcl=-0.2,family="sans")
     plot(x=c(1,max(rsc.vec[,1])),y=c(min(geneList),max(geneList)), type="n", 
-         axes= FALSE,xlab="", ylab=ylabPanels[1], cex.lab=cexlev[1], ylim=ylim,xlim=xlim, ...=...)
-    if(min(geneList)<0)abline(h=0,lwd=1.1)    #segments(0, 0, length(geneList), 0,col="grey70")
+         axes= FALSE,xlab="", ylab=ylabPanels[1], cex.lab=cexlev[1],
+         ylim=ylim,xlim=xlim, ...=...)
+    if(min(geneList)<0)
+      abline(h=0,lwd=1.1)#segments(0, 0, length(geneList), 0,col="grey70")
     sq<-c(1:length(geneList))%%sparsity;sq[sq>1]<-0
     sq<-as.logical(sq)
     lines(x=c(1:length(geneList))[sq],y=geneList[sq],col="#008080",lwd=1.5)
     pp<-pretty(c(geneList,ylimPanels[1:2]),n=nn)
     pp<-pp[(pp >= ylim[1] & pp <= ylim[2])]
-    axis(2,line=0, cex.axis=cexlev[2], las=2, at=pp, labels=pp, lwd=1.3,...=...)
+    axis(2,line=0, cex.axis=cexlev[2], las=2, at=pp, 
+         labels=pp, lwd=1.3,...=...)
     if(!is.null(labPheno)){
       legend("topright", legend=labPheno, col="#008080", pch="", x.intersp=0.5, 
              bty="n",cex=cexlev[3], seg.len=1, lwd=2, ...=...)     
@@ -523,7 +572,8 @@ gsplot2 <- function(runningScoreUp, enrichmentScoreUp, runningScoreDown, enrichm
   # plot2
   if(heightPanels[2]>0){
     par(mar=c(0.0, 5.0, 0, 1.5),mgp=c(2.1,0.25,0),tcl=-0.1,tck=0.15)
-    plot(x=c(1,max(rsc.vec[,1])),y=c(0,max(rsc.vec[,2])+1), type="n", axes=FALSE, xlab="",
+    plot(x=c(1,max(rsc.vec[,1])),y=c(0,max(rsc.vec[,2])+1), type="n", 
+         axes=FALSE, xlab="",
          ylab="",cex.lab=cexlev[1], ...=...)
     for(i in 1:ng){
       idx<-rsc.vec[,2]==i
@@ -532,10 +582,12 @@ gsplot2 <- function(runningScoreUp, enrichmentScoreUp, runningScoreDown, enrichm
       cc<-rsc.vec[idx,3]
       segments(xx,yy-0.9,xx, yy-0.1, col=rsc.colors[cc],lwd=0.35)
     }
-    axis(2,las=2, at=c(1:ng)-0.5,labels=ylabPanels[2], line=0, cex.axis=cexlev[3],lwd=1.3, ...=...)
+    axis(2,las=2, at=c(1:ng)-0.5,labels=ylabPanels[2], line=0, 
+         cex.axis=cexlev[3],lwd=1.3, ...=...)
     leg <- paste0(c("negative (","positive ("), regsizes,")")
     legend("top", legend=leg, col=rsc.colors, bty="n",cex=cexlev[5],
-           horiz=TRUE,seg.len=1,lwd=2,title=NULL,title.adj = 0,inset=-0.1,x.intersp=0.5, ...=...)
+           horiz=TRUE,seg.len=1,lwd=2,title=NULL,title.adj = 0,
+           inset=-0.1,x.intersp=0.5, ...=...)
   }
   #-------------------------------------------------
   # plot3
@@ -544,7 +596,8 @@ gsplot2 <- function(runningScoreUp, enrichmentScoreUp, runningScoreDown, enrichm
     par(mar=c(5, 5.0, 0.0, 1.5),mgp=c(2.2,0.5,0),tcl=-0.2)
     cc<-as.matrix(runningScoreDown)
     plot(x=c(1,nrow(cc)),y=c(min(cc),max(cc)), type="n", axes=FALSE, xlab="",
-         ylim=ylimPanels[c(3,4)],ylab=ylabPanels[3], cex.lab=cexlev[1], ...=...)
+         ylim=ylimPanels[c(3,4)],ylab=ylabPanels[3], 
+         cex.lab=cexlev[1], ...=...)
     par(mgp=c(2.0,0.5,0))
     title(xlab=xlab, cex.lab=cexlev[1], ...=...)
     if(min(cc)<0)abline(h=0,lwd=1.1)
@@ -582,13 +635,15 @@ gsplot2 <- function(runningScoreUp, enrichmentScoreUp, runningScoreDown, enrichm
       yy<-cc[,i]
       xx<-which(yy==enrichmentScoreDown[[i]])
       xx<-xx[length(xx)]
-      points(xx, yy[xx], bg=rsc.colors[1],col=rsc.colors[1], lwd=1, cex=1, pch=21)
+      points(xx, yy[xx], bg=rsc.colors[1],col=rsc.colors[1], 
+             lwd=1, cex=1, pch=21)
     }
     cc<-as.matrix(runningScoreUp)
     for(i in 1:ng){
       yy<-cc[,i]
       xx<-which(yy==enrichmentScoreUp[[i]])[1]
-      points(xx, yy[xx], bg=rsc.colors[2],col=rsc.colors[2], lwd=1, cex=1, pch=21)
+      points(xx, yy[xx], bg=rsc.colors[2],col=rsc.colors[2], 
+             lwd=1, cex=1, pch=21)
     }
     #---
     pp<-pretty(c(0,nrow(cc)))
@@ -596,10 +651,15 @@ gsplot2 <- function(runningScoreUp, enrichmentScoreUp, runningScoreDown, enrichm
     axis(2,las=2,cex.axis=cexlev[2], lwd=1.3, ...=...)
     # adjpv<-c(adjpv["down"],adjpv["up"],adjpv["pv"])
     # lbstat<-paste(c("neg ","pos ","diff "),adjpv,sep="")
-    # legend("bottomleft", legend=lbstat, col=c(rsc.colors[1],rsc.colors[2],NA), pch=20, bty="n",cex=cexlev[5], 
-    #        pt.cex=1.2, title="  Adj. p-value", title.adj = 0, y.intersp=0.85,x.intersp=0.6, ...=...)
-    # legend("topright", legend=label, col=NA, pch=NA, bty="n",cex=cexlev[1]*1.3, pt.cex=1.2, title=NULL,  ...=...)
-    # legend("bottomright", legend=paste("dES = ",dES,sep=""), col=NA, pch=NA, bty="n",cex=cexlev[1]*0.6, title=NULL,  ...=...)
+    # legend("bottomleft", legend=lbstat, 
+    #        col=c(rsc.colors[1],rsc.colors[2],NA), pch=20, 
+    #        bty="n",cex=cexlev[5],
+    #        pt.cex=1.2, title="  Adj. p-value", title.adj = 0, 
+    #        y.intersp=0.85,x.intersp=0.6, ...=...)
+    # legend("topright", legend=label, col=NA, pch=NA, bty="n",
+    #        cex=cexlev[1]*1.3, pt.cex=1.2, title=NULL,  ...=...)
+    # legend("bottomright", legend=paste("dES = ",dES,sep=""), col=NA, 
+    #        pch=NA, bty="n",cex=cexlev[1]*0.6, title=NULL,  ...=...)
     lbstat<-paste(c("dES = ","Adj. p-value = "),c(dES, adjpv["pv"]),sep="")
     legend("bottomleft", legend=lbstat, title=NULL, bty="n", cex=cexlev[5], 
            xjust = 0, inset = c(-0.025,0),

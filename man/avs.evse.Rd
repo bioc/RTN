@@ -4,58 +4,94 @@
 \title{An eQTL/VSE pipeline for variant set enrichment analysis.}
 
 \description{
-The VSE method (\code{\link[RTN:avs.vse]{avs.vse}}) provides a robust framework to cope with the heterogeneous structure of haplotype blocks, and has been designed to test enrichment in cistromes and epigenomes. In order to extend the variant set enrichment to genes this pipeline implements an additional step using expression quantitative trait loci (eQTLs).
+The VSE method (\code{\link[RTN:avs.vse]{avs.vse}}) provides a robust framework 
+to cope with the heterogeneous structure of haplotype blocks, and has been 
+designed to test enrichment in cistromes and epigenomes. In order to extend 
+the variant set enrichment to genes this pipeline implements an additional 
+step using expression quantitative trait loci (eQTLs).
 }
 
 \usage{
-avs.evse(object, annotation, gxdata, snpdata, maxgap=250, pValueCutoff=0.05, pAdjustMethod="bonferroni",
-boxcox=TRUE, lab="annotation", glist=NULL, minSize=100,  fineMapping=TRUE, 
-verbose=TRUE)
+avs.evse(object, annotation, gxdata, snpdata, maxgap=250, pValueCutoff=0.05, 
+pAdjustMethod="bonferroni", boxcox=TRUE, lab="annotation", glist=NULL, 
+minSize=100,  fineMapping=TRUE, verbose=TRUE)
 }
 
 \arguments{
 \item{object}{
 an object. When this function is implemented as the S4 method of class 
-\code{\link[RTN:AVS-class]{AVS-class}}, this argument is an object of class 'AVS'.
+\code{\link[RTN:AVS-class]{AVS-class}}, this argument is an object of 
+class 'AVS'.
 }
 \item{annotation}{
-a data frame with genomic annotations listing chromosome coordinates to which a particular 
-property or function has been attributed. It should include the following columns: <CHROM>, <START>, <END> and <ID>. The <ID> column can be any genomic identifier, while values in <CHROM> should be listed in ['chr1', 'chr2', 'chr3' ..., 'chrX']. Both <START> and <END> columns correspond to chromosome positions mapped to the human genome assembly used to build the AVS object.
+a data frame with genomic annotations listing chromosome coordinates to which 
+a particular property or function has been attributed. It should include the 
+following columns: <CHROM>, <START>, <END> and <ID>. The <ID> column can be 
+any genomic identifier, while values in <CHROM> should be listed in 
+['chr1', 'chr2', 'chr3' ..., 'chrX']. Both <START> and <END> columns 
+correspond to chromosome positions mapped to the human genome assembly 
+used to build the AVS object.
 }
 \item{gxdata}{
 object of class "matrix", a gene expression matrix.
 }
 \item{snpdata}{
-either an object of class "matrix" or "ff", a single nucleotide polymorphism (SNP) matrix.
+either an object of class "matrix" or "ff", a single nucleotide polymorphism 
+(SNP) matrix.
 }
 \item{maxgap}{
-a single integer value specifying the max distant (kb) between the AVS and the annotation used to compute the eQTL analysis.
+a single integer value specifying the max distant (kb) between the AVS and the 
+annotation used to compute the eQTL analysis.
 }
 \item{pValueCutoff}{
-a single numeric value specifying the cutoff for p-values considered significant.
+a single numeric value specifying the cutoff for p-values 
+considered significant.
 }
 \item{pAdjustMethod}{
-a single character value specifying the p-value adjustment method to be used (see 'p.adjust' for details).
+a single character value specifying the p-value adjustment method to be 
+used (see 'p.adjust' for details).
 }
 \item{boxcox}{
-a single logical value specifying to use Box-Cox procedure to find a transformation of the null that approaches normality (when boxcox=TRUE) or not (when boxcox=FALSE). See \code{\link[car:powerTransform]{powerTransform}} and \code{\link[car:bcPower]{bcPower}}.
+a single logical value specifying to use Box-Cox procedure to find a 
+transformation of the null that approaches normality (when boxcox=TRUE) or 
+not (when boxcox=FALSE). See \code{\link[car:powerTransform]{powerTransform}} 
+and \code{\link[car:bcPower]{bcPower}}.
 }
 \item{lab}{
-a single character value specifying a name for the annotation dataset (this option is overrided if 'glist' is used).
+a single character value specifying a name for the annotation dataset 
+(this option is overrided if 'glist' is used).
 }
 \item{glist}{
-an optional list with character vectors mapped to the 'annotation' data via <ID> column. This option can be used to run a batch mode for gene sets and regulons.
+an optional list with character vectors mapped to the 'annotation' data via 
+<ID> column. This option can be used to run a batch mode for gene sets 
+and regulons.
 }
 \item{minSize}{
-if 'glist' is provided, this argument is a single integer or numeric value specifying the minimum number of elements for each gene set in the 'glist'. Gene sets with fewer than this number are removed from the analysis. if 'fineMapping=FALSE', an alternative min size value can be provided as a vector of the form c(minSize1, minSize2) used to space the null distributions (see 'fineMapping').
+if 'glist' is provided, this argument is a single integer or numeric value 
+specifying the minimum number of elements for each gene set in the 'glist'. 
+Gene sets with fewer than this number are removed from the analysis. 
+If 'fineMapping=FALSE', an alternative min size value can be provided as a 
+vector of the form c(minSize1, minSize2) used to space the null distributions 
+(see 'fineMapping').
 }
 \item{fineMapping}{
-if 'glist' is provided, this argument is a single logical value specifying to compute individual null distributions, sized for each gene set (when fineMapping=TRUE). This option has a significant impact on the running time required to perform the computational analysis, especially for large gene set lists. When fineMapping=FALSE, a low resolution analysis is performed by pre-computing a fewer number of null distributions of different sizes (spaced by 'minSize'), and then used as a proxy of the nulls.
+if 'glist' is provided, this argument is a single logical value specifying to 
+compute individual null distributions, sized for each gene set 
+(when fineMapping=TRUE). This option has a significant impact on the running 
+time required to perform the computational analysis, especially for large 
+gene set lists. When fineMapping=FALSE, a low resolution analysis is performed 
+by pre-computing a fewer number of null distributions of different sizes 
+(spaced by 'minSize'), and then used as a proxy of the nulls.
 }
 \item{verbose}{
-a single logical value specifying to display detailed messages (when verbose=TRUE) 
-or not (when verbose=FALSE).
+a single logical value specifying to display detailed messages 
+(when verbose=TRUE) or not (when verbose=FALSE).
 }
+}
+
+\value{
+a data frame in the slot "results", see 'what' options in 
+\code{\link[RTN:avs.get]{avs.get}}.
 }
 
 \author{Mauro Castro}
@@ -96,10 +132,11 @@ genemap <- genemap[,c("seqnames","start","end","gene_id")]
 colnames(genemap) <- c("CHROM","START","END","ID")
 
 #--- step 3: load a TNI object, or any other source of regulons (e.g. gene sets)
-#--- and prepare a gene set list (gene ids should be the same as in the 'genemap' object)
+#--- and prepare a gene set list 
+#--- (gene ids should be the same as in the 'genemap' object)
 data("rtni1st")
 glist <- tni.get(rtni1st,what="refregulons",idkey="ENTREZ")
-glist <- glist[ c("FOXA1","GATA3","ESR1") ] #reduce the list just for demonstration!
+glist <- glist[ c("FOXA1","GATA3","ESR1") ] #reduce the list for demonstration!
 
 #--- step 4: input matched variation and gene expression datasets!
 #--- here we use two "toy" datasets for demonstration purposes only.
@@ -107,7 +144,8 @@ data(toy_snpdata, package="RTNdata.LDHapMapRel27")
 data(toy_gxdata, package="RTNdata.LDHapMapRel27")
 
 #--- step 5: run the avs.evse pipeline
-bcavs<-avs.evse(bcavs, annotation=genemap, gxdata=toy_gxdata, snpdata=toy_snpdata, 
+bcavs<-avs.evse(bcavs, annotation=genemap, gxdata=toy_gxdata, 
+                snpdata=toy_snpdata, 
                 glist=glist, pValueCutoff=0.01)
 
 #--- step 6: generate the EVSE plots

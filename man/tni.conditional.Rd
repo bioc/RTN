@@ -13,7 +13,7 @@ the TF and its targets conditioned to the gene expression of a modulator.
 }
 
 \usage{
-tni.conditional(object, modulators=NULL, tfs=NULL, sampling=35, pValueCutoff=0.01, 
+tni.conditional(object, modulators, tfs=NULL, sampling=35, pValueCutoff=0.01, 
 pAdjustMethod="bonferroni", minRegulonSize=15, minIntersectSize=5, 
 miThreshold="md", prob=0.99, medianEffect=FALSE, 
 iConstraint=TRUE, verbose=TRUE, ...)
@@ -27,8 +27,7 @@ a processed object of class 'TNI' \code{\link[RTN:TNI-class]{TNI-class}} evaluat
 and \code{\link[RTN:tni.dpi.filter]{tni.dpi.filter}}.
 }
 \item{modulators}{
-a vector with gene identifiers for those considered as candidate modulators. If NULL, the function 
-will assess all TFs in the network, provided that the candidate passes all filtering steps.
+a vector with identifiers for those considered as candidate modulators.
 }
 \item{tfs}{
 a vector with TF identifiers. If NULL, the function will assess all TFs in the network.
@@ -117,7 +116,7 @@ mod4test <- rownames(rtni@gexp)[sample(1:nrow(rtni@gexp),200)]
 rtni <- tni.conditional(rtni, modulators=mod4test, pValueCutoff=1e-3)
 
 #get results
-cdt <- tni.get(rtni, what="cdt")
+cdt <- tni.get(rtni, what="cdt.table")
 
 #get summary on a graph object
 g <- tni.graph(rtni, gtype="mmap")

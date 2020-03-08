@@ -1,5 +1,5 @@
 ################################################################################
-##########################         TNI Class        ############################
+##########################    TNI Class Methods     ############################
 ################################################################################
 
 ##------------------------------------------------------------------------------
@@ -8,26 +8,50 @@
 tni.constructor <- function(expData, regulatoryElements, rowAnnotation=NULL, 
                             colAnnotation=NULL, cvfilter=FALSE, verbose=TRUE){
   if(missing(expData))
-    stop("NOTE: 'expData' is missing!",call.=FALSE)    
+    stop("'expData' is missing!",call.=FALSE)    
   if(missing(regulatoryElements))
-    stop("NOTE: 'regulatoryElements' is missing!",call.=FALSE) 
-  if(class(expData) == "SummarizedExperiment" || 
-     class(expData) == "RangedSummarizedExperiment"){
+    stop("'regulatoryElements' is missing!",call.=FALSE) 
+  if(is(expData,"SummarizedExperiment") || 
+     is(expData,"RangedSummarizedExperiment")){
     if( !is.null(rowAnnotation) || !is.null(colAnnotation) ){
       tp1 <- "NOTE: when using a 'SummarizedExperiment' container, "
       tp2 <- "row and col annotations are used from that object!"
       warning(tp1,tp2,call.=FALSE)
     }
     if (length(assays(expData)) > 1) {
-      stop("NOTE: please input a SummarizedExperiment with only one assay")
+      stop("please input a SummarizedExperiment with only one assay")
     }
     rowAnnotation <- as.data.frame(rowData(expData))
     colAnnotation <- as.data.frame(colData(expData))
     expData <- assays(expData)[[1]]
   }
   object <- new("TNI", expData=expData, regulatoryElements=regulatoryElements)
-  object <- tni.preprocess(object, rowAnnotation, colAnnotation, cvfilter, verbose)
+  object <- tni.preprocess(object, rowAnnotation, colAnnotation, 
+                           cvfilter, verbose)
   return(object)
+}
+
+##------------------------------------------------------------------------------
+## Estimate 'alphaB' for 'nB', given 'nA', 'alphaA' and 'betaA'
+tni.alpha.adjust <- function(nB, nA, alphaA, betaA = 0.2){
+  if(missing(nB))
+    stop("'nB' is missing!",call.=FALSE) 
+  if(missing(nA))
+    stop("'nA' is missing!",call.=FALSE) 
+  if(nA<nB)
+    stop("'nA' must be greater than or equal to 'nB'!",call.=FALSE)
+  if(missing(alphaA))
+    stop("'alphaA' is missing!",call.=FALSE)
+  tnai.checks(name="nB", para=nB)
+  tnai.checks(name="nA", para=nA)
+  tnai.checks(name="alphaA", para=alphaA)
+  tnai.checks(name="betaA", para=betaA)
+  if(nA==nB){
+    alphaB <- alphaA
+  } else {
+    alphaB <- .alpha.adjust(nB, nA, alphaA, betaA)
+  }
+  return(alphaB)
 }
 
 ##------------------------------------------------------------------------------
@@ -43,34 +67,47 @@ setMethod("initialize",
             .Object@results<-list()
             ##-----status matrix
             .Object@status <- rep("[ ]", 1, 5)
-            names(.Object@status) <- c("Preprocess", "Permutation", "Bootstrap", "DPI.filter", "Conditional")
+            names(.Object@status) <- c("Preprocess", "Permutation", 
+                                       "Bootstrap", "DPI.filter", 
+                                       "Conditional")
             ##-----summary info
             ##-----regulatoryElements
             sum.info.regElements<-matrix(,1,2)
             rownames(sum.info.regElements)<-"regulatoryElements"
-            colnames(sum.info.regElements)<-c("input","valid")           
+            colnames(sum.info.regElements)<-c("input","valid")   
+            ##-----targetElements
+            sum.info.targetElements<-matrix(,1,2)
+            rownames(sum.info.targetElements)<-"targetElements"
+            colnames(sum.info.targetElements)<-c("input","valid")  
             ##-----parameters
             sum.info.para <- list()
             sum.info.para$perm<-matrix(,1,7)
-            colnames(sum.info.para$perm)<-c("pValueCutoff","pAdjustMethod", "globalAdjustment",
-                               "estimator", "nPermutations","pooledNullDistribution", "boxcox")
+            colnames(sum.info.para$perm)<-c("pValueCutoff","pAdjustMethod", 
+                                            "globalAdjustment", "estimator", 
+                                            "nPermutations",
+                                            "pooledNullDistribution", "boxcox")
             rownames(sum.info.para$perm)<-"Parameter"
             sum.info.para$boot<-matrix(,1,4)
-            colnames(sum.info.para$boot)<-c("estimator", "nBootstraps", "consensus", "boxcox")        
+            colnames(sum.info.para$boot)<-c("estimator", "nBootstraps", 
+                                            "consensus", "boxcox")        
             rownames(sum.info.para$boot)<-"Parameter"
             sum.info.para$dpi<-matrix(,1,1)
             colnames(sum.info.para$dpi)<-c("eps")       
             rownames(sum.info.para$dpi)<-"Parameter"
             sum.info.para$cdt<-matrix(,1,7)
-            colnames(sum.info.para$cdt)<-c("sampling","pValueCutoff","pAdjustMethod","minRegulonSize",
-                                           "minIntersectSize","miThreshold","prob")
+            colnames(sum.info.para$cdt)<-c("sampling","pValueCutoff",
+                                           "pAdjustMethod","minRegulonSize",
+                                           "minIntersectSize","miThreshold",
+                                           "prob")
             rownames(sum.info.para$cdt)<-"Parameter"
             ##-----results
             sum.info.results<-list()
             sum.info.results$tnet<-matrix(,2,3)
-            colnames(sum.info.results$tnet)<-c("regulatoryElements","Targets","Edges")
+            colnames(sum.info.results$tnet)<-c("regulatoryElements","Targets",
+                                               "Edges")
             rownames(sum.info.results$tnet)<-c("tnet.ref","tnet.dpi")
             .Object@summary<-list(regulatoryElements=sum.info.regElements,
+                                  targetElements=sum.info.targetElements,
                                   para=sum.info.para,results=sum.info.results)			
             .Object
           }
@@ -80,8 +117,8 @@ setMethod("initialize",
 setMethod(
   "tni.preprocess",
   "TNI",
-  function(object, rowAnnotation=NULL, colAnnotation=NULL, cvfilter=FALSE, 
-           verbose=TRUE){
+  function(object, rowAnnotation=NULL, colAnnotation=NULL, 
+           cvfilter=FALSE, verbose=TRUE){
     
     ##----check compatibility
     object <- upgradeTNI(object)
@@ -93,6 +130,10 @@ setMethod(
     tnai.checks(name="cvfilter",para=cvfilter)
     tnai.checks(name="verbose",para=verbose)
     
+    ##---- Count initial input
+    object@summary$regulatoryElements[,"input"] <- length(object@regulatoryElements)
+    object@summary$targetElements[,"input"] <- nrow(object@gexp)
+    
     ##----initial checks for the main arguments
     tnai.checks(name="regulatoryElements",para=object@regulatoryElements)
     tmp <- .expDataChecks(object@gexp, rowAnnotation, colAnnotation)
@@ -100,10 +141,11 @@ setMethod(
     rowAnnotation <- tmp$rowAnnotation
     colAnnotation <- tmp$colAnnotation
     
-    ##----add rowAnnotation
+    ##----update rowAnnotation
     if(cvfilter && ncol(rowAnnotation)>1){
       #apply cvfilter if rowAnnotation is available
-      if(verbose)cat("--Removing duplicated genes (keep max coefficient of variation!)...\n")
+      if(verbose)
+        cat("--Removing duplicated genes (keep max coefficient of variation!)...\n")
       #e.g. col1=id, col2=symbol (collapse cv by col2)
       cvres <- cv.filter(object@gexp, rowAnnotation)
       object@gexp <- cvres$gexp
@@ -116,22 +158,19 @@ setMethod(
     object@colAnnotation <- colAnnotation[colnames(object@gexp),,drop=FALSE]
     
     ##----update regulatoryElements
-    object@summary$regulatoryElements[,"input"] <- length(object@regulatoryElements)
     if(verbose) cat("--Checking 'regulatoryElements' in 'rowAnnotation'...\n")
-    col1 <- sapply(1:ncol(rowAnnotation),function(i){
+    col1 <- sapply(1:ncol(object@rowAnnotation),function(i){
       sum(object@regulatoryElements%in%object@rowAnnotation[,i],na.rm=TRUE)
     })
     col1 <- which(col1==max(col1))[1]
-    if(col1!=1){
-      idx <- object@rowAnnotation[[col1]] %in% object@regulatoryElements
-      object@regulatoryElements <- rownames(object@rowAnnotation)[idx]
-    }
+    idx <- object@rowAnnotation[[col1]] %in% object@regulatoryElements
+    object@regulatoryElements <- rownames(object@rowAnnotation)[idx]
     
     ##----check sd in expData
     if(verbose) cat("--Checking 'expData'...\n")
     sd.check <- apply(object@gexp,1,sd)
     if(any(is.na(sd.check))){
-      stop("NOTE: unpredicted exception found in the input data matrix! 
+      stop("unpredicted exception found in the input data matrix! 
            ...a possible cause is the presence of 'Inf' values. ")
     }
     sd.check <- sd.check==0
@@ -140,40 +179,30 @@ setMethod(
                      sum(sd.check),"gene(s)! \n")
       object@gexp <- object@gexp[!sd.check,,drop=FALSE]
       object@rowAnnotation <- object@rowAnnotation[!sd.check,,drop=FALSE]
+      object@regulatoryElements <- object@regulatoryElements[
+        object@regulatoryElements %in% rownames(object@rowAnnotation)]
     }
     
-    ##----check regulatoryElements
-    if(verbose) cat("--Checking 'regulatoryElements' in 'expData'...\n")
-    idx <- object@regulatoryElements%in%rownames(object@gexp)
-    object@regulatoryElements <- object@regulatoryElements[idx]
+    ##----add targetElements
+    object@targetElements <- rownames(object@rowAnnotation)
+    object@summary$targetElements[,"valid"] <- nrow(object@gexp)
+    
+    ##----final checks for regulatoryElements
     if(length(object@regulatoryElements)==0)
-      stop("NOTE: input 'regulatoryElements' contains no useful data!\n", call.=FALSE)
+      stop("input 'regulatoryElements' contains no useful data!\n")
     object@summary$regulatoryElements[,"valid"] <- length(object@regulatoryElements)
-    #make sure regulatoryElements is named
-    if(is.null(names(object@regulatoryElements))){
-      #..if null names, add available ones
-      if(!is.null(object@rowAnnotation$SYMBOL)){
-        names(object@regulatoryElements)<-object@rowAnnotation[object@regulatoryElements,"SYMBOL"]
-      } else {
-        names(object@regulatoryElements)<-object@regulatoryElements
-      }
+    #..make sure regulatoryElements is named
+    if(!is.null(object@rowAnnotation$SYMBOL)){
+      names(object@regulatoryElements)<-object@rowAnnotation[
+        object@regulatoryElements,"SYMBOL"]
     } else {
-      if(!is.null(object@rowAnnotation$SYMBOL)){
-        #..check possible incositency between 'rowAnnotation' and 'regulatoryElements' names
-        tp<-object@rowAnnotation[object@regulatoryElements,"SYMBOL"]
-        if(any(tp!=names(object@regulatoryElements))){
-          tp1<-"NOTE: inconsistent symbol(s) found in the named vector 'regulatoryElements'!\n"
-          tp2<-"Please, use symbols consistent with col <SYMBOL> in 'rowAnnotation'!"
-          warning(tp1,tp2)
-        }
-      } else {
-        #..remove any empty space or NA from 'regulatoryElements' names
-        rnames<-names(object@regulatoryElements)
-        idx<-rnames==""|rnames=="NA"
-        names(object@regulatoryElements)[idx]<-object@regulatoryElements[idx]
-      }
+      names(object@regulatoryElements)<-object@regulatoryElements
     }
-    #sort regulatoryElements by names
+    #..remove any empty space or NA from 'regulatoryElements' names
+    rnames<-names(object@regulatoryElements)
+    idx<-rnames==""|rnames=="NA"
+    names(object@regulatoryElements)[idx]<-object@regulatoryElements[idx]
+    #..sort regulatoryElements by names
     idx <- sort.list(names(object@regulatoryElements))
     object@regulatoryElements <- object@regulatoryElements[idx]
     
@@ -191,9 +220,12 @@ setMethod(
 setMethod(
   "tni.permutation",
   "TNI",
-  function(object, pValueCutoff=0.01, pAdjustMethod="BH", globalAdjustment=TRUE, estimator="spearman",
-           nPermutations=1000, pooledNullDistribution=TRUE, boxcox=TRUE, parChunks=NULL, verbose=TRUE){
-    if(object@status["Preprocess"]!="[x]")stop("NOTE: input 'object' needs preprocessing!")
+  function(object, pValueCutoff=0.01, pAdjustMethod="BH", 
+           globalAdjustment=TRUE, estimator="spearman", nPermutations=1000, 
+           pooledNullDistribution=TRUE, boxcox=TRUE, parChunks=NULL, 
+           verbose=TRUE){
+    if(object@status["Preprocess"]!="[x]")
+      stop("input 'object' needs preprocessing!")
     
     #---check compatibility
     object <- upgradeTNI(object)
@@ -208,9 +240,12 @@ setMethod(
     tnai.checks(name="boxcox",para=boxcox)
     tnai.checks(name="parChunks",para=parChunks)
     tnai.checks(name="verbose",para=verbose)
-    object@para$perm<-list(pValueCutoff=pValueCutoff,pAdjustMethod=pAdjustMethod,globalAdjustment=globalAdjustment,
-                      estimator=estimator,nPermutations=nPermutations,pooledNullDistribution=pooledNullDistribution,
-                      boxcox=boxcox)
+    object@para$perm<-list(pValueCutoff=pValueCutoff,
+                           pAdjustMethod=pAdjustMethod,
+                           globalAdjustment=globalAdjustment, 
+                           estimator=estimator,nPermutations=nPermutations,
+                           pooledNullDistribution=pooledNullDistribution,
+                           boxcox=boxcox)
     object@summary$para$perm[1,]<-unlist(object@para$perm)
     ###compute reference network###
     ##---permutation analysis
@@ -221,7 +256,8 @@ setMethod(
     }
     # object@results$mipval <- res$mipval
     # object@results$miadjpv <- res$miadjpv
-    object@results$tn.ref <- res$tn.ref * tni.cor(object@gexp, res$tn.ref, estimator=object@para$perm$estimator)
+    object@results$tn.ref <- res$tn.ref * 
+      tni.cor(object@gexp, res$tn.ref, estimator=object@para$perm$estimator)
     object@status["Permutation"] <- "[x]"
     if(verbose)cat("-Permutation analysis complete! \n\n")
     ##update summary and return results
@@ -239,8 +275,10 @@ setMethod(
   "TNI",
   function(object, nBootstraps=100, consensus=95, 
            parChunks=NULL, verbose=TRUE){
-    if(object@status["Preprocess"]!="[x]")stop("NOTE: input 'object' needs preprocessing and permutation analysis!")
-    if(object@status["Permutation"]!="[x]")stop("NOTE: input 'object' needs permutation analysis!")
+    if(object@status["Preprocess"]!="[x]")
+      stop("input 'object' needs preprocessing and permutation analysis!")
+    if(object@status["Permutation"]!="[x]")
+      stop("input 'object' needs permutation analysis!")
     
     #---check compatibility
     object <- upgradeTNI(object)
@@ -278,7 +316,7 @@ setMethod(
   "TNI",
   function(object, eps=0, sizeThreshold=TRUE, minRegulonSize=15, verbose=TRUE){
     if(object@status["Permutation"]!="[x]")
-      stop("NOTE: input 'object' needs permutation/bootstrep analysis!")
+      stop("input 'object' needs permutation/bootstrep analysis!")
     
     #---check compatibility
     object <- upgradeTNI(object)
@@ -300,24 +338,27 @@ setMethod(
     
     ##---apply dpi filter
     if(verbose)cat("-Applying dpi filter...\n")
-    object@results$tn.dpi <- tni.dpi(abs(object@results$tn.ref), eps=object@para$dpi$eps)
-    object@results$tn.dpi <- object@results$tn.dpi * tni.cor(object@gexp,object@results$tn.dpi,
-                                                             estimator=object@para$perm$estimator)
+    object@results$tn.dpi <- tni.dpi(abs(object@results$tn.ref), 
+                                     eps=object@para$dpi$eps)
+    object@results$tn.dpi <- object@results$tn.dpi * 
+      tni.cor(object@gexp,object@results$tn.dpi, 
+              estimator=object@para$perm$estimator)
     
     ##---apply sizeThreshold on small/unbalanced regulons
     if(sizeThreshold){
-      regulon_counts <- tni.get(object, what="regulonSize")
-      regulon_counts <- regulon_counts[,c("Positive","Negative")]>minRegulonSize
-      regs <- which(rowSums(regulon_counts)==1)
-      regs <- rownames(regulon_counts)[regs]
+      rgcounts <- tni.get(object, what="regulonSize")
+      rgcounts <- rgcounts[,c("Positive","Negative")]>minRegulonSize
+      regs <- which(rowSums(rgcounts)==1)
+      regs <- rownames(rgcounts)[regs]
       epsz <- abs(object@results$tn.ref)
       epsz <- min(epsz[epsz!=0])/2
       if(length(regs)>0 & epsz>eps){
         tnet1 <- object@results$tn.dpi
         tnet2 <- tni.dpi(abs(object@results$tn.ref), eps=epsz)
-        tnet2 <- tnet2 * tni.cor(object@gexp, tnet2, estimator=object@para$perm$estimator)
+        tnet2 <- tnet2 * tni.cor(object@gexp[object@targetElements,], 
+                                 tnet2, estimator=object@para$perm$estimator)
         for(reg in regs){
-          idx1 <- which(!regulon_counts[reg,])
+          idx1 <- which(!rgcounts[reg,])
           if(idx1==1){
             tp1 <- tnet1[,reg]
             tp2 <- tnet2[,reg];tp2[tp2<=0] <- NA
@@ -359,16 +400,16 @@ setMethod(
   "tni.gsea2",
   "TNI",function(object, minRegulonSize=15, sizeFilterMethod="posORneg", 
                  scale=FALSE, exponent=1, tnet="dpi", regulatoryElements=NULL, 
-                 samples=NULL, features=NULL, refsamp=NULL, log=FALSE, 
+                 samples=NULL, features=NULL, refsamp=NULL, log=TRUE, 
                  alternative=c("two.sided", "less", "greater"), 
                  targetContribution=FALSE, additionalData=FALSE, verbose=TRUE, 
                  doSizeFilter=NULL){
     if(object@status["Preprocess"]!="[x]")
-      stop("NOTE: TNI object is not compleate: requires preprocessing!")
+      stop("TNI object is not compleate: requires preprocessing!")
     if(object@status["Permutation"]!="[x]")
-      stop("NOTE: TNI object is not compleate: requires permutation/bootstrap and DPI filter!")  
+      stop("TNI object is not compleate: requires permutation/bootstrap and DPI filter!")  
     if(object@status["DPI.filter"]!="[x]")
-      stop("NOTE: TNI object is not compleate: requires DPI filter!")
+      stop("TNI object is not compleate: requires DPI filter!")
     
     #---check compatibility
     object <- upgradeTNI(object)
@@ -402,34 +443,59 @@ setMethod(
       }
     }
     
-    ##------ compute reference gx vec
-    if(scale) object@gexp <- t(scale(t(object@gexp)))
-    if(is.null(refsamp)){
-      gxref <- apply(object@gexp,1,mean)
-    } else {
-      idx <- refsamp %in% colnames(object@gexp)
-      if(!all(idx)){
-        stop("NOTE: 'refsamp' should list only valid names!")
+    ##------ get gexp
+    gexp <- object@gexp[object@targetElements,,drop=FALSE]
+    if(log){
+      if(verbose) cat("-Checking log space... ")
+      if(.isUnloggedData(gexp)){
+        if(verbose) cat("applying log2 transformation!\n")
+        gexp <- .log2transform(gexp)
+      } else {
+        if(verbose)cat("OK!\n")
       }
-      gxref <- apply(object@gexp[,refsamp],1,mean)
+    } else {
+      if(.isUnloggedData(gexp)){
+        tp1 <- "The 'tni.gsea2' expects expression values in log space.\n"
+        tp2 <- "Please, either set 'log = TRUE' or adjust the expression data\n"
+        tp3 <- "available in the TNI object."
+        warning(tp1, tp2, tp3)
+      }
     }
+    if(scale){
+      if(verbose) cat("-Applying 'scale' option...\n")
+      gexp <- t(scale(t(gexp)))
+    }
+    
+    ##------ compute reference gx vec
+    if(is.null(refsamp)){
+      gxref <- apply(gexp,1,mean)
+    } else {
+      idx <- refsamp %in% colnames(gexp)
+      if(!all(idx)){
+        stop("'refsamp' should list only valid names!")
+      }
+      gxref <- apply(gexp[,refsamp],1,mean)
+    }
+    
     ##----- set samples
     if(!is.null(samples)){
-      idx <- samples %in% colnames(object@gexp)
+      idx <- samples %in% colnames(gexp)
       if(!all(idx)){
-        stop("NOTE: 'samples' should list only valid names!")
+        stop("'samples' should list only valid names!")
       }
-      samples<-colnames(object@gexp)[colnames(object@gexp) %in% samples]
+      samples<-colnames(gexp)[colnames(gexp) %in% samples]
     } else {
-      samples<-colnames(object@gexp)
+      samples<-colnames(gexp)
     }
+    
     ##----- set features
     if(!is.null(features)){
-      col1<-sapply(1:ncol(object@rowAnnotation),function(i){
-        sum(features%in%object@rowAnnotation[,i],na.rm=TRUE)
+      rowAnnotation <- object@rowAnnotation[object@targetElements,,drop=FALSE]
+      col1<-sapply(1:ncol(rowAnnotation),function(i){
+        sum(features%in%rowAnnotation[,i],na.rm=TRUE)
       })
       col1<-which(col1==max(col1))[1]
-      idx<-object@rowAnnotation[[col1]]%in%features
+      idx<-rowAnnotation[[col1]]%in%features
       object@results$tn.ref[!idx,]<-0
       object@results$tn.dpi[!idx,]<-0
     }
@@ -445,12 +511,14 @@ setMethod(
     if(!is.null(regulatoryElements)){
       if(sum(regulatoryElements%in%object@regulatoryElements) > 
          sum(regulatoryElements%in%names(object@regulatoryElements) ) ){
-        regulatoryElements <- object@regulatoryElements[object@regulatoryElements%in%regulatoryElements]
+        regulatoryElements <- object@regulatoryElements[
+          object@regulatoryElements%in%regulatoryElements]
       } else {
-        regulatoryElements<-object@regulatoryElements[names(object@regulatoryElements)%in%regulatoryElements]
+        regulatoryElements<-object@regulatoryElements[
+          names(object@regulatoryElements)%in%regulatoryElements]
       }
       if(length(regulatoryElements)==0)
-        stop("NOTE: 'regulatoryElements' argument has no valid names!")
+        stop("'regulatoryElements' argument has no valid names!")
     } else {
       regulatoryElements<-object@regulatoryElements
     }
@@ -459,32 +527,32 @@ setMethod(
     ##-----check regulon size
     regcounts <- .regulonCounts(listOfRegulonsAndMode)
     if(sizeFilterMethod=="posANDneg"){
-      idx <- regcounts$Positive >= minRegulonSize & regcounts$Negative >= minRegulonSize
+      idx <- regcounts$Positive >= minRegulonSize & 
+        regcounts$Negative >= minRegulonSize
     } else if(sizeFilterMethod=="posORneg"){
-      idx <- regcounts$Positive >= minRegulonSize | regcounts$Negative >= minRegulonSize
+      idx <- regcounts$Positive >= minRegulonSize | 
+        regcounts$Negative >= minRegulonSize
     } else {
       idx <- regcounts$Size >= minRegulonSize
     }
-    regulatoryElements <- regulatoryElements[regulatoryElements%in%rownames(regcounts)[idx]]
+    regulatoryElements <- regulatoryElements[
+      regulatoryElements%in%rownames(regcounts)[idx]]
     listOfRegulonsAndMode <- listOfRegulonsAndMode[regulatoryElements]
     
     ##-----stop when no regulon passes the size requirement
     if(length(listOfRegulonsAndMode)==0){
-      stop("NOTE: no regulon has passed the 'minRegulonSize' requirement!")
+      stop("no regulon passed the 'minRegulonSize' requirement!")
     }
     
     #-----get phenotypes
-    if(log){
-      phenotypes<-log2(1+object@gexp)-log2(1+gxref)
-    } else {
-      phenotypes <- object@gexp-gxref
-    }
+    phenotypes <- gexp-gxref
     
     #-----reset names to integer values
     listOfRegulons <- lapply(listOfRegulonsAndMode, names)
     for(i in names(listOfRegulonsAndMode)){
       reg <- listOfRegulonsAndMode[[i]]
-      names(listOfRegulonsAndMode[[i]]) <- match(names(reg),rownames(phenotypes))
+      names(listOfRegulonsAndMode[[i]]) <- match(names(reg),
+                                                 rownames(phenotypes))
     }
     rnames_phenotypes <- rownames(phenotypes)
     rownames(phenotypes)<-1:nrow(phenotypes)
@@ -496,10 +564,13 @@ setMethod(
 
     #-----run 2t-gsea
     if(isParallel() && length(samples)>1){
-      if(verbose)cat("-Performing two-tailed GSEA (parallel version - ProgressBar disabled)...\n")
-      if(verbose)cat("--For", length(listOfRegulonsAndMode), "regulon(s) and",length(samples),'sample(s)...\n')
+      if(verbose)
+        cat("-Performing two-tailed GSEA (parallel version - ProgressBar disabled)...\n")
+      if(verbose)cat("--For", length(listOfRegulonsAndMode), "regulon(s) and",
+                     length(samples),'sample(s)...\n')
       cl<-getOption("cluster")
-      snow::clusterExport(cl, list(".run.tni.gsea2.alternative",".fgseaScores4TNI"), 
+      snow::clusterExport(cl, list(".run.tni.gsea2.alternative",
+                                   ".fgseaScores4TNI"), 
                           envir=environment())
       regulonActivity <- list()
       res <- snow::parLapply(cl, samples, function(samp){
@@ -571,12 +642,16 @@ setMethod(
 ##aREA-3T for TNI
 setMethod(
   "tni.area3",
-  "TNI",function(object, minRegulonSize=15, sizeFilterMethod="posORneg", scale=FALSE, 
-                 tnet="dpi", regulatoryElements=NULL, samples=NULL, features=NULL, 
-                 refsamp=NULL, log=FALSE, verbose=TRUE, doSizeFilter=NULL){
-    if(object@status["Preprocess"]!="[x]")stop("NOTE: TNI object is not compleate: requires preprocessing!")
-    if(object@status["Permutation"]!="[x]")stop("NOTE: TNI object is not compleate: requires permutation/bootstrap and DPI filter!")  
-    if(object@status["DPI.filter"]!="[x]")stop("NOTE: TNI object is not compleate: requires DPI filter!")
+  "TNI",function(object, minRegulonSize=15, sizeFilterMethod="posORneg",
+                 scale=FALSE, tnet="dpi", regulatoryElements=NULL, 
+                 samples=NULL, features=NULL, refsamp=NULL, log=FALSE, 
+                 verbose=TRUE, doSizeFilter=NULL){
+    if(object@status["Preprocess"]!="[x]")
+      stop("TNI object is not compleate: requires preprocessing!")
+    if(object@status["Permutation"]!="[x]")
+      stop("TNI object is not compleate: requires permutation/bootstrap and DPI filter!")  
+    if(object@status["DPI.filter"]!="[x]")
+      stop("TNI object is not compleate: requires DPI filter!")
     
     #---check compatibility
     object <- upgradeTNI(object)
@@ -607,33 +682,35 @@ setMethod(
     }
     
     ##------ compute reference gx vec
-    if(scale) object@gexp <- t(scale(t(object@gexp)))
+    gexp <- object@gexp[object@targetElements,,drop=FALSE]
+    if(scale) gexp <- t(scale(t(gexp)))
     if(is.null(refsamp)){
-      gxref <- apply(object@gexp,1,mean)
+      gxref <- apply(gexp,1,mean)
     } else {
-      idx <- refsamp %in% colnames(object@gexp)
+      idx <- refsamp %in% colnames(gexp)
       if(!all(idx)){
-        stop("NOTE: 'refsamp' should list only valid names!")
+        stop("'refsamp' should list only valid names!")
       }
-      gxref <- apply(object@gexp[,refsamp],1,mean)
+      gxref <- apply(gexp[,refsamp],1,mean)
     }
     ##----- set samples
     if(!is.null(samples)){
-      idx <- samples %in% colnames(object@gexp)
+      idx <- samples %in% colnames(gexp)
       if(!all(idx)){
-        stop("NOTE: 'samples' should list only valid names!")
+        stop("'samples' should list only valid names!")
       }
-      samples<-colnames(object@gexp)[colnames(object@gexp) %in% samples]
+      samples<-colnames(gexp)[colnames(gexp) %in% samples]
     } else {
-      samples<-colnames(object@gexp)
+      samples<-colnames(gexp)
     }
     ##----- set features
     if(!is.null(features)){
-      col1<-sapply(1:ncol(object@rowAnnotation),function(i){
-        sum(features%in%object@rowAnnotation[,i],na.rm=TRUE)
+      rowAnnotation <- object@rowAnnotation[object@targetElements,,drop=FALSE]
+      col1<-sapply(1:ncol(rowAnnotation),function(i){
+        sum(features%in%rowAnnotation[,i],na.rm=TRUE)
       })
       col1<-which(col1==max(col1))[1]
-      idx<-object@rowAnnotation[[col1]]%in%features
+      idx<-rowAnnotation[[col1]]%in%features
       object@results$tn.ref[!idx,] <- 0
       object@results$tn.dpi[!idx,] <- 0
     }
@@ -656,7 +733,7 @@ setMethod(
           names(object@regulatoryElements)%in%regulatoryElements]
       }
       if(length(regulatoryElements)==0)
-        stop("NOTE: 'regulatoryElements' argument has no valid names!")
+        stop("'regulatoryElements' argument has no valid names!")
     } else {
       regulatoryElements<-object@regulatoryElements
     }
@@ -665,9 +742,11 @@ setMethod(
     ##-----check regulon size
     regcounts <- .regulonCounts(listOfRegulonsAndMode)
     if(sizeFilterMethod=="posANDneg"){
-      idx <- regcounts$Positive >= minRegulonSize & regcounts$Negative >= minRegulonSize
+      idx <- regcounts$Positive >= minRegulonSize & 
+        regcounts$Negative >= minRegulonSize
     } else if(sizeFilterMethod=="posORneg"){
-      idx <- regcounts$Positive >= minRegulonSize | regcounts$Negative >= minRegulonSize
+      idx <- regcounts$Positive >= minRegulonSize | 
+        regcounts$Negative >= minRegulonSize
     } else {
       idx <- regcounts$Size >= minRegulonSize
     }
@@ -677,14 +756,14 @@ setMethod(
     
     ##-----stop when no regulon passes the size requirement
     if(length(listOfRegulonsAndMode)==0){
-      stop("NOTE: no regulon has passed the 'minRegulonSize' requirement!")
+      stop("no regulon passed the 'minRegulonSize' requirement!")
     }
     
     #--- get phenotypes
     if(log){
-      phenotypes <- log2(1+object@gexp)-log2(1+gxref)
+      phenotypes <- log2(1+gexp)-log2(1+gxref)
     } else {
-      phenotypes <- object@gexp-gxref
+      phenotypes <- gexp-gxref
     }
     
     #--- get regulons evaluated by EM algorithm
@@ -692,7 +771,8 @@ setMethod(
       cat("Running EM algorithm... ")
     }
     if(tnet=="ref"){
-      listOfRegulonsAndModeGmm <- tni.get(object,what="refregulons.and.mode.gmm")
+      listOfRegulonsAndModeGmm <- tni.get(object,
+                                          what="refregulons.and.mode.gmm")
     } else {
       listOfRegulonsAndModeGmm <- tni.get(object,what="regulons.and.mode.gmm")
     }
@@ -707,7 +787,8 @@ setMethod(
     if (verbose) {
       cat("Running aREA algorithm...\n")
     }
-    nes <- t(aREA(eset=phenotypes, regulon=arearegs, minsize=0, verbose=FALSE)$nes)
+    nes <- t(aREA(eset=phenotypes, regulon=arearegs, minsize=0, 
+                  verbose=FALSE)$nes)
     nes <- nes[samples,regulatoryElements]
     colnames(nes) <- names(regulatoryElements)
     
@@ -725,10 +806,14 @@ setMethod(
 setMethod(
   "tni2tna.preprocess",
   "TNI",
-  function(object, phenotype=NULL, hits=NULL, phenoIDs=NULL, duplicateRemoverMethod="max", verbose=TRUE) {
-    if(object@status["Preprocess"]!="[x]")stop("NOTE: TNI object is not compleate: requires preprocessing!")
-    if(object@status["Permutation"]!="[x]")stop("NOTE: TNI object is not compleate: requires permutation/bootstrap and DPI filter!")  
-    if(object@status["DPI.filter"]!="[x]")stop("NOTE: TNI object is not compleate: requires DPI filter!")
+  function(object, phenotype=NULL, hits=NULL, phenoIDs=NULL, 
+           duplicateRemoverMethod="max", verbose=TRUE) {
+    if(object@status["Preprocess"]!="[x]")
+      stop("TNI object is not compleate: requires preprocessing!")
+    if(object@status["Permutation"]!="[x]")
+      stop("TNI object is not compleate: requires permutation/bootstrap and DPI filter!")  
+    if(object@status["DPI.filter"]!="[x]")
+      stop("TNI object is not compleate: requires DPI filter!")
     
     #---check compatibility
     object <- upgradeTNI(object)
@@ -747,9 +832,11 @@ setMethod(
                    regulatoryElements=object@regulatoryElements, 
                    phenotype=phenotype,
                    hits=hits)
-    if(nrow(object@rowAnnotation)>0).object@rowAnnotation<-object@rowAnnotation
-    if(!is.null(object@results$conditional) && length(object@results$conditional)>0){
-      cdt<-tni.get(object,what="cdt")
+    if(nrow(object@rowAnnotation)>0)
+      .object@rowAnnotation <- object@rowAnnotation[object@targetElements,]
+    if(!is.null(object@results$conditional) && 
+       length(object@results$conditional)>0){
+      cdt<-tni.get(object,what="cdt.list")
       lmod<-lapply(cdt,function(reg){
         if(nrow(reg)>0){
           tp<-reg$Mode
@@ -773,7 +860,8 @@ setMethod(
 setMethod(
   "tni.get",
   "TNI",
-  function(object, what="summary", order=TRUE, ntop=NULL, reportNames=TRUE, idkey=NULL) {
+  function(object, what="summary", order=TRUE, ntop=NULL, reportNames=TRUE, 
+           idkey=NULL) {
     
     #---check compatibility
     object <- upgradeTNI(object)
@@ -788,10 +876,16 @@ setMethod(
     tnai.checks(name="reportNames",para=reportNames)
     ##-----get query
     query <- NULL
-    if(what=="regulonSize"){
-      query <- .regulonCounts(tni.get(object, what="regulons.and.mode"))  
+    if(what=="subgroupEnrichment"){
+      query<-object@results$subgroupEnrichment
+    } else if(what=="regulonSize"){
+      query <- .regulonCounts(tni.get(object, what="regulons.and.mode"))
+      if(!is.null(idkey))
+        query<-translateQuery(query,idkey,object,"dataframeAndNames",
+                              reportNames)
     } else if(what=="refregulonSize"){
       query <- .regulonCounts(tni.get(object, what="refregulons.and.mode"))
+      # if(!is.null(idkey))
     } else if(what=="gexp"){
       query<-object@gexp
       if(!is.null(idkey))
@@ -800,16 +894,26 @@ setMethod(
       query<-object@regulatoryElements
       if(!is.null(idkey))
         query<-translateQuery(query,idkey,object,"vecAndContent",reportNames)
+    } else if(what=="modulators"){
+      query<-object@modulators
+      if(!is.null(idkey))
+        query<-translateQuery(query,idkey,object,"vecAndContent",reportNames)
+    } else if(what=="targetElements"){
+      query<-object@targetElements
+      if(!is.null(idkey))
+        query<-translateQuery(query,idkey,object,"vecAndContent",reportNames)
     } else if(what=="para"){
       query<-object@para
     } else if(what=="refnet"){
       query<-object@results$tn.ref
-      if(is.null(query))stop("NOTE: empty slot!",call.=FALSE)
-      if(!is.null(idkey))query<-translateQuery(query,idkey,object,"rtnetAndNames",reportNames)
+      if(is.null(query))stop("empty slot!",call.=FALSE)
+      if(!is.null(idkey))query<-translateQuery(query,idkey,object,
+                                               "rtnetAndNames",reportNames)
     } else if(what=="tnet"){
       query<-object@results$tn.dpi
-      if(is.null(query))stop("NOTE: empty slot!",call.=FALSE)
-      if(!is.null(idkey))query<-translateQuery(query,idkey,object,"rtnetAndNames",reportNames)
+      if(is.null(query))stop("empty slot!",call.=FALSE)
+      if(!is.null(idkey))query<-translateQuery(query,idkey,object,
+                                               "rtnetAndNames",reportNames)
     } else if(what=="refregulons" || what=="refregulons.and.mode"){
       query<-list()
       for(i in object@regulatoryElements){
@@ -822,9 +926,11 @@ setMethod(
           names(tp)<-query[[i]]
           query[[i]]<-tp
         }
-        if(!is.null(idkey))query<-translateQuery(query,idkey,object,"listAndNames",reportNames)
+        if(!is.null(idkey))query<-translateQuery(query,idkey,object,
+                                                 "listAndNames",reportNames)
       } else {
-        if(!is.null(idkey))query<-translateQuery(query,idkey,object,"listAndContent",reportNames)
+        if(!is.null(idkey))query<-translateQuery(query,idkey,object,
+                                                 "listAndContent",reportNames)
       }
     } else if(what=="regulons" || what=="regulons.and.mode"){
       query<-list()
@@ -838,61 +944,67 @@ setMethod(
           names(tp)<-query[[i]]
           query[[i]]<-tp
         }
-        if(!is.null(idkey))query<-translateQuery(query,idkey,object,"listAndNames",reportNames)
+        if(!is.null(idkey))query<-translateQuery(query,idkey,object,
+                                                 "listAndNames",reportNames)
       } else {
-        if(!is.null(idkey))query<-translateQuery(query,idkey,object,"listAndContent",reportNames)
+        if(!is.null(idkey))query<-translateQuery(query,idkey,object,
+                                                 "listAndContent",reportNames)
       }
-    } else if(what=="cdt" || what=="cdtrev"){
-      query<-object@results$conditional$count
+    } else if(what=="cdt.list" || what=="cdt.table"){
+      query <- object@results$conditional$count
       for(nm in names(query)){
-        qry<-query[[nm]]
-        qry<-qry[ !qry[,2 ] & !qry[,3 ],-c(2,3),drop=FALSE]
+        qry <- query[[nm]]
+        qry <- qry[ !qry[,2 ] & !qry[,3 ],-c(2,3),drop=FALSE]
         query[[nm]]<-qry
       }
-      #obs. daqui resultados saem ordenados, segundo stat disponivel!
-      if(what=="cdtrev"){
-        query<-cdt.getReverse(query,object@para$cdt$pAdjustMethod)
+      if(what=="cdt.table"){
+        query <- cdt.table(query)
+        query <- p.adjust.cdt.table(query,object@para$cdt$pAdjustMethod)
+        query <- query[query$AdjPvFET<= object@para$cdt$pValueCutoff,]
+        query <- query[query$AdjPvKS <= object@para$cdt$pValueCutoff,]
+        if(is.null(query$AdjPvSNR)){
+          idx <- order(query$PvKS, query$PvFET, decreasing = F)
+        } else {
+          query <- query[query$AdjPvSNR <= object@para$cdt$pValueCutoff,]
+          idx <- order(query$PvSNR, query$PvKS, query$PvFET, decreasing = F)
+        }
+        query <- query[idx,]
+        rownames(query)<-NULL
+        query <- p.format.cdt.table(query)
+        if(reportNames){
+          idx <- match(query$Modulator,object@modulators)
+          query$Modulator <- names(object@modulators)[idx]
+          idx <- match(query$TF,object@regulatoryElements)
+          query$TF <- names(object@regulatoryElements)[idx]
+        }
       } else {
-        query<-cdt.get(query,object@para$cdt$pAdjustMethod)
-      }
-      if(is.null(ntop)){
+        query <- cdt.list(query,object@para$cdt$pAdjustMethod)
         for(nm in names(query)){
           qry<-query[[nm]]
-          b1 <- qry[,"AdjPvFET"] <= object@para$cdt$pValueCutoff
-          b2 <- qry[,"AdjPvKS"]  <= object@para$cdt$pValueCutoff
+          qry <- qry[qry$AdjPvFET<= object@para$cdt$pValueCutoff,]
+          qry <- qry[qry$AdjPvKS <= object@para$cdt$pValueCutoff,]
           if(!is.null(qry$AdjPvSNR)){
-            b3 <- qry[,"AdjPvSNR"] <= object@para$cdt$pValueCutoff
-            qry<-qry[b1 & b2 & b3,,drop=FALSE]
-          } else {
-            qry<-qry[b1 & b2,,drop=FALSE]
+            qry <- qry[qry$AdjPvSNR <= object@para$cdt$pValueCutoff,]
           }
           query[[nm]]<-qry
         }
-      } else {
-        for(nm in names(query)){
-          qry<-query[[nm]]
-          qryntop<-ntop
-          if(nrow(qry)>1){
-            if(qryntop>nrow(qry) || qryntop<0)qryntop=nrow(qry)
-            qry<-qry[1:qryntop,,drop=FALSE]
-            query[[nm]]<-qry
+        query<-query[unlist(lapply(query,nrow))>0]
+        if(reportNames){
+          for(nm in names(query)){
+            if(nrow(query[[nm]])>0){
+              idx<-match(query[[nm]][,"Modulator"],object@modulators)
+              query[[nm]][,"Modulator"]<-names(object@modulators)[idx]
+              idx<-match(query[[nm]][,"TF"],object@regulatoryElements)
+              query[[nm]][,"TF"]<-names(object@regulatoryElements)[idx]
+            }
           }
         }
+        if(length(query)>0)query<-sortblock.cdt.list(query)
       }
-      query<-query[unlist(lapply(query,nrow))>0]
-      if(reportNames){
-        for(nm in names(query)){
-          if(nrow(query[[nm]])>0){
-            idx<-match(query[[nm]][,"Modulator"],object@modulators)
-            query[[nm]][,"Modulator"]<-names(object@modulators)[idx]
-            idx<-match(query[[nm]][,"TF"],object@regulatoryElements)
-            query[[nm]][,"TF"]<-names(object@regulatoryElements)[idx]
-          }
-        }
-      }
-      #sort 1st list hierarchy by nrow
-      if(length(query)>0)query<-sortblock.cdt(query)
-      if(!is.null(idkey))warning("'idkey' argument has no effect on consolidated tables!")
+      if(!is.null(ntop))
+        warning("'ntop' argument has no effect on this query!")
+      if(!is.null(idkey))
+        warning("'idkey' argument has no effect on this query!")
     } else if(what=="summary"){
       query<-object@summary
       query$results$tnet <- .get.tnet.summary(object)
@@ -907,7 +1019,9 @@ setMethod(
       getqs<-function(query,order=TRUE,reportNames=TRUE,ntop=NULL){
         if(is.data.frame(query) && nrow(query)>0 ){
           if(is.null(ntop)){
-            query<-query[query[,"Adjusted.Pvalue"] <= object@para$gsea2$pValueCutoff,,drop=FALSE]
+            query<-query[
+              query[,"Adjusted.Pvalue"]<=object@para$gsea2$pValueCutoff,,
+              drop=FALSE]
           } else {
             if(ntop>nrow(query)|| ntop<0)ntop=nrow(query)
             if(nrow(query)>1){
@@ -916,7 +1030,8 @@ setMethod(
             }
           }
           if(order){
-            if(nrow(query)>1) query<-query[order(query[,"Observed.Score"]),,drop=FALSE]
+            if(nrow(query)>1) query<-query[order(query[,"Observed.Score"]),,
+                                           drop=FALSE]
           }
           if(reportNames){
             idx<-match(query[,1],object@regulatoryElements)
@@ -933,12 +1048,17 @@ setMethod(
         dft<-getqs(object@results$GSEA2.results$differential,order,reportNames)
         dft<-dft[rownames(dft)%in%tp,,drop=FALSE]
         query$differential<-dft
-        query$positive<-object@results$GSEA2.results$positive[rownames(dft),,drop=FALSE]
-        query$negative<-object@results$GSEA2.results$negative[rownames(dft),,drop=FALSE]
+        query$positive<-object@results$GSEA2.results$positive[rownames(dft),,
+                                                              drop=FALSE]
+        query$negative<-object@results$GSEA2.results$negative[rownames(dft),,
+                                                              drop=FALSE]
       } else {
-        query$differential<-getqs(object@results$GSEA2.results$differential,order,reportNames,ntop)
-        query$positive<-object@results$GSEA2.results$positive[rownames(query$differential),,drop=FALSE]
-        query$negative<-object@results$GSEA2.results$negative[rownames(query$differential),,drop=FALSE]
+        query$differential<-getqs(
+          object@results$GSEA2.results$differential,order,reportNames,ntop)
+        query$positive<-object@results$GSEA2.results$positive[
+          rownames(query$differential),,drop=FALSE]
+        query$negative<-object@results$GSEA2.results$negative[
+          rownames(query$differential),,drop=FALSE]
       }
     } else if(what=="regulons.and.mode.gmm"){
       query <- .mi2gmm.dpi(object, idkey)
@@ -954,7 +1074,7 @@ setMethod(
 setMethod(
   "tni.conditional",
   "TNI",
-  function(object, modulators=NULL, tfs=NULL, sampling=35, pValueCutoff=0.01, 
+  function(object, modulators, tfs=NULL, sampling=35, pValueCutoff=0.01, 
            pAdjustMethod="bonferroni", minRegulonSize=15, minIntersectSize=5, 
            miThreshold="md", prob=0.99, medianEffect=FALSE, 
            iConstraint=TRUE, verbose=TRUE, mdStability=FALSE){
@@ -963,7 +1083,10 @@ setMethod(
     object <- upgradeTNI(object)
     
     ##-----check input arguments
-    if(object@status["DPI.filter"]!="[x]")stop("NOTE: input 'object' needs dpi analysis!")
+    if(object@status["DPI.filter"]!="[x]")
+      stop("input 'object' needs dpi analysis!")
+    if(missing(modulators))
+      stop("please provide a character vector with 'modulators'!")
     tnai.checks(name="modulators",para=modulators)
     tnai.checks(name="tfs",para=tfs)
     tnai.checks(name="sampling",para=sampling)
@@ -985,8 +1108,10 @@ setMethod(
     }
     ##-----par info
     object@para$cdt<-list(sampling=sampling, pValueCutoff=pValueCutoff,
-                          pAdjustMethod=pAdjustMethod, minRegulonSize=minRegulonSize, 
-                          minIntersectSize=minIntersectSize, miThreshold=NA, prob=prob,
+                          pAdjustMethod=pAdjustMethod, 
+                          minRegulonSize=minRegulonSize, 
+                          minIntersectSize=minIntersectSize, 
+                          miThreshold=NA, prob=prob,
                           iConstraint=iConstraint)
     ##-----summary info
     cdt<-unlist(object@para$cdt)
@@ -1001,58 +1126,47 @@ setMethod(
     } else {
       if(verbose)cat("--Checking TFs in the dataset...\n")
       tfs<-as.character(tfs)
-      idx<-which(!tfs%in%object@regulatoryElements & !tfs%in%names(object@regulatoryElements))
+      idx<-which(!tfs%in%object@regulatoryElements & 
+                   !tfs%in%names(object@regulatoryElements))
       if(length(idx)>0){
-        message(paste("Note: input 'tfs' contains", length(idx)," element(s) not listed in the network!\n"))
+        message(paste("Note: input 'tfs' contains", length(idx),
+                      " element(s) not listed in the network!\n"))
       }
-      idx<-which(object@regulatoryElements%in%tfs | names(object@regulatoryElements)%in%tfs)
+      idx<-which(object@regulatoryElements%in%tfs | 
+                   names(object@regulatoryElements)%in%tfs)
       if(length(idx)<1){
         stop(paste("NOTE: input 'tfs' contains no useful data!\n"))
       }      
       tfs<-object@regulatoryElements[idx]
     }
-    ##-----make sure 'modulators' are set to character
-    if(is.null(modulators)){
-      modulators<-object@regulatoryElements
-    } else {
-      if(verbose)cat("--Checking modulators in the dataset...\n")
-      if(!is.character(modulators)){
-        nm<-names(modulators)
-        modulators<-as.character(modulators)
-        names(modulators)<-nm
-      }
-      ##-----make sure all 'modulators' are valid
-      idx<-which(!modulators%in%rownames(object@gexp))
-      if(length(idx)>0){
-        message(paste("Note: input 'modulators' contains", length(idx)," element(s) not listed in the network!\n"))
-      }
-      idx<-which(modulators%in%rownames(object@gexp))
-      if(length(idx)<1){
-        stop(paste("NOTE: input 'modulators' contains no useful data!\n"))
-      }
-      modulators<-modulators[idx]
-      ##-----make sure 'modulators' is a named vector
-      if(is.null(names(modulators))){
-        if(!is.null(object@rowAnnotation$SYMBOL)){
-          names(modulators)<-object@rowAnnotation[modulators,"SYMBOL"]
-        } else {
-          names(modulators)<-modulators
-        }
-      } else {
-        #check possible inconsitency between 'rowAnnotation' and 'modulators' 
-        if(!is.null(object@rowAnnotation$SYMBOL)){
-          tp<-object@rowAnnotation[modulators,"SYMBOL"]
-          if(any(tp!=names(modulators))){
-            warning("one or more symbols in the named vector 'modulators' seem to differ from 'rowAnnotation' slot!")
-          }
-        }
-      }
-      if(length(modulators)==0)stop("NOTE: incorrect number of dimensions: range constraint step requires 1 or more valid modulators!")
-      #final check: remove any empty space or NA from md names!!!
-      mdnames<-names(modulators)
-      idx<-mdnames==""|mdnames=="NA"
-      names(modulators)[idx]<-modulators[idx] 
+    
+    ##-----make sure all 'modulators' are valid
+    if(verbose)cat("--Checking modulators in the dataset...\n")
+    modulators <- as.character(modulators)
+    col1 <- sapply(1:ncol(object@rowAnnotation),function(i){
+      sum(modulators%in%object@rowAnnotation[,i],na.rm=TRUE)
+    })
+    col1 <- which(col1==max(col1))[1]
+    idx<-which(!modulators%in%object@rowAnnotation[[col1]])
+    if(length(idx)>0){
+      message(paste("Note: input 'modulators' contains", length(idx),
+                    " element(s) not listed in the network!\n"))
     }
+    idx <- object@rowAnnotation[[col1]] %in% modulators
+    modulators <- rownames(object@rowAnnotation)[idx]
+    if(length(modulators)==0){
+      stop("input 'modulators' contains no useful data!\n")
+    }
+    ##-----make sure 'modulators' is a named vector
+    if(!is.null(object@rowAnnotation$SYMBOL)){
+      names(modulators)<-object@rowAnnotation[modulators,"SYMBOL"]
+    } else {
+      names(modulators)<-modulators
+    }
+    ##-----remove any empty space or NA from md names
+    mdnames<-names(modulators)
+    idx<-mdnames==""|mdnames=="NA"
+    names(modulators)[idx]<-modulators[idx]
     object@modulators<-modulators
     
     ##-----get TF-targets from tnet
@@ -1072,7 +1186,8 @@ setMethod(
     tfs<-tfs[tfs%in%names(gs.size[gs.size>=minRegulonSize])]
     tfTargets<-tfTargets[tfs]
     tfAllTargets<-tfAllTargets[tfs]
-    tnetAllTargets<-rownames(object@results$tn.dpi)[rowSums(object@results$tn.dpi!=0)>0]
+    tnetAllTargets<-rownames(object@results$tn.dpi)[
+      rowSums(object@results$tn.dpi!=0)>0]
     ##-----Checking independence of modulators and TFs
     IConstraintList<-list()
     if(iConstraint){
@@ -1088,14 +1203,16 @@ setMethod(
       }
     }
     ##-----set sub-sample idx
-    spsz<-round(ncol(object@gexp)*sampling/100,0)
+    gxtemp<-object@gexp
+    spsz<-round(ncol(gxtemp)*sampling/100,0)
     idxLow<-1:spsz
-    idxHigh<-(ncol(object@gexp)-spsz+1):ncol(object@gexp)
+    idxHigh<-(ncol(gxtemp)-spsz+1):ncol(gxtemp)
     ##-----start filtering
     if(verbose)cat("--Applying modulator range constraint...\n")
-    gxtemp<-object@gexp
+    if(.isUnloggedData(gxtemp)) gxtemp <- .log2transform(gxtemp)
     gxtemp[is.na(gxtemp)]<-median(gxtemp,na.rm=TRUE)
-    gxtemp<-t(apply(gxtemp[modulators,,drop=FALSE],1,sort))[,c(idxLow,idxHigh),drop=FALSE]
+    gxtemp<-t(apply(
+      gxtemp[modulators,,drop=FALSE],1,sort))[,c(idxLow,idxHigh),drop=FALSE]
     if(length(modulators)==1){
       gxtemp<-rbind(gxtemp,gxtemp)
     }
@@ -1106,7 +1223,9 @@ setMethod(
     thigh=tlow=NULL
     contrasts <- makeContrasts(thigh-tlow, levels=design)
     ct.fit <- eBayes(contrasts.fit(fit, contrasts))
-    res.fit<-unclass(decideTests(ct.fit, adjust.method=object@para$cdt$pAdjustMethod, p.value=object@para$cdt$pValueCutoff))
+    res.fit<-unclass(decideTests(ct.fit, 
+                                 adjust.method=object@para$cdt$pAdjustMethod, 
+                                 p.value=object@para$cdt$pValueCutoff))
     RConstraintList<-rownames(res.fit)[res.fit<=0]
     ##--get samples (sorted index) for each pre-selected modulator
     if(verbose)cat("--Selecting subsamples...\n")
@@ -1121,11 +1240,17 @@ setMethod(
       if(verbose)cat("\n")
       if(verbose)cat("-Estimating mutual information threshold...\n")
       if(miThreshold=="md.tf"){
-        mimark<-miThresholdMdTf(gxtemp,tfs=tfs,nsamples=spsz,prob=prob,nPermutations=object@para$perm$nPermutations, 
-                                estimator=object@para$perm$estimator,verbose=verbose)
+        mimark<-miThresholdMdTf(gxtemp[object@targetElements,],tfs=tfs,
+                                nsamples=spsz,prob=prob,
+                                nPermutations=object@para$perm$nPermutations, 
+                                estimator=object@para$perm$estimator,
+                                verbose=verbose)
       } else {
-        mimark<-miThresholdMd(gxtemp,nsamples=spsz,prob=prob,nPermutations=object@para$perm$nPermutations, 
-                              estimator=object@para$perm$estimator,verbose=verbose)
+        mimark<-miThresholdMd(gxtemp[object@targetElements,],nsamples=spsz,
+                              prob=prob,
+                              nPermutations=object@para$perm$nPermutations, 
+                              estimator=object@para$perm$estimator,
+                              verbose=verbose)
       }
     } else {
       mimark<-sort(miThreshold)
@@ -1134,7 +1259,8 @@ setMethod(
         mimark<-abs(mimark)
         mimark<-c(-mimark,mimark)
       } else {
-        if(sum(mimark>0)!=1)stop("'miThreshold' upper and lower bounds should have different signals!")
+        if(sum(mimark>0)!=1)
+          stop("'miThreshold' upper and lower bounds should have different signals!")
       }
       object@summary$para$cdt[,"prob"]<-"custom"
       object@para$cdt$prob<-NA
@@ -1148,36 +1274,41 @@ setMethod(
       data.frame(targets=tar,stringsAsFactors=FALSE)
     })
     rescount<-lapply(tfTargets,function(tar){
-      res<-data.frame(NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,stringsAsFactors=FALSE)
-      colnames(res)<-c("Modulator","irConstraint","nConstraint","TF","UniverseSize","EffectSize","RegulonSize","Expected",
-                       "Observed","Negative","Positive","Mode","PvFET","AdjPvFET","KS","PvKS","AdjPvKS")
+      res<-data.frame(NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,
+                      stringsAsFactors=FALSE)
+      colnames(res)<-c("Modulator","irConstraint","nConstraint","TF",
+                       "UniverseSize","EffectSize","RegulonSize","Expected",
+                       "Observed","Negative","Positive",
+                       "Mode","PvFET","AdjPvFET","KS","PvKS","AdjPvKS")
       res
     })
     
     ##-----start conditional mutual information analysis
-    
     modregulons<-list()
     glstat<-list()
     if(verbose)cat("\n")
     if(verbose)cat("-Performing conditional mutual information analysis...\n")
-    if(verbose)cat("--For", length(tfs), "tfs and" , length(modulators), "candidate modulator(s) \n")
+    if(verbose)cat("--For", length(tfs), "tfs and" , length(modulators), 
+                   "candidate modulator(s) \n")
     if(verbose && !mdStability) pb <- txtProgressBar(style=3)
-    
     for(i in 1:length(modulators)){
       md<-modulators[i]
       #get sample ordering
       lw<-idxLow[md,]
       hg<-idxHigh[md,]
       #compute mi on both tails
-      milow<-tni.pmin(gxtemp[,lw],tfs,estimator=object@para$perm$estimator)
-      mihigh<-tni.pmin(gxtemp[,hg],tfs,estimator=object@para$perm$estimator)
+      milow<-tni.pmin(gxtemp[object@targetElements,lw],tfs,
+                      estimator=object@para$perm$estimator)
+      mihigh<-tni.pmin(gxtemp[object@targetElements,hg],tfs,
+                       estimator=object@para$perm$estimator)
       milow[is.na(milow)]<-0
       mihigh[is.na(mihigh)]<-0
       #get mi delta
       miDelta<-mihigh-milow
       #identify modulations above mi threshold
       if(miThreshold=="md.tf" && length(tfs)>1){
-        sigDelta<-t(apply(miDelta,1,"<",mimark[,1])) | t(apply(miDelta,1,">",mimark[,2]))
+        sigDelta<-t(apply(miDelta,1,"<",mimark[,1])) | 
+          t(apply(miDelta,1,">",mimark[,2]))
       } else {
         sigDelta<- miDelta<mimark[1] | miDelta>mimark[2]
       }
@@ -1189,13 +1320,17 @@ setMethod(
       if(mdStability){
         if(is.null(mrkboot)){
           if(verbose)cat("\n-Estimating stability threshold...\n")
-          mrkboot<-miThresholdMd(gxtemp,nsamples=spsz,prob=c(0.05, 0.95),
-                                 nPermutations=1000,estimator=object@para$perm$estimator,
+          mrkboot<-miThresholdMd(gxtemp[object@targetElements,],nsamples=spsz,
+                                 prob=c(0.05, 0.95),
+                                 nPermutations=1000,
+                                 estimator=object@para$perm$estimator,
                                  verbose=verbose)
         }
         if(verbose)cat("-Checking modulation stability for", names(md), "\n")
-        stabt<-cdt.stability(gxtemp,object@para$perm$estimator,mrkboot,miThreshold,
-                             spsz,md,tfs,sigDelta,nboot=100,consensus=75,verbose=verbose)
+        stabt<-cdt.stability(gxtemp,object@para$perm$estimator,
+                             mrkboot,miThreshold,
+                             spsz,md,tfs,object@targetElements,sigDelta,
+                             nboot=100,consensus=75,verbose=verbose)
         sigDelta[!stabt]<-FALSE
       } else {
         if(verbose) setTxtProgressBar(pb, i/length(modulators))
@@ -1235,7 +1370,8 @@ setMethod(
           #---set obs to predicted mode
           Obs<-if(Mode==-1) abs(ObsNeg) else if(Mode==1) ObsPos else ObsOV
           #---run fet with phyper (obs-1)
-          pvfet <- phyper(Obs-1, RegSZ, UniSZ-RegSZ, EffectSZ, lower.tail=FALSE)
+          pvfet <- phyper(Obs-1, RegSZ, UniSZ-RegSZ, EffectSZ, 
+                          lower.tail=FALSE)
           #---run ks test
           #pheno
           pheno<-abs(object@results$tn.ref[,tf])
@@ -1248,7 +1384,8 @@ setMethod(
             dks<-1
             pvks<-0
           } else {
-            kst<-suppressWarnings(ks.test(pheno[-hits],pheno[hits],alternative="greater"))
+            kst<-suppressWarnings(ks.test(pheno[-hits],pheno[hits],
+                                          alternative="greater"))
             dks<-kst$statistic
             pvks<-kst$p.value
           }
@@ -1275,7 +1412,8 @@ setMethod(
         
         #---add results to a list
         reseffect[[tf]][[md]]<-dtvec[tftar]
-        rescount[[tf]][md,]<-c(NA,NA,NA,NA,UniSZ,EffectSZ,RegSZ,ExpOV,ObsOV,ObsNeg,ObsPos,Mode,pvfet,NA,dks,pvks,NA)
+        rescount[[tf]][md,]<-c(NA,NA,NA,NA,UniSZ,EffectSZ,RegSZ,ExpOV,ObsOV,
+                               ObsNeg,ObsPos,Mode,pvfet,NA,dks,pvks,NA)
         rescount[[tf]][md,c(1,4)]<-c(md,tf)
         rescount[[tf]][md,c(2,3)]<-c(irconst,nconst)
         #---retain modulated targets
@@ -1304,7 +1442,6 @@ setMethod(
       }
       
     }
-    
     if(verbose && !mdStability) close(pb)
     
     #set data format
@@ -1316,11 +1453,7 @@ setMethod(
       }
       rescount[[tf]]<-results
     }
-    
-    ##global p.adjustment
-    #rescount<-p.adjust.cdt(cdt=rescount,pAdjustMethod=pAdjustMethod, p.name="PvKS",adjp.name="AdjPvKS",sort.name="PvKS",roundpv=FALSE)
-    #rescount<-p.adjust.cdt(cdt=rescount,pAdjustMethod=pAdjustMethod, p.name="PvFET",adjp.name="AdjPvFET",roundpv=FALSE)
-    rescount<-sortblock.cdt(cdt=rescount,coln="PvFET")
+    rescount<-sortblock.cdt.list(cdt=rescount,coln="PvFET")
     
     ##update summary
     object@results$conditional$count<-rescount
@@ -1332,20 +1465,23 @@ setMethod(
     if(medianEffect){
       if(verbose)cat("\n")
       if(verbose)cat("-Checking median modulation effect...\n") 
-      modulatedTFs<-tni.get(object,what="cdt",ntop=-1)
+      modulatedTFs<-tni.get(object,what="cdt.list")
       modulatedTFs<-unlist(lapply(modulatedTFs,nrow))
       modulatedTFs<-names(modulatedTFs)[modulatedTFs>0]      
       if(length(modulatedTFs)>0){
         if(verbose)cat("--For", length(modulators), "candidate modulator(s) \n")
-        res<-checkModuationEffect(gxtemp,tfs,modregulons,modulatedTFs,glstat,spsz,
-                                  minRegulonSize,pValueCutoff,
+        res<-checkModuationEffect(gxtemp,tfs,modregulons,modulatedTFs,glstat,
+                                  spsz, minRegulonSize,pValueCutoff,
                                   nPermutations=object@para$perm$nPermutations,
                                   estimator=object@para$perm$estimator,
                                   pAdjustMethod=pAdjustMethod,
                                   count=object@results$conditional$count,
                                   verbose)
-        res$md2tf$count<-p.adjust.cdt(cdt=res$md2tf$count,pAdjustMethod=pAdjustMethod,p.name="PvSNR",
-                                      adjp.name="AdjPvSNR",roundpv=FALSE, global=FALSE)       
+        res$md2tf$count<-p.adjust.cdt.list(cdt=res$md2tf$count,
+                                           pAdjustMethod=pAdjustMethod,
+                                           p.name="PvSNR",
+                                           adjp.name="AdjPvSNR",
+                                           roundpv=FALSE, global=FALSE)       
         object@results$conditional$mdeffect$md2tf$null<-res$md2tf$null
         object@results$conditional$mdeffect$md2tf$observed<-res$md2tf$observed
         object@results$conditional$mdeffect$tf2md$null<-res$tf2md$null
@@ -1359,7 +1495,7 @@ setMethod(
   return(object)
   }
 )
-#supplementary information: get simple correlation between tfs and candidate modulators
+#supplementary information: get simple correlation between tfs and modulators
 # tni.tfmdcor<-function(x,tfs, mds, estimator="pearson",dg=0, asInteger=FALSE){
 #   ids<-unique(c(tfs,setdiff(mds,tfs)))
 #   x=x[ids,]
@@ -1393,14 +1529,15 @@ setMethod(
   }
 )
 
-
 ##------------------------------------------------------------------------------
 ##get graph from TNI
 ## experimental args:
-## mask: a logical value specifying to apply a mask on the 'amapFilter', keeping at least the 
+## mask: a logical value specifying to apply a mask on the 'amapFilter', 
+## keeping at least the 
 ## ......best weighted edge (when verbose=TRUE) or not (when verbose=FALSE).
 ## hcl: an hclust object with TF's IDs
-## overlap: overlapping nodes used for the Jaccard (options: 'all', 'pos', 'neg')
+## overlap: overlapping nodes used for the Jaccard 
+## (options: 'all', 'pos', 'neg')
 ## TODO: revise 'tnai.checks' for new args!
 setMethod(
   "tni.graph",
@@ -1419,7 +1556,8 @@ setMethod(
     object <- upgradeTNI(object)
     
     ##-----check input arguments
-    if(object@status["DPI.filter"]!="[x]")stop("NOTE: input 'object' needs dpi analysis!")
+    if(object@status["DPI.filter"]!="[x]")
+      stop("input 'object' needs dpi analysis!")
     tnai.checks(name="tnet",para=tnet)
     tnai.checks(name="tni.gtype",para=gtype)
     tnai.checks(name="minRegulonSize",para=minRegulonSize)
@@ -1454,8 +1592,9 @@ setMethod(
       tfs<-tfs[tfs%in%minsz]
     } else {
       tfs<-as.character(tfs)
-      idx<-which(names(object@regulatoryElements)%in%tfs | object@regulatoryElements%in%tfs)
-      if(length(idx)==0)stop("NOTE: input 'tfs' contains no useful data!\n")
+      idx<-which(names(object@regulatoryElements)%in%tfs | 
+                   object@regulatoryElements%in%tfs)
+      if(length(idx)==0)stop("input 'tfs' contains no useful data!\n")
       tfs<-object@regulatoryElements[idx]
     }
     
@@ -1465,15 +1604,18 @@ setMethod(
     if(gtype=="mmap" || gtype=="mmapDetailed"){ #get modulatory maps
       
       ##-----check input arguments
-      if(object@status["Conditional"]!="[x]")stop("NOTE: input needs conditional analysis!")
+      if(object@status["Conditional"]!="[x]")
+        stop("input needs conditional analysis!")
       #get tfs and modulators
-      cdt<-tni.get(object,what="cdt")
-      if(length(cdt)==0)stop("NOTE: input conditional analysis is empty")
-      #cdt<-tni.get(object,what="cdt",ntop=5)
+      cdt<-tni.get(object,what="cdt.list")
+      if(length(cdt)==0)
+        stop("input conditional analysis is empty")
       testedtfs<-names(cdt)
-      testedtfs<-object@regulatoryElements[object@regulatoryElements%in%testedtfs]
+      testedtfs<-object@regulatoryElements[
+        object@regulatoryElements%in%testedtfs]
       testedtfs<-testedtfs[testedtfs%in%tfs]
-      if(length(testedtfs)==0)stop("NOTE: input 'tfs' contains no useful data!\n")
+      if(length(testedtfs)==0)
+        stop("input 'tfs' contains no useful data!\n")
       modulators<-sapply(testedtfs,function(tf){
         rownames(cdt[[tf]])
       })
@@ -1483,7 +1625,11 @@ setMethod(
       othertfs<-othertfs[!othertfs%in%testedtfs]
       othertfs<-othertfs[othertfs%in%modulators]
       #get adjmt
-      tnet<-tnet[unique(c(testedtfs,setdiff(modulators,testedtfs))),testedtfs,drop=FALSE]
+      if(!all(modulators %in% rownames(tnet))){
+        stop("for 'mmap', all 'modulators' should be 'targetElements'!")
+      }
+      tnet<-tnet[unique(c(testedtfs,setdiff(modulators,testedtfs))),
+                 testedtfs,drop=FALSE]
       mnet<-tnet;mnet[,]=0
       for(i in colnames(mnet)){
         tp<-cdt[[i]]
@@ -1507,7 +1653,7 @@ setMethod(
           idx1<-mds%in%modulators
           idx2<-mds%in%names(modulators)
           if(!all(idx1) & !all(idx2)){
-            stop("NOTE: one or more input modutors in 'mds' not listed in the TNI object!")
+            stop("one or more modutors in 'mds' not listed in the TNI object!")
           } else {
             if(sum(idx1)>sum(idx2)){
               mds<-modulators[modulators%in%mds]
@@ -1516,7 +1662,8 @@ setMethod(
             }
           }
         }
-        g<-tni.mmap.detailed(object,mnet,testedtfs, mds, ntop=ntop, nbottom=nbottom)
+        g<-tni.mmap.detailed(object,mnet,testedtfs, mds, ntop=ntop,
+                             nbottom=nbottom)
       } else {
         g<-tni.mmap(object,mnet,tnet,pvnet,othertfs,testedtfs,modulators)
       }
@@ -1552,11 +1699,12 @@ setMethod(
       g<-remove.graph.attribute(g,"legNodeFontSize")
       if(ecount(g)>0){
         #set edge attr
-        g<-att.sete(g=g, from="modeOfAction", to='edgeColor',cols=c("#96D1FF","grey80","#FF8E91"), 
+        g<-att.sete(g=g, from="modeOfAction", to='edgeColor',
+                    cols=c("#96D1FF","grey80","#FF8E91"), 
                     title="Interaction",categvec=-1:1)
         g$legEdgeColor$legend<-c("(-)","NA","(+)")
         E(g)$edgeWidth<-1.5
-        #map modeOfAction to node attribute (compute the average of the interactions)
+        #map modeOfAction to node attribute (compute average interaction)
         el<-data.frame(get.edgelist(g),E(g)$modeOfAction,stringsAsFactors=FALSE)
         nid<-V(g)$name
         mdmode<-sapply(nid,function(id){
@@ -1566,7 +1714,8 @@ setMethod(
         mdmode[V(g)$tfs==1]=NA
         V(g)$medianModeOfAction<-as.integer(mdmode)
         #assign mode to targets
-        g<-att.setv(g=g, from="medianModeOfAction", to='nodeColor',cols=c("#96D1FF","grey80","#FF8E91"), 
+        g<-att.setv(g=g, from="medianModeOfAction", to='nodeColor',
+                    cols=c("#96D1FF","grey80","#FF8E91"), 
                     title="ModeOfAction",categvec=-1:1,pal=1,na.col="grey80")
         V(g)$nodeLineColor<-V(g)$nodeColor
         g<-remove.graph.attribute(g,"legNodeColor")
@@ -1608,7 +1757,8 @@ setMethod(
         adjmt[adjmt<amapCutoff & mask==0]=0
       }
       #-------------------
-      g<-igraph::graph.adjacency(adjmt, diag=FALSE, mode="undirected", weighted=TRUE)
+      g<-igraph::graph.adjacency(adjmt, diag=FALSE, mode="undirected", 
+                                 weighted=TRUE)
       if(nrow(object@rowAnnotation)>0 & ncol(object@rowAnnotation)>1){
         g<-att.mapv(g=g,dat=object@rowAnnotation,refcol=1)
       }
@@ -1617,8 +1767,10 @@ setMethod(
       V(g)$nodeAlias<-names(tfs)[idx]
       V(g)$degree<-sz[idx]
       #---set main attribs
-      if(ecount(g)>0)g<-att.sete(g=g, from="weight", to='edgeWidth', nquant=nquant, xlim=c(1,15,1),roundleg=2)
-      g<-att.setv(g=g, from="degree", to='nodeSize', xlim=xlim, nquant=nquant, breaks=breaks, roundleg=1,title="Regulon size")
+      if(ecount(g)>0)g<-att.sete(g=g, from="weight", to='edgeWidth', 
+                                 nquant=nquant, xlim=c(1,15,1),roundleg=2)
+      g<-att.setv(g=g, from="degree", to='nodeSize', xlim=xlim, 
+                  nquant=nquant, breaks=breaks, roundleg=1,title="Regulon size")
       V(g)$nodeFontSize<-20
       return(g)
       
@@ -1651,8 +1803,9 @@ setMethod(
       idx<-match(names(nestsz),V(gg$g)$name)
       V(gg$g)$nestSize[idx]<-nestsz
       #---set main attribs
-      gg$g<-att.setv(g=gg$g, from="degree", to='nodeSize', xlim=xlim, breaks=breaks, 
-                     nquant=nquant, roundleg=0, title="Regulon size")
+      gg$g<-att.setv(g=gg$g, from="degree", to='nodeSize', xlim=xlim, 
+                     breaks=breaks, nquant=nquant, roundleg=0, 
+                     title="Regulon size")
       V(gg$g)$internalNode <- FALSE
       V(gg$g)$internalNode[is.na(V(gg$g)$degree)] <- TRUE
       V(gg$g)$nodeSize[V(gg$g)$internalNode] <- 10
@@ -1669,15 +1822,15 @@ setMethod(
 )
 
 #-------------------------------------------------------------------------------
-## tni.regulon.summary returns a summary of useful information about a particular
-## regulon(s) or the network, to aid in interpretation
+## tni.regulon.summary returns a summary of useful information about a 
+## particular regulon(s) or the network, to aid in interpretation
 setMethod(
     "tni.regulon.summary",
     "TNI",
     function(object, regulatoryElements = NULL, verbose = TRUE) {
         #-- Basic checks
         if(object@status["DPI.filter"]!="[x]")
-            stop("NOTE: input 'object' needs dpi analysis!")
+            stop("input 'object' needs dpi analysis!")
         if(!is.null(regulatoryElements))
           tnai.checks("regulatoryElements",regulatoryElements)
         tnai.checks("verbose",verbose)
@@ -1689,16 +1842,19 @@ setMethod(
         if (is.null(regulatoryElements)){
             networkSummary <- tni.get(object)$results
             if(verbose){
-                nRegulators <- paste("Regulatory network comprised of", 
-                                     networkSummary$tnet["tnet.dpi", "regulatoryElements"],
-                                     "regulons. \n")
+                nRegulators <- paste(
+                  "Regulatory network comprised of", 
+                  networkSummary$tnet["tnet.dpi", "regulatoryElements"],
+                  "regulons. \n")
                 cat(nRegulators)
                 message("-- DPI-filtered network: ")
                 print(networkSummary$tnet["tnet.dpi",], quote = FALSE)
-                print(networkSummary$regulonSize["tnet.dpi",], quote = FALSE, digits = 3)
+                print(networkSummary$regulonSize["tnet.dpi",], 
+                      quote = FALSE, digits = 3)
                 message("-- Reference network: ")
                 print(networkSummary$tnet["tnet.ref",], quote = FALSE) 
-                print(networkSummary$regulonSize["tnet.ref",], quote = FALSE, digits = 3)
+                print(networkSummary$regulonSize["tnet.ref",], 
+                      quote = FALSE, digits = 3)
                 cat("---\n")
             }
             invisible(networkSummary)
@@ -1708,12 +1864,13 @@ setMethod(
              sum(regulatoryElements%in%names(regnames))){
             regulatoryElements <- regnames[regnames%in%regulatoryElements]
           } else {
-            regulatoryElements <- regnames[names(regnames)%in%regulatoryElements]
+            regulatoryElements <- regnames[names(regnames)%in%
+                                             regulatoryElements]
           }
           if(length(regulatoryElements)==0)
-            stop("NOTE: 'regulatoryElements' argument has no valid names!")
+            stop("'regulatoryElements' argument has no valid names!")
           
-          #-- Get all regulon and ref regulon information for regulatoryElements
+          #-- Get info of all regulons and refregulons
           tnet <- tni.get(object, "tnet")
           refnet <-  tni.get(object, "refnet")
           
@@ -1758,9 +1915,13 @@ setMethod(
               cat(textRegsMI)
               #-- Warning for < 15 targets in a cloud
               if (regSummary$targets["DPInet","Positive"] < 15) {
-                warning("WARNING: This regulon has less than 15 positive targets. Regulon activity readings may be unreliable.\n")
+                tp <- paste0("This regulon has less than 15 positive targets.",
+                            "Regulon activity readings may be unreliable.\n")
+                warning(tp)
               } else if (regSummary$targets["DPInet","Negative"] < 15) {
-                warning("WARNING: This regulon has less than 15 negative targets. Regulon activity readings may be unreliable.\n")
+                tp <- paste0("This regulon has less than 15 negative targets.",
+                            "Regulon activity readings may be unreliable.\n")
+                warning(tp)
               }
               cat("---\n")
             }
@@ -1782,19 +1943,19 @@ setMethod(
     
     #--- check arguments
     if(object@status["Preprocess"]!="[x]")
-      stop("NOTE: input 'object' needs preprocessing!")
+      stop("input 'object' needs preprocessing!")
     tnai.checks("verbose",verbose)
     
     #--- check if expData is a summarizedExperiment
-    if (class(expData) == "SummarizedExperiment" || 
-        class(expData) == "RangedSummarizedExperiment") {
+    if (is(expData, "SummarizedExperiment") || 
+        is(expData, "RangedSummarizedExperiment")) {
       if( !is.null(rowAnnotation) || !is.null(colAnnotation) ){
-        tp1 <- "NOTE: when using a 'SummarizedExperiment' container, "
+        tp1 <- "When using a 'SummarizedExperiment' container, "
         tp2 <- "row and col annotations are used from that object!"
         warning(tp1,tp2,call.=FALSE)
       }
       if (length(assays(expData)) > 1) {
-        stop("NOTE: please input a SummarizedExperiment with only one assay")
+        stop("please input a SummarizedExperiment with only one assay")
       }
       rowAnnotation <- as.data.frame(rowData(expData))
       colAnnotation <- as.data.frame(colData(expData))
@@ -1802,7 +1963,8 @@ setMethod(
     }
     
     #--- check main arguments
-    if(verbose)cat("--Mapping 'expData' to 'rowAnnotation' and 'colAnnotation'...\n")
+    if(verbose)
+      cat("--Mapping 'expData' to 'rowAnnotation' and 'colAnnotation'...\n")
     tmp <- .expDataChecks(expData, rowAnnotation, colAnnotation, verbose=FALSE)
     new_expData <- tmp$expData
     new_rowAnnotation <- tmp$rowAnnotation
@@ -1811,6 +1973,12 @@ setMethod(
     #--- match annotation
     if(verbose)cat("--Checking new and old 'rowAnnotation'...")
     old_rowAnnotation <- tni.get(object, "rowAnnotation")
+    if(ncol(new_rowAnnotation)==1) 
+      new_rowAnnotation <- cbind(new_rowAnnotation, 
+                                 'NA'=rep(NA, nrow(new_rowAnnotation)))
+    if(ncol(old_rowAnnotation)==1) 
+      old_rowAnnotation <- cbind(old_rowAnnotation, 
+                                 'NA'=rep(NA, nrow(old_rowAnnotation)))  
     ijcol <- sapply(1:ncol(old_rowAnnotation),function(i){
       sapply(1:ncol(new_rowAnnotation),function(j){
         sum(old_rowAnnotation[,i]%in%new_rowAnnotation[,j])
@@ -1822,9 +1990,11 @@ setMethod(
     if(checkmatch>75){
       if(verbose)cat(paste0(round(checkmatch,1),"% agreement! \n"))
     } else if(checkmatch >= 50 && checkmatch < 75){
-      warning("NOTE: ",100-checkmatch,"% of the TNI is not represented in new 'rowAnnotation'!")
+      warning("NOTE: ",100-checkmatch,
+              "% of the TNI is not represented in new 'rowAnnotation'!")
     } else if(checkmatch < 50){
-      stop("NOTE: ",100-checkmatch,"% of the TNI is not represented in the new 'rowAnnotation'!")
+      stop("",100-checkmatch,
+           "% of the TNI is not represented in the new 'rowAnnotation'!")
     }
     
     #--- Simplify new_rowAnnotation
@@ -1839,7 +2009,8 @@ setMethod(
     
     #--- Remove duplications in the key
     if(any(duplicated(new_rowAnnotation$ID2_NEW))){
-      if(verbose)cat("--Removing duplicated genes (keep max coefficient of variation!)...\n")
+      if(verbose)
+        cat("--Removing duplicated genes (keep max coefficient of variation!)...\n")
       #e.g. col1=id, col2=symbol (collapse cv by col2)
       cvres <- cv.filter(new_expData, new_rowAnnotation)
       new_expData <- cvres$gexp
@@ -1850,30 +2021,49 @@ setMethod(
     idx <- match(new_rowAnnotation$ID2_NEW, old_rowAnnotation[[ijcol[2]]])
     check <- all(new_rowAnnotation$ID2_NEW==old_rowAnnotation[[ijcol[2]]][idx])
     if(!check){
-      stop("NOTE: unpredicted exception found in the input data! 
+      stop("unpredicted exception found in the input data! 
            ...a possible cause is annotation mismatch!")
     }
     
     if(verbose)cat("--Replacing samples and annotation...")
     
     #--- Combine keys
-    new_rowAnnotation <- cbind(new_rowAnnotation, old_rowAnnotation[idx,,drop=FALSE])
+    new_rowAnnotation <- cbind(new_rowAnnotation, 
+                               old_rowAnnotation[idx,,drop=FALSE])
     rownames(new_rowAnnotation) <- rownames(old_rowAnnotation)[idx]
     
-    #--- Align regulons using old key
-    object@results$tn.ref <- object@results$tn.ref[rownames(new_rowAnnotation),,drop=FALSE]
-    object@results$tn.dpi <- object@results$tn.dpi[rownames(new_rowAnnotation),,drop=FALSE]
+    #--- Remove 'targetElements' not listed in the new_rowAnnotation
+    idx <- object@targetElements %in% rownames(new_rowAnnotation)
+    object@targetElements <- object@targetElements[idx]
+    object@results$tn.ref <- object@results$tn.ref[
+      object@targetElements,,drop=FALSE]
+    object@results$tn.dpi <- object@results$tn.dpi[
+      object@targetElements,,drop=FALSE]
+    
+    #--- Update 'targetElements' annotation
+    idx <- match(object@targetElements, rownames(new_rowAnnotation))
+    object@targetElements <- new_rowAnnotation$ID1_NEW[idx]
+    rownames(object@results$tn.ref) <- object@targetElements
+    rownames(object@results$tn.dpi) <- object@targetElements
+    
+    #--- Remove 'regulatoryElements' not listed in the new_rowAnnotation
+    # idx <- object@regulatoryElements %in% rownames(new_rowAnnotation)
+    # object@regulatoryElements <- object@regulatoryElements[idx]
+    # object@results$tn.ref <- object@results$tn.ref[,object@regulatoryElements]
+    # object@results$tn.dpi <- object@results$tn.dpi[,object@regulatoryElements]
+    
+    #--- Update 'regulatoryElements' annotation
+    # idx <- match(object@regulatoryElements, rownames(new_rowAnnotation))
+    # object@regulatoryElements[] <- new_rowAnnotation$ID1_NEW[idx]
+    # colnames(object@results$tn.ref) <- as.character(object@regulatoryElements)
+    # colnames(object@results$tn.dpi) <- as.character(object@regulatoryElements)
     
     #--- Update TNI with new samples and annotation
     object@gexp <- new_expData
     object@rowAnnotation <- new_rowAnnotation
     object@colAnnotation <- new_colAnnotation
-    
-    #--- Update TNI with new keys
     rownames(object@gexp) <- new_rowAnnotation$ID1_NEW
     rownames(object@rowAnnotation) <- new_rowAnnotation$ID1_NEW
-    rownames(object@results$tn.ref) <- new_rowAnnotation$ID1_NEW
-    rownames(object@results$tn.dpi) <- new_rowAnnotation$ID1_NEW
     
     return(object)
   }
@@ -1889,25 +2079,40 @@ setMethod(
 ##------------------------------------------------------------------------------
 #---check compatibility and upgrade tni objects
 upgradeTNI <- function(object){
-  if(class(object)[1]=="TNI"){
-    if(.hasSlot(object, "transcriptionFactors") && !.hasSlot(object, "regulatoryElements")){
+  if(is(object, "TNI")){
+    if(.hasSlot(object, "transcriptionFactors") && 
+       !.hasSlot(object, "regulatoryElements")){
       object@regulatoryElements <- object@transcriptionFactors
       object@rowAnnotation <- object@annotation
       ID <- colnames(object@gexp)
-      object@colAnnotation <- data.frame(ID, row.names = ID, stringsAsFactors = FALSE)
+      object@colAnnotation <- data.frame(ID, row.names = ID, 
+                                         stringsAsFactors = FALSE)
     }
     if(length(object@rowAnnotation)==0){
       tp <- rownames(object@gexp)
-      object@rowAnnotation <- data.frame(ID=tp, row.names=tp, stringsAsFactors = FALSE)
+      object@rowAnnotation <- data.frame(ID=tp, row.names=tp, 
+                                         stringsAsFactors = FALSE)
     }
     if(length(object@colAnnotation)==0){
       tp <- colnames(object@gexp)
-      object@colAnnotation <- data.frame(ID=tp, row.names=tp, stringsAsFactors = FALSE)
+      object@colAnnotation <- data.frame(ID=tp, row.names=tp, 
+                                         stringsAsFactors = FALSE)
     }
-    #---
-    names(object@summary) <- c("regulatoryElements","para","results")
-    rownames(object@summary$regulatoryElements) <- "regulatoryElements"
-    #---
+    if(!.hasSlot(object, "targetElements")){
+      object@targetElements <- rownames(object@rowAnnotation)
+    }
+    if(is.null(object@summary$targetElements)){
+      sum.info.targetElements<-matrix(,1,2)
+      rownames(sum.info.targetElements)<-"targetElements"
+      colnames(sum.info.targetElements)<-c("input","valid") 
+      object@summary$targetElements <- sum.info.targetElements
+    }
+    if(is.null(object@summary$regulatoryElements)){
+      sum.info.regulatoryElements<-matrix(,1,2)
+      rownames(sum.info.regulatoryElements)<-"regulatoryElements"
+      colnames(sum.info.regulatoryElements)<-c("input","valid") 
+      object@summary$regulatoryElements <- sum.info.regulatoryElements
+    }
     sum.info.results <- object@summary$results
     colnames(sum.info.results$tnet)<-c("regulatoryElements","Targets","Edges")
     object@summary$results <- sum.info.results
@@ -1932,7 +2137,13 @@ translateQuery<-function(query,idkey,object,annottype,reportNames){
     idx<-tfs%in%rownames(rowAnnotation)
     names(tfs)[idx]<-rowAnnotation[tfs[idx],idkey]
   }
-  if(annottype=="gexpAndNames"){
+  if(annottype=="dataframeAndNames"){
+    n <- ncol(query)
+    idx <- match(rownames(query),rownames(rowAnnotation))
+    query[[idkey]] <- rowAnnotation[[idkey]][idx]
+    query <- query[,c(n+1,1:n),drop=FALSE]
+    query <- query[!is.na(rownames(query)),,drop=FALSE]
+  } else if(annottype=="gexpAndNames"){
     idx<-rownames(query)%in%rownames(rowAnnotation)
     rownames(query)[idx]<-rowAnnotation[rownames(query)[idx],idkey]
     query <- query[!is.na(rownames(query)),,drop=FALSE]

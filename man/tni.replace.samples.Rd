@@ -9,7 +9,7 @@ This function replaces samples of an existing TNI-class objects.
 
 \usage{
 tni.replace.samples(object, expData, rowAnnotation=NULL, colAnnotation=NULL, 
-verbose=TRUE)
+removeRegNotAnnotated=TRUE, verbose=TRUE)
 }
 
 \arguments{
@@ -25,6 +25,11 @@ listed in the gene expression matrix.
 }
 \item{colAnnotation}{
 an optional data frame with sample annotation.
+}
+\item{removeRegNotAnnotated}{
+a single logical value specifying to remove 'regulatoryElements' not annotated
+in 'expData' (when removeRegNotAnnotated=TRUE) or not 
+(when removeRegNotAnnotated=FALSE).
 }
 \item{verbose}{
 a single logical value specifying to display detailed messages 

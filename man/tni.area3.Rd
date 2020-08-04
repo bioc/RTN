@@ -93,7 +93,11 @@ rtni <- tni.bootstrap(rtni)
 rtni <- tni.dpi.filter(rtni)
 
 #run aREA algorithm
-EScores <- tni.area3(rtni)
+rtni <- tni.area3(rtni)
+
+#get results
+regulonActivity <- tni.get(rtni, what = "regulonActivity")
+
 
 }
 }

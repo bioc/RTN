@@ -9,6 +9,9 @@ setMethod(
   function(object, geneSetList, minGeneSetSize = 15, exponent = 1, 
            verbose = TRUE){
     
+    #--- check compatibility
+    object <- upgradeTNI(object)
+    
     #-- Basic checks
     if(object@status["Preprocess"]!="[x]")
       stop("input 'object' needs preprocessing!")
@@ -18,9 +21,6 @@ setMethod(
     tnai.checks("minGeneSetSize", minGeneSetSize)
     tnai.checks("exponent", exponent)
     tnai.checks("verbose",verbose)
-    
-    #--- check compatibility
-    object <- upgradeTNI(object)
     
     #--- start preprocessing
     if(verbose)cat("-Preprocessing for input data...\n")
@@ -461,7 +461,7 @@ setMethod(
   refcol <- sapply(1:ncol(rowAnnotation),function(i){
     sum(ids%in%rowAnnotation[,i],na.rm=TRUE)
   })
-  agreement<-sum(refcol)/length(ids)*100
+  agreement<-max(refcol)/length(ids)*100
   if(verbose)cat(paste(round(agreement,1),"% ! \n",sep=""))
   if(agreement<30){
     idiff<-round(100-agreement,1)

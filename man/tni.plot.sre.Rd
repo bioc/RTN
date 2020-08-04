@@ -43,6 +43,10 @@ columns show the subgroups. The plotted values correspond to average regulon
 activity for a regulon in a subgroup. Enriched values can be marked.
 }
 
+\seealso{
+\code{\link[RTN:tni.sre]{tni.sre}}
+}
+
 \examples{
 # load tniData
 data(tniData)
@@ -59,6 +63,9 @@ rtni <- tni.permutation(rtni)
 
 # dpi filter (infers the transcriptional network)
 rtni <- tni.dpi.filter(rtni)
+
+#run GSEA2 analysis pipeline
+rtni <- tni.gsea2(rtni)
 
 # set sample groups
 colAnnotation <- tni.get(rtni, "colAnnotation")

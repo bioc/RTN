@@ -2,6 +2,7 @@
 \alias{tniData}
 \alias{tnaData}
 \alias{tfsData}
+\alias{pksData}
 \docType{data}
 
 \title{Pre-processed datasets for the RTN package.}
@@ -20,6 +21,7 @@ The \strong{tniData} and \strong{tnaData} datasets were extracted, pre-processed
 
 The \strong{tfsData} consists of a list with gene annotation for human transcription factors (TFs),  compiled from 6 resources (Lambert et. al 2018; Carro et al. 2010; Vaquerizas et al. 2009; D. L. Fulton et al. 2009; Yusuf et al. 2012; and Ravasi et al. 2010), and provided here in the form of 'data frame' objects that include ENTREZ and HGNC gene symbol annotation.
 
+The \strong{pksData} consists of a list with gene annotation for human protein kinases, retrived from the Swiss-Prot Protein Knowledgebase (https://www.uniprot.org/docs/pkinfam), release 2020_02 of 22-Apr-2020. 
 
 \describe{
   \item{tniData$expData}{a named gene expression matrix with 120 samples (a subset from the Fletcher2013b).}
@@ -35,6 +37,7 @@ The \strong{tfsData} consists of a list with gene annotation for human transcrip
   \item{tfsData$Fulton2009}{a data.frame listing TFs from Fulton et al. (2009).} 
   \item{tfsData$Vaquerizas2009}{a data.frame listing TFs from Vaquerizas et al. (2009).} 
   \item{tfsData$all}{a data.frame listing all TFs.}
+  \item{pksData$pkinfam2020}{a data.frame listing human protein kinases.}
 }
 }
 
@@ -62,6 +65,7 @@ Yusuf, D. et al., \emph{The Transcription Factor Encyclopedia.} Genome Biology, 
     data(tniData)
     data(tnaData)
     data(tfsData)
+    data(pksData)
 }
 
 \keyword{dataset}

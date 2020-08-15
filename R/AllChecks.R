@@ -40,8 +40,9 @@ tnai.checks <- function(name, para, supp) {
             "regulonSize","refregulonSize",
             "regulons","refregulons",
             "regulons.and.mode", "refregulons.and.mode",
-            "rowAnnotation", "colAnnotation", "cdt.list","cdt.table",
-            "subgroupEnrichment")
+            "rowAnnotation", "colAnnotation", 
+            "cdt.list", "cdt.table",
+            "subgroupEnrichment", "regulonActivity")
     supps <- c("regulons.and.mode.gmm","refregulons.and.mode.gmm")
     if(!is.character(para) || length(para)!=1 || !(para %in% c(opts,supps)))
       stop(paste("'what' should be any one of the options: ", 
@@ -401,6 +402,9 @@ tnai.checks <- function(name, para, supp) {
   } else if(name=="scale") {
     if(!is.singleLogical(para))
       stop("'scale' should be a logical value!",call.=FALSE)
+  } else if(name=="removeRegNotAnnotated") {
+    if(!is.singleLogical(para))
+      stop("'removeRegNotAnnotated' should be a logical value!",call.=FALSE)
   } else if(name=="nPermutations") {
     if(!(is.integer(para) || is.numeric(para)) || length(para)!=1 || 
        para<1 || round(para,0)!=para)
@@ -737,9 +741,10 @@ tnai.checks <- function(name, para, supp) {
           )
       }
       #check rownames ('supp' is gexp's rownames)
-      n1 <- sum(supp%in%para[,1])
+      n1 <- sum(supp%in%as.character(para[,1]))
       n2 <- sum(supp%in%rownames(para))
       if(n1>=n2){
+        para[,1] <- as.character(para[,1])
         if(any(is.na(para[,1])) || any(para[,1]=="")){
           stop("Col 1 in 'rowAnnotation' should have no NA or empty value!",
                call.=FALSE)
@@ -781,7 +786,7 @@ tnai.checks <- function(name, para, supp) {
         stop("'colAnnotation' should have unique colnames!")
       }
       #check rownames
-      n1 <- sum(supp%in%para[,1])
+      n1 <- sum(supp%in%as.character(para[,1]))
       n2 <- sum(supp%in%rownames(para))
       if(n1>=n2){
         para[,1] <- as.character(para[,1])

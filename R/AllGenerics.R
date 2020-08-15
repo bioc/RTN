@@ -48,7 +48,7 @@ setGeneric("tni.area3",
              standardGeneric("tni.area3"), package="RTN")
 setGeneric("tni.graph",
            function(object, tnet="dpi", gtype="rmap", 
-                    minRegulonSize=15, tfs=NULL, 
+                    minRegulonSize=15, regulatoryElements=NULL, 
                     amapFilter="quantile", amapCutoff=NULL, ntop=NULL, ...)
              standardGeneric("tni.graph"), package="RTN")
 setGeneric("tni.regulon.summary",
@@ -80,11 +80,11 @@ setGeneric("tni.prune",
                standardGeneric("tni.prune"), package="RTN")
 setGeneric("tni.replace.samples",
            function(object, expData, rowAnnotation=NULL, colAnnotation=NULL,
-                    verbose=TRUE)
+                    removeRegNotAnnotated=TRUE, verbose=TRUE)
              standardGeneric("tni.replace.samples"), package="RTN")
 setGeneric("tni.sre",
            function(object, sampleGroups, regulatoryElements = NULL, 
-                    pValueCutoff = 0.05, pAdjustMethod = "BH", ...)
+                    pValueCutoff = 0.05, pAdjustMethod = "BH")
              standardGeneric("tni.sre"), package = "RTN")
 
 ##-------------------------------------------------------------------------
@@ -94,7 +94,8 @@ setGeneric("tna.mra",
              standardGeneric("tna.mra"), package="RTN")
 setGeneric("tna.gsea1",
            function(object, pValueCutoff=0.05, pAdjustMethod="BH",  
-                    minRegulonSize=15, nPermutations=1000, exponent=1, 
+                    minRegulonSize=15, sizeFilterMethod="posORneg",
+                    nPermutations=1000, exponent=1, 
                     tnet="dpi", orderAbsValue=TRUE, 
                     tfs=NULL, verbose=TRUE) 
              standardGeneric("tna.gsea1"), package="RTN")

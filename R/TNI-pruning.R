@@ -41,18 +41,20 @@ setMethod(
     
     #-- creating effect list
     if (tarPriorityMethod == "TC"){
-      dataActivity <- tni.gsea2(object, regulatoryElements = regulatoryElements, 
-                               targetContribution=TRUE, 
-                               verbose=verbose, ...=...)
+      object <- tni.gsea2(object, regulatoryElements = regulatoryElements, 
+                          targetContribution=TRUE, verbose=verbose, ...=...)
+      dataActivity <- tni.get(object, what = "regulonActivity")
       listOfTargetEffect <- dataActivity$data$listOfTargetContribution
     } else if (tarPriorityMethod == "EC"){
-      dataActivity <- tni.gsea2(object, regulatoryElements = regulatoryElements, 
-                                additionalData=TRUE, verbose=verbose, ...=...)
+      object <- tni.gsea2(object, regulatoryElements = regulatoryElements, 
+                          additionalData=TRUE, verbose=verbose, ...=...)
+      dataActivity <- tni.get(object, what = "regulonActivity")
       listOfTargetEffect <- lapply(regulatoryElements, expressionCorrelation, 
-                             object, dataActivity)
+                                   object, dataActivity)
     } else if (tarPriorityMethod == "MI"){
-      dataActivity <- tni.gsea2(object, regulatoryElements = regulatoryElements, 
-                               additionalData=TRUE, verbose=verbose, ...=...)
+      object <- tni.gsea2(object, regulatoryElements = regulatoryElements, 
+                          additionalData=TRUE, verbose=verbose, ...=...)
+      dataActivity <- tni.get(object, what = "regulonActivity")
       listOfTargetEffect <- lapply(regulatoryElements, mutualInformation,
                              object, dataActivity)
     }

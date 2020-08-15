@@ -13,8 +13,8 @@ testing corrections).
 
 \usage{
 tna.gsea1(object, pValueCutoff=0.05, pAdjustMethod="BH",  minRegulonSize=15, 
-nPermutations=1000, exponent=1, tnet="dpi", orderAbsValue=TRUE, tfs=NULL, 
-verbose=TRUE)
+sizeFilterMethod="posORneg", nPermutations=1000, exponent=1, tnet="dpi", 
+orderAbsValue=TRUE, tfs=NULL, verbose=TRUE)
 }
 
 \arguments{
@@ -34,6 +34,9 @@ used (see 'p.adjust' for details).
 a single integer or numeric value specifying the minimum number of 
 elements in a regulon that must map to elements of the gene universe. 
 Gene sets with fewer than this number are removed from the analysis.
+}
+\item{sizeFilterMethod}{
+a single character value specifying the use of the 'minRegulonSize' argument, which is applyed to regulon's positive and negative targets. Options: "posANDneg", "posORneg", "posPLUSneg". For "posANDneg", the number of both positive and negative targets should be > 'minRegulonSize'; for "posORneg", the number of either positive or negative targets should be > 'minRegulonSize'; and for "posPLUSneg", the number of all targets should be > 'minRegulonSize'.
 }
 \item{nPermutations}{
 a single integer or numeric value specifying the number of permutations 

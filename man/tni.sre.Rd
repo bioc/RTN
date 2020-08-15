@@ -6,11 +6,12 @@
 \usage{
 
 tni.sre(object, sampleGroups, regulatoryElements = NULL, 
-        pValueCutoff = 0.05, pAdjustMethod = "BH", ...)
+        pValueCutoff = 0.05, pAdjustMethod = "BH")
   
 }
 
 \arguments{
+
 \item{object}{A \linkS4class{TNI} object.}
 
 \item{sampleGroups}{either a list featuring sample groups or a string 
@@ -25,10 +26,8 @@ p-values considered significant.}
 \item{pAdjustMethod}{a single character value specifying the p-value 
 adjustment method to be used (see 'p.adjust' for details).}
 
-\item{...}{arguments passed to \code{\link[RTN:tni.gsea2]{tni.gsea2}}.
+}
 
-}
-}
 
 \value{
 A TNI-class object with the results of the subgroup regulon enrichment
@@ -39,6 +38,10 @@ added to the results slot. To recover the results, use tni.get(object, "regulonE
 This method evaluates which regulons are enriched in sample groups, given a
 grouping variable. It performs Fisher's Exact Test whether a regulon is
 positively or negatively enriched in a subgroup using regulon activity.
+}
+
+\seealso{
+\code{\link[RTN:tni.plot.sre]{tni.plot.sre}}
 }
 
 \examples{
@@ -56,6 +59,9 @@ rtni <- tni.permutation(rtni)
 rtni <- tni.bootstrap(rtni)
 rtni <- tni.dpi.filter(rtni)
 
+#run GSEA2 analysis pipeline
+rtni <- tni.gsea2(rtni)
+
 # set sample groups
 colAnnotation <- tni.get(rtni, "colAnnotation")
 sampleGroups <- list(G1=colAnnotation$ID[1:60], 
@@ -67,6 +73,8 @@ rtni <- tni.sre(rtni, sampleGroups)
 
 # get results
 tni.get(rtni, "subgroupEnrichment")
+
+# for a heatmap representation, see the tni.plot.sre() function.
 }
 
 }

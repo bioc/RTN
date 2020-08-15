@@ -66,10 +66,10 @@ setMethod("initialize",
             ##-----result slot
             .Object@results<-list()
             ##-----status matrix
-            .Object@status <- rep("[ ]", 1, 5)
+            .Object@status <- rep("[ ]", 1, 6)
             names(.Object@status) <- c("Preprocess", "Permutation", 
                                        "Bootstrap", "DPI.filter", 
-                                       "Conditional")
+                                       "Conditional","Activity")
             ##-----summary info
             ##-----regulatoryElements
             sum.info.regElements<-matrix(,1,2)
@@ -224,11 +224,12 @@ setMethod(
            globalAdjustment=TRUE, estimator="spearman", nPermutations=1000, 
            pooledNullDistribution=TRUE, boxcox=TRUE, parChunks=NULL, 
            verbose=TRUE){
-    if(object@status["Preprocess"]!="[x]")
-      stop("input 'object' needs preprocessing!")
     
     #---check compatibility
     object <- upgradeTNI(object)
+    
+    if(object@status["Preprocess"]!="[x]")
+      stop("input 'object' needs preprocessing!")
     
     ##-----check and assign parameters
     tnai.checks(name="pValueCutoff",para=pValueCutoff)
@@ -275,13 +276,14 @@ setMethod(
   "TNI",
   function(object, nBootstraps=100, consensus=95, 
            parChunks=NULL, verbose=TRUE){
+    
+    #---check compatibility
+    object <- upgradeTNI(object)
+    
     if(object@status["Preprocess"]!="[x]")
       stop("input 'object' needs preprocessing and permutation analysis!")
     if(object@status["Permutation"]!="[x]")
       stop("input 'object' needs permutation analysis!")
-    
-    #---check compatibility
-    object <- upgradeTNI(object)
     
     #----check parameters
     tnai.checks(name="nBootstraps",para=nBootstraps)    
@@ -315,11 +317,12 @@ setMethod(
   "tni.dpi.filter",
   "TNI",
   function(object, eps=0, sizeThreshold=TRUE, minRegulonSize=15, verbose=TRUE){
-    if(object@status["Permutation"]!="[x]")
-      stop("input 'object' needs permutation/bootstrep analysis!")
     
     #---check compatibility
     object <- upgradeTNI(object)
+    
+    if(object@status["Permutation"]!="[x]")
+      stop("input 'object' needs permutation/bootstrep analysis!")
     
     ##---check and assign parameters
     tnai.checks(name="eps",para=eps)
@@ -404,15 +407,16 @@ setMethod(
                  alternative=c("two.sided", "less", "greater"), 
                  targetContribution=FALSE, additionalData=FALSE, verbose=TRUE, 
                  doSizeFilter=NULL){
-    if(object@status["Preprocess"]!="[x]")
-      stop("TNI object is not compleate: requires preprocessing!")
-    if(object@status["Permutation"]!="[x]")
-      stop("TNI object is not compleate: requires permutation/bootstrap and DPI filter!")  
-    if(object@status["DPI.filter"]!="[x]")
-      stop("TNI object is not compleate: requires DPI filter!")
     
     #---check compatibility
     object <- upgradeTNI(object)
+    
+    if(object@status["Preprocess"]!="[x]")
+      stop("TNI object requires preprocessing!")
+    if(object@status["Permutation"]!="[x]")
+      stop("TNI object requires permutation/bootstrap and DPI filter!")  
+    if(object@status["DPI.filter"]!="[x]")
+      stop("TNI object requires DPI filter!")
     
     ##-----check and assign parameters
     tnai.checks(name="minRegulonSize",para=minRegulonSize)
@@ -634,7 +638,12 @@ setMethod(
       colnames(regulonActivity$status)<-names(regulatoryElements)
       regulonActivity$regulatoryElements <- regulatoryElements
     }
-    return(regulonActivity)
+    object@results$regulonActivity <- regulonActivity
+    
+    #---
+    if(verbose)cat("-GSEA2 complete! \n\n")
+    object@status["Activity"] <- "[x]"
+    return(object)
   }
 )
 
@@ -646,15 +655,16 @@ setMethod(
                  scale=FALSE, tnet="dpi", regulatoryElements=NULL, 
                  samples=NULL, features=NULL, refsamp=NULL, log=FALSE, 
                  verbose=TRUE, doSizeFilter=NULL){
-    if(object@status["Preprocess"]!="[x]")
-      stop("TNI object is not compleate: requires preprocessing!")
-    if(object@status["Permutation"]!="[x]")
-      stop("TNI object is not compleate: requires permutation/bootstrap and DPI filter!")  
-    if(object@status["DPI.filter"]!="[x]")
-      stop("TNI object is not compleate: requires DPI filter!")
     
     #---check compatibility
     object <- upgradeTNI(object)
+    
+    if(object@status["Preprocess"]!="[x]")
+      stop("TNI object requires preprocessing!")
+    if(object@status["Permutation"]!="[x]")
+      stop("TNI object requires permutation/bootstrap and DPI filter!")  
+    if(object@status["DPI.filter"]!="[x]")
+      stop("TNI object requires DPI filter!")
     
     ##-----check and assign parameters
     tnai.checks(name="minRegulonSize",para=minRegulonSize)
@@ -792,11 +802,16 @@ setMethod(
     nes <- nes[samples,regulatoryElements]
     colnames(nes) <- names(regulatoryElements)
     
-    #-- for compatibility, wrap up results into the same format
+    #-- for compatibility, wrap-up results into the same format
     regulonActivity <- list(differential=nes)
     regulonActivity <- .tni.stratification.area(regulonActivity)
     regulonActivity$regulatoryElements <- regulatoryElements
-    return(regulonActivity)
+    object@results$regulonActivity <- regulonActivity
+    
+    #---
+    if(verbose)cat("-GSEA2 complete! \n\n")
+    object@status["Activity"] <- "[x]"
+    return(object)
   }
 )
 
@@ -808,15 +823,16 @@ setMethod(
   "TNI",
   function(object, phenotype=NULL, hits=NULL, phenoIDs=NULL, 
            duplicateRemoverMethod="max", verbose=TRUE) {
-    if(object@status["Preprocess"]!="[x]")
-      stop("TNI object is not compleate: requires preprocessing!")
-    if(object@status["Permutation"]!="[x]")
-      stop("TNI object is not compleate: requires permutation/bootstrap and DPI filter!")  
-    if(object@status["DPI.filter"]!="[x]")
-      stop("TNI object is not compleate: requires DPI filter!")
     
     #---check compatibility
     object <- upgradeTNI(object)
+    
+    if(object@status["Preprocess"]!="[x]")
+      stop("TNI object requires preprocessing!")
+    if(object@status["Permutation"]!="[x]")
+      stop("TNI object requires permutation/bootstrap and DPI filter!")  
+    if(object@status["DPI.filter"]!="[x]")
+      stop("TNI object requires DPI filter!")
     
     ##-----check input arguments
     tnai.checks(name="TNI",para=object)
@@ -833,7 +849,7 @@ setMethod(
                    phenotype=phenotype,
                    hits=hits)
     if(nrow(object@rowAnnotation)>0)
-      .object@rowAnnotation <- object@rowAnnotation[object@targetElements,]
+      .object@rowAnnotation <- object@rowAnnotation[object@targetElements,,drop=FALSE]
     if(!is.null(object@results$conditional) && 
        length(object@results$conditional)>0){
       cdt<-tni.get(object,what="cdt.list")
@@ -852,220 +868,6 @@ setMethod(
                               duplicateRemoverMethod=duplicateRemoverMethod,
                               verbose=verbose)
     return(.object)
-  }
-)
-
-##------------------------------------------------------------------------------
-##get slots from TNI 
-setMethod(
-  "tni.get",
-  "TNI",
-  function(object, what="summary", order=TRUE, ntop=NULL, reportNames=TRUE, 
-           idkey=NULL) {
-    
-    #---check compatibility
-    object <- upgradeTNI(object)
-    
-    ##-----reset compatibility with old args
-    if(what=="tn.dpi")what="tnet"
-    if(what=="tn.ref")what="refnet"
-    ##-----check input arguments
-    tnai.checks(name="tni.what",para=what)
-    tnai.checks(name="ntop",para=ntop)
-    tnai.checks(name="idkey",para=idkey)
-    tnai.checks(name="reportNames",para=reportNames)
-    ##-----get query
-    query <- NULL
-    if(what=="subgroupEnrichment"){
-      query<-object@results$subgroupEnrichment
-    } else if(what=="regulonSize"){
-      query <- .regulonCounts(tni.get(object, what="regulons.and.mode"))
-      if(!is.null(idkey))
-        query<-translateQuery(query,idkey,object,"dataframeAndNames",
-                              reportNames)
-    } else if(what=="refregulonSize"){
-      query <- .regulonCounts(tni.get(object, what="refregulons.and.mode"))
-      # if(!is.null(idkey))
-    } else if(what=="gexp"){
-      query<-object@gexp
-      if(!is.null(idkey))
-        query<-translateQuery(query,idkey,object,"gexpAndNames",reportNames)
-    } else if(what=="regulatoryElements"){
-      query<-object@regulatoryElements
-      if(!is.null(idkey))
-        query<-translateQuery(query,idkey,object,"vecAndContent",reportNames)
-    } else if(what=="modulators"){
-      query<-object@modulators
-      if(!is.null(idkey))
-        query<-translateQuery(query,idkey,object,"vecAndContent",reportNames)
-    } else if(what=="targetElements"){
-      query<-object@targetElements
-      if(!is.null(idkey))
-        query<-translateQuery(query,idkey,object,"vecAndContent",reportNames)
-    } else if(what=="para"){
-      query<-object@para
-    } else if(what=="refnet"){
-      query<-object@results$tn.ref
-      if(is.null(query))stop("empty slot!",call.=FALSE)
-      if(!is.null(idkey))query<-translateQuery(query,idkey,object,
-                                               "rtnetAndNames",reportNames)
-    } else if(what=="tnet"){
-      query<-object@results$tn.dpi
-      if(is.null(query))stop("empty slot!",call.=FALSE)
-      if(!is.null(idkey))query<-translateQuery(query,idkey,object,
-                                               "rtnetAndNames",reportNames)
-    } else if(what=="refregulons" || what=="refregulons.and.mode"){
-      query<-list()
-      for(i in object@regulatoryElements){
-        idx<-object@results$tn.ref[,i]!=0
-        query[[i]]<-rownames(object@results$tn.ref)[idx]
-      }
-      if(what=="refregulons.and.mode"){
-        for(i in names(query)){
-          tp<-object@results$tn.ref[query[[i]],i]
-          names(tp)<-query[[i]]
-          query[[i]]<-tp
-        }
-        if(!is.null(idkey))query<-translateQuery(query,idkey,object,
-                                                 "listAndNames",reportNames)
-      } else {
-        if(!is.null(idkey))query<-translateQuery(query,idkey,object,
-                                                 "listAndContent",reportNames)
-      }
-    } else if(what=="regulons" || what=="regulons.and.mode"){
-      query<-list()
-      for(i in object@regulatoryElements){
-        idx<-object@results$tn.dpi[,i]!=0
-        query[[i]]<-rownames(object@results$tn.dpi)[idx]
-      }
-      if(what=="regulons.and.mode"){
-        for(i in names(query)){
-          tp<-object@results$tn.dpi[query[[i]],i]
-          names(tp)<-query[[i]]
-          query[[i]]<-tp
-        }
-        if(!is.null(idkey))query<-translateQuery(query,idkey,object,
-                                                 "listAndNames",reportNames)
-      } else {
-        if(!is.null(idkey))query<-translateQuery(query,idkey,object,
-                                                 "listAndContent",reportNames)
-      }
-    } else if(what=="cdt.list" || what=="cdt.table"){
-      query <- object@results$conditional$count
-      for(nm in names(query)){
-        qry <- query[[nm]]
-        qry <- qry[ !qry[,2 ] & !qry[,3 ],-c(2,3),drop=FALSE]
-        query[[nm]]<-qry
-      }
-      if(what=="cdt.table"){
-        query <- cdt.table(query)
-        query <- p.adjust.cdt.table(query,object@para$cdt$pAdjustMethod)
-        query <- query[query$AdjPvFET<= object@para$cdt$pValueCutoff,]
-        query <- query[query$AdjPvKS <= object@para$cdt$pValueCutoff,]
-        if(is.null(query$AdjPvSNR)){
-          idx <- order(query$PvKS, query$PvFET, decreasing = F)
-        } else {
-          query <- query[query$AdjPvSNR <= object@para$cdt$pValueCutoff,]
-          idx <- order(query$PvSNR, query$PvKS, query$PvFET, decreasing = F)
-        }
-        query <- query[idx,]
-        rownames(query)<-NULL
-        query <- p.format.cdt.table(query)
-        if(reportNames){
-          idx <- match(query$Modulator,object@modulators)
-          query$Modulator <- names(object@modulators)[idx]
-          idx <- match(query$TF,object@regulatoryElements)
-          query$TF <- names(object@regulatoryElements)[idx]
-        }
-      } else {
-        query <- cdt.list(query,object@para$cdt$pAdjustMethod)
-        for(nm in names(query)){
-          qry<-query[[nm]]
-          qry <- qry[qry$AdjPvFET<= object@para$cdt$pValueCutoff,]
-          qry <- qry[qry$AdjPvKS <= object@para$cdt$pValueCutoff,]
-          if(!is.null(qry$AdjPvSNR)){
-            qry <- qry[qry$AdjPvSNR <= object@para$cdt$pValueCutoff,]
-          }
-          query[[nm]]<-qry
-        }
-        query<-query[unlist(lapply(query,nrow))>0]
-        if(reportNames){
-          for(nm in names(query)){
-            if(nrow(query[[nm]])>0){
-              idx<-match(query[[nm]][,"Modulator"],object@modulators)
-              query[[nm]][,"Modulator"]<-names(object@modulators)[idx]
-              idx<-match(query[[nm]][,"TF"],object@regulatoryElements)
-              query[[nm]][,"TF"]<-names(object@regulatoryElements)[idx]
-            }
-          }
-        }
-        if(length(query)>0)query<-sortblock.cdt.list(query)
-      }
-      if(!is.null(ntop))
-        warning("'ntop' argument has no effect on this query!")
-      if(!is.null(idkey))
-        warning("'idkey' argument has no effect on this query!")
-    } else if(what=="summary"){
-      query<-object@summary
-      query$results$tnet <- .get.tnet.summary(object)
-      query$results$regulonSize <- .get.regulon.summary(object)
-    } else if(what=="rowAnnotation"){
-      query<-object@rowAnnotation
-    } else if(what=="colAnnotation"){
-      query<-object@colAnnotation      
-    } else if(what=="status"){
-      query<-object@status
-    } else if(what=="gsea2"){
-      getqs<-function(query,order=TRUE,reportNames=TRUE,ntop=NULL){
-        if(is.data.frame(query) && nrow(query)>0 ){
-          if(is.null(ntop)){
-            query<-query[
-              query[,"Adjusted.Pvalue"]<=object@para$gsea2$pValueCutoff,,
-              drop=FALSE]
-          } else {
-            if(ntop>nrow(query)|| ntop<0)ntop=nrow(query)
-            if(nrow(query)>1){
-              idx<-sort.list(query[,"Pvalue"]) 
-              query<-query[idx[1:ntop],,drop=FALSE]
-            }
-          }
-          if(order){
-            if(nrow(query)>1) query<-query[order(query[,"Observed.Score"]),,
-                                           drop=FALSE]
-          }
-          if(reportNames){
-            idx<-match(query[,1],object@regulatoryElements)
-            query[,1]<-names(object@regulatoryElements)[idx]
-          }
-        }
-        query
-      }
-      query<-list()
-      if(is.null(ntop)){
-        tp<-rownames(getqs(object@results$GSEA2.results$differential))
-        tp<-intersect(tp,rownames(getqs(object@results$GSEA2.results$positive)))
-        tp<-intersect(tp,rownames(getqs(object@results$GSEA2.results$negative)))
-        dft<-getqs(object@results$GSEA2.results$differential,order,reportNames)
-        dft<-dft[rownames(dft)%in%tp,,drop=FALSE]
-        query$differential<-dft
-        query$positive<-object@results$GSEA2.results$positive[rownames(dft),,
-                                                              drop=FALSE]
-        query$negative<-object@results$GSEA2.results$negative[rownames(dft),,
-                                                              drop=FALSE]
-      } else {
-        query$differential<-getqs(
-          object@results$GSEA2.results$differential,order,reportNames,ntop)
-        query$positive<-object@results$GSEA2.results$positive[
-          rownames(query$differential),,drop=FALSE]
-        query$negative<-object@results$GSEA2.results$negative[
-          rownames(query$differential),,drop=FALSE]
-      }
-    } else if(what=="regulons.and.mode.gmm"){
-      query <- .mi2gmm.dpi(object, idkey)
-    } else if(what=="refregulons.and.mode.gmm"){
-      query <- .mi2gmm.ref(object, idkey)
-    }
-    return(query)
   }
 )
 
@@ -1274,12 +1076,12 @@ setMethod(
       data.frame(targets=tar,stringsAsFactors=FALSE)
     })
     rescount<-lapply(tfTargets,function(tar){
-      res<-data.frame(NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,
+      res<-data.frame(NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,
                       stringsAsFactors=FALSE)
       colnames(res)<-c("Modulator","irConstraint","nConstraint","TF",
                        "UniverseSize","EffectSize","RegulonSize","Expected",
                        "Observed","Negative","Positive",
-                       "Mode","PvFET","AdjPvFET","KS","PvKS","AdjPvKS")
+                       "Mode","PvFET","AdjPvFET","KS","PvKS","AdjPvKS","R")
       res
     })
     
@@ -1363,10 +1165,11 @@ setMethod(
         #check minimum number of modulated targets for testing (n constraint)
         nconst<-(ObsOV/RegSZ*100)<minIntersectSize # || ExpOV<1
         if(irconst || nconst ){
-          Mode<-0;pvfet<-NA; dks<-NA;pvks<-NA;dtvec[]<-0
+          Mode<-NA;pvfet<-NA; dks<-NA;pvks<-NA;dtvec[]<-0; R <- NA
         } else {
-          #---get mode of actions
-          Mode<-if(ObsNeg>ObsPos) -1 else if(ObsNeg<ObsPos) 1 else 0
+          #---get mode of actions (and R, for reference)
+          Mode <- if(ObsNeg>ObsPos) -1 else if(ObsNeg<ObsPos) 1 else 0
+          R <- cor(gxtemp[tf,],gxtemp[md,], method = "spearman")
           #---set obs to predicted mode
           Obs<-if(Mode==-1) abs(ObsNeg) else if(Mode==1) ObsPos else ObsOV
           #---run fet with phyper (obs-1)
@@ -1413,7 +1216,7 @@ setMethod(
         #---add results to a list
         reseffect[[tf]][[md]]<-dtvec[tftar]
         rescount[[tf]][md,]<-c(NA,NA,NA,NA,UniSZ,EffectSZ,RegSZ,ExpOV,ObsOV,
-                               ObsNeg,ObsPos,Mode,pvfet,NA,dks,pvks,NA)
+                               ObsNeg,ObsPos,Mode,pvfet,NA,dks,pvks,NA,R)
         rescount[[tf]][md,c(1,4)]<-c(md,tf)
         rescount[[tf]][md,c(2,3)]<-c(irconst,nconst)
         #---retain modulated targets
@@ -1514,22 +1317,6 @@ setMethod(
 #rnet<-tni.tfmdcor(object@gexp,tfs, modulators)
 
 ##------------------------------------------------------------------------------
-##show summary information on screen
-setMethod(
-  "show",
-  "TNI",
-  function(object) {
-    cat("A TNI (Transcriptional Network Inference) object:\n")
-    message("--status:")
-    
-    #---check compatibility
-    object <- upgradeTNI(object)
-    
-    print(tni.get(object, what=c("status")), quote=FALSE)
-  }
-)
-
-##------------------------------------------------------------------------------
 ##get graph from TNI
 ## experimental args:
 ## mask: a logical value specifying to apply a mask on the 'amapFilter', 
@@ -1542,7 +1329,7 @@ setMethod(
 setMethod(
   "tni.graph",
   "TNI",
-  function(object, tnet="dpi", gtype="rmap", minRegulonSize=15, tfs=NULL,
+  function(object, tnet="dpi", gtype="rmap", minRegulonSize=15, regulatoryElements=NULL,
            amapFilter="quantile", amapCutoff=NULL, ntop=NULL, mask=FALSE, 
            hcl=NULL, overlap="all", xlim=c(30,80,5), nquant=5, breaks=NULL, 
            mds=NULL, nbottom=NULL){
@@ -1561,7 +1348,7 @@ setMethod(
     tnai.checks(name="tnet",para=tnet)
     tnai.checks(name="tni.gtype",para=gtype)
     tnai.checks(name="minRegulonSize",para=minRegulonSize)
-    tnai.checks(name="tfs",para=tfs)
+    tnai.checks(name="regulatoryElements",para=regulatoryElements)
     tnai.checks(name="ntop",para=ntop)
     tnai.checks(name="mds",para=mds)
     tnai.checks(name="amapFilter",para=amapFilter)
@@ -1586,12 +1373,12 @@ setMethod(
       idx1[check]<-idx2[check]
       tfs<-tfs[idx1]
       hcl$labels<-tfs
-    } else if(is.null(tfs)){
+    } else if(is.null(regulatoryElements)){
       tfs<-object@regulatoryElements
       minsz<-colnames(tnet)[colSums(tnet!=0)>=minRegulonSize]
       tfs<-tfs[tfs%in%minsz]
     } else {
-      tfs<-as.character(tfs)
+      tfs<-as.character(regulatoryElements)
       idx<-which(names(object@regulatoryElements)%in%tfs | 
                    object@regulatoryElements%in%tfs)
       if(length(idx)==0)stop("input 'tfs' contains no useful data!\n")
@@ -1822,121 +1609,11 @@ setMethod(
 )
 
 #-------------------------------------------------------------------------------
-## tni.regulon.summary returns a summary of useful information about a 
-## particular regulon(s) or the network, to aid in interpretation
-setMethod(
-    "tni.regulon.summary",
-    "TNI",
-    function(object, regulatoryElements = NULL, verbose = TRUE) {
-        #-- Basic checks
-        if(object@status["DPI.filter"]!="[x]")
-            stop("input 'object' needs dpi analysis!")
-        if(!is.null(regulatoryElements))
-          tnai.checks("regulatoryElements",regulatoryElements)
-        tnai.checks("verbose",verbose)
-        
-        #--- check compatibility
-        object <- upgradeTNI(object)
-        
-        #-- if regulatoryElements = NULL, get a summary of network as a whole
-        if (is.null(regulatoryElements)){
-            networkSummary <- tni.get(object)$results
-            if(verbose){
-                nRegulators <- paste(
-                  "Regulatory network comprised of", 
-                  networkSummary$tnet["tnet.dpi", "regulatoryElements"],
-                  "regulons. \n")
-                cat(nRegulators)
-                message("-- DPI-filtered network: ")
-                print(networkSummary$tnet["tnet.dpi",], quote = FALSE)
-                print(networkSummary$regulonSize["tnet.dpi",], 
-                      quote = FALSE, digits = 3)
-                message("-- Reference network: ")
-                print(networkSummary$tnet["tnet.ref",], quote = FALSE) 
-                print(networkSummary$regulonSize["tnet.ref",], 
-                      quote = FALSE, digits = 3)
-                cat("---\n")
-            }
-            invisible(networkSummary)
-        } else { #-- Otherwise, get TF summaries
-          regnames <- tni.get(object, "regulatoryElements")
-          if(sum(regulatoryElements%in%regnames) > 
-             sum(regulatoryElements%in%names(regnames))){
-            regulatoryElements <- regnames[regnames%in%regulatoryElements]
-          } else {
-            regulatoryElements <- regnames[names(regnames)%in%
-                                             regulatoryElements]
-          }
-          if(length(regulatoryElements)==0)
-            stop("'regulatoryElements' argument has no valid names!")
-          
-          #-- Get info of all regulons and refregulons
-          tnet <- tni.get(object, "tnet")
-          refnet <-  tni.get(object, "refnet")
-          
-          #-- Get summaries
-          allRegulonSummary <- lapply(regulatoryElements, .regulon.summary, 
-                                      refnet, tnet, regnames)
-          #-- Print
-          if(verbose){
-            for(tf in names(regulatoryElements)) {
-              regSummary <- allRegulonSummary[[tf]]
-              
-              if (length(regSummary$regulatorsMI) <= 10) {
-                textRegsMI <- paste0(paste(names(regSummary$regulatorsMI),
-                                           collapse = ", "), "\n", "\n")
-              } else {
-                textRegsMI <- paste0(paste(names(regSummary$regulatorsMI)[1:10],
-                                           collapse = ", "),
-                                     "...[", 
-                                     length(regSummary$regulatorsMI) - 10, 
-                                     " more]", "\n", "\n")
-              }
-              nTars <- regSummary$targets["DPInet", "Total"]
-              
-              #-- Size info
-              if(nTars < 50) regsize <- "small"
-              else if (nTars < 200) regsize <- "medium-sized"
-              else regsize <- "large"
-              #-- Balance info
-              posTars <- regSummary$targets["DPInet","Positive"]
-              regbalance <- ifelse(posTars > 0.75*nTars || posTars < 0.25*nTars,
-                                   "unbalanced", "balanced")
-              #-- Print
-              cat(paste("The", tf, "regulon", "has", nTars, 
-                        "targets, it's a", regsize, 
-                        "and", regbalance,
-                        "regulon.", "\n"))
-              message("-- DPI filtered network targets:")
-              print(regSummary$targets["DPInet",], quote = FALSE)
-              message("-- Reference network targets:")
-              print(regSummary$targets["Refnet",], quote = FALSE)
-              message("-- Regulators with mutual information:")
-              cat(textRegsMI)
-              #-- Warning for < 15 targets in a cloud
-              if (regSummary$targets["DPInet","Positive"] < 15) {
-                tp <- paste0("This regulon has less than 15 positive targets.",
-                            "Regulon activity readings may be unreliable.\n")
-                warning(tp)
-              } else if (regSummary$targets["DPInet","Negative"] < 15) {
-                tp <- paste0("This regulon has less than 15 negative targets.",
-                            "Regulon activity readings may be unreliable.\n")
-                warning(tp)
-              }
-              cat("---\n")
-            }
-          }
-          invisible(allRegulonSummary)
-        }
-    }
-)
-
-#-------------------------------------------------------------------------------
 setMethod(
   "tni.replace.samples",
   "TNI",
   function(object, expData, rowAnnotation = NULL, colAnnotation = NULL,
-           verbose = TRUE){
+           removeRegNotAnnotated = TRUE, verbose = TRUE){
     
     #--- check compatibility
     object <- upgradeTNI(object)
@@ -1945,6 +1622,7 @@ setMethod(
     if(object@status["Preprocess"]!="[x]")
       stop("input 'object' needs preprocessing!")
     tnai.checks("verbose",verbose)
+    tnai.checks("removeRegNotAnnotated",removeRegNotAnnotated)
     
     #--- check if expData is a summarizedExperiment
     if (is(expData, "SummarizedExperiment") || 
@@ -1965,7 +1643,7 @@ setMethod(
     #--- check main arguments
     if(verbose)
       cat("--Mapping 'expData' to 'rowAnnotation' and 'colAnnotation'...\n")
-    tmp <- .expDataChecks(expData, rowAnnotation, colAnnotation, verbose=FALSE)
+    tmp <- .expDataChecks(expData, rowAnnotation, colAnnotation, verbose=verbose)
     new_expData <- tmp$expData
     new_rowAnnotation <- tmp$rowAnnotation
     new_colAnnotation <- tmp$colAnnotation
@@ -1981,19 +1659,21 @@ setMethod(
                                  'NA'=rep(NA, nrow(old_rowAnnotation)))  
     ijcol <- sapply(1:ncol(old_rowAnnotation),function(i){
       sapply(1:ncol(new_rowAnnotation),function(j){
-        sum(old_rowAnnotation[,i]%in%new_rowAnnotation[,j])
+        tp1 <- old_rowAnnotation[,i]; tp1 <- tp1[!is.na(tp1)]
+        tp2 <- new_rowAnnotation[,j]; tp2 <- tp2[!is.na(tp2)]
+        sum(tp1%in%tp2)
       })
     })
     ijcol <- which(ijcol==max(ijcol), arr.ind = TRUE)[1,]
     checkmatch <- old_rowAnnotation[[ijcol[2]]]%in%new_rowAnnotation[[ijcol[1]]]
-    checkmatch <- round(sum(checkmatch)/nrow(old_rowAnnotation)*100)
+    checkmatch <- sum(checkmatch)/nrow(old_rowAnnotation)*100
     if(checkmatch>75){
-      if(verbose)cat(paste0(round(checkmatch,1),"% agreement! \n"))
+      if(verbose)cat(paste0(round(checkmatch,2),"% agreement! \n"))
     } else if(checkmatch >= 50 && checkmatch < 75){
       warning("NOTE: ",100-checkmatch,
               "% of the TNI is not represented in new 'rowAnnotation'!")
     } else if(checkmatch < 50){
-      stop("",100-checkmatch,
+      stop("\n",round(100-checkmatch,2),
            "% of the TNI is not represented in the new 'rowAnnotation'!")
     }
     
@@ -2002,13 +1682,19 @@ setMethod(
     idx <- new_rowAnnotation[[ijcol[1]]] %in% old_rowAnnotation[[ijcol[2]]]
     new_rowAnnotation <- new_rowAnnotation[idx,,drop=FALSE]
     new_expData <- new_expData[rownames(new_rowAnnotation),,drop=FALSE]
-    new_rowAnnotation <- data.frame(ID1_NEW=rownames(new_rowAnnotation),
-                                    ID2_NEW=new_rowAnnotation[[ijcol[1]]], 
+    new_rowAnnotation <- data.frame(ID_NEW=rownames(new_rowAnnotation),
+                                    ID_KEY=new_rowAnnotation[[ijcol[1]]], 
                                     row.names = rownames(new_rowAnnotation),
                                     stringsAsFactors = FALSE)
     
+    #--- Remove NAs in the key
+    idx <- is.na(new_rowAnnotation$ID_KEY) | new_rowAnnotation$ID_KEY=="" | 
+      new_rowAnnotation$ID_KEY=="NA"
+    new_rowAnnotation <- new_rowAnnotation[!idx,]
+    new_expData <- new_expData[rownames(new_rowAnnotation),]
+    
     #--- Remove duplications in the key
-    if(any(duplicated(new_rowAnnotation$ID2_NEW))){
+    if(any(duplicated(new_rowAnnotation$ID_KEY))){
       if(verbose)
         cat("--Removing duplicated genes (keep max coefficient of variation!)...\n")
       #e.g. col1=id, col2=symbol (collapse cv by col2)
@@ -2018,19 +1704,21 @@ setMethod(
     }
     
     #--- Final check
-    idx <- match(new_rowAnnotation$ID2_NEW, old_rowAnnotation[[ijcol[2]]])
-    check <- all(new_rowAnnotation$ID2_NEW==old_rowAnnotation[[ijcol[2]]][idx])
+    idxFinal <- match(new_rowAnnotation$ID_KEY, old_rowAnnotation[[ijcol[2]]])
+    check <- all(new_rowAnnotation$ID_KEY==old_rowAnnotation[[ijcol[2]]][idxFinal])
     if(!check){
       stop("unpredicted exception found in the input data! 
            ...a possible cause is annotation mismatch!")
     }
     
-    if(verbose)cat("--Replacing samples and annotation...")
+    if(verbose)cat("--Replacing samples and annotation...\n")
     
     #--- Combine keys
     new_rowAnnotation <- cbind(new_rowAnnotation, 
-                               old_rowAnnotation[idx,,drop=FALSE])
-    rownames(new_rowAnnotation) <- rownames(old_rowAnnotation)[idx]
+                               old_rowAnnotation[idxFinal,,drop=FALSE])
+    rownames(new_rowAnnotation) <- rownames(old_rowAnnotation)[idxFinal]
+    new_rowAnnotation <- new_rowAnnotation[,!names(new_rowAnnotation)=="NA", 
+                                           drop=FALSE]
     
     #--- Remove 'targetElements' not listed in the new_rowAnnotation
     idx <- object@targetElements %in% rownames(new_rowAnnotation)
@@ -2042,30 +1730,377 @@ setMethod(
     
     #--- Update 'targetElements' annotation
     idx <- match(object@targetElements, rownames(new_rowAnnotation))
-    object@targetElements <- new_rowAnnotation$ID1_NEW[idx]
+    object@targetElements <- new_rowAnnotation$ID_NEW[idx]
     rownames(object@results$tn.ref) <- object@targetElements
     rownames(object@results$tn.dpi) <- object@targetElements
     
     #--- Remove 'regulatoryElements' not listed in the new_rowAnnotation
-    # idx <- object@regulatoryElements %in% rownames(new_rowAnnotation)
-    # object@regulatoryElements <- object@regulatoryElements[idx]
-    # object@results$tn.ref <- object@results$tn.ref[,object@regulatoryElements]
-    # object@results$tn.dpi <- object@results$tn.dpi[,object@regulatoryElements]
-    
+    if(removeRegNotAnnotated){
+      idx <- object@regulatoryElements %in% rownames(new_rowAnnotation)
+      if(sum(!idx)>0){
+        if(verbose) cat("--Removing 'regulatoryElements' not annotated...\n")
+        object@regulatoryElements <- object@regulatoryElements[idx]
+        object@results$tn.ref <- object@results$tn.ref[
+          ,object@regulatoryElements,drop=FALSE]
+        object@results$tn.dpi <- object@results$tn.dpi[
+          ,object@regulatoryElements,drop=FALSE]
+      }
+    }
     #--- Update 'regulatoryElements' annotation
-    # idx <- match(object@regulatoryElements, rownames(new_rowAnnotation))
-    # object@regulatoryElements[] <- new_rowAnnotation$ID1_NEW[idx]
-    # colnames(object@results$tn.ref) <- as.character(object@regulatoryElements)
-    # colnames(object@results$tn.dpi) <- as.character(object@regulatoryElements)
+    idx <- match(object@regulatoryElements, rownames(new_rowAnnotation))
+    object@regulatoryElements[] <- new_rowAnnotation$ID_NEW[idx]
+    colnames(object@results$tn.ref) <- as.character(object@regulatoryElements)
+    colnames(object@results$tn.dpi) <- as.character(object@regulatoryElements)
     
     #--- Update TNI with new samples and annotation
     object@gexp <- new_expData
     object@rowAnnotation <- new_rowAnnotation
     object@colAnnotation <- new_colAnnotation
-    rownames(object@gexp) <- new_rowAnnotation$ID1_NEW
-    rownames(object@rowAnnotation) <- new_rowAnnotation$ID1_NEW
+    rownames(object@gexp) <- new_rowAnnotation$ID_NEW
+    rownames(object@rowAnnotation) <- new_rowAnnotation$ID_NEW
     
     return(object)
+  }
+)
+
+#-------------------------------------------------------------------------------
+## tni.regulon.summary returns a summary of useful information about a 
+## particular regulon(s) or the network, to aid in interpretation
+setMethod(
+  "tni.regulon.summary",
+  "TNI",
+  function(object, regulatoryElements = NULL, verbose = TRUE) {
+    
+    #---check compatibility
+    object <- upgradeTNI(object)
+    
+    #-- Basic checks
+    if(object@status["DPI.filter"]!="[x]")
+      stop("input 'object' needs dpi analysis!")
+    if(!is.null(regulatoryElements))
+      tnai.checks("regulatoryElements",regulatoryElements)
+    tnai.checks("verbose",verbose)
+    
+    #-- if regulatoryElements = NULL, get a summary of network as a whole
+    if (is.null(regulatoryElements)){
+      networkSummary <- tni.get(object)$results
+      if(verbose){
+        nRegulators <- paste(
+          "Regulatory network comprised of", 
+          networkSummary$tnet["tnet.dpi", "regulatoryElements"],
+          "regulons. \n")
+        cat(nRegulators)
+        message("-- DPI-filtered network: ")
+        print(networkSummary$tnet["tnet.dpi",], quote = FALSE)
+        print(networkSummary$regulonSize["tnet.dpi",], 
+              quote = FALSE, digits = 3)
+        message("-- Reference network: ")
+        print(networkSummary$tnet["tnet.ref",], quote = FALSE) 
+        print(networkSummary$regulonSize["tnet.ref",], 
+              quote = FALSE, digits = 3)
+        cat("---\n")
+      }
+      invisible(networkSummary)
+    } else { #-- Otherwise, get TF summaries
+      regnames <- tni.get(object, "regulatoryElements")
+      if(sum(regulatoryElements%in%regnames) > 
+         sum(regulatoryElements%in%names(regnames))){
+        regulatoryElements <- regnames[regnames%in%regulatoryElements]
+      } else {
+        regulatoryElements <- regnames[names(regnames)%in%
+                                         regulatoryElements]
+      }
+      if(length(regulatoryElements)==0)
+        stop("'regulatoryElements' argument has no valid names!")
+      
+      #-- Get info of all regulons and refregulons
+      tnet <- tni.get(object, "tnet")
+      refnet <-  tni.get(object, "refnet")
+      
+      #-- Get summaries
+      allRegulonSummary <- lapply(regulatoryElements, .regulon.summary, 
+                                  refnet, tnet, regnames)
+      #-- Print
+      if(verbose){
+        for(tf in names(regulatoryElements)) {
+          regSummary <- allRegulonSummary[[tf]]
+          
+          if (length(regSummary$regulatorsMI) <= 10) {
+            textRegsMI <- paste0(paste(names(regSummary$regulatorsMI),
+                                       collapse = ", "), "\n", "\n")
+          } else {
+            textRegsMI <- paste0(paste(names(regSummary$regulatorsMI)[1:10],
+                                       collapse = ", "),
+                                 "...[", 
+                                 length(regSummary$regulatorsMI) - 10, 
+                                 " more]", "\n", "\n")
+          }
+          nTars <- regSummary$targets["DPInet", "Total"]
+          
+          #-- Size info
+          if(nTars < 50) regsize <- "small"
+          else if (nTars < 200) regsize <- "medium-sized"
+          else regsize <- "large"
+          #-- Balance info
+          posTars <- regSummary$targets["DPInet","Positive"]
+          regbalance <- ifelse(posTars > 0.75*nTars || posTars < 0.25*nTars,
+                               "unbalanced", "balanced")
+          #-- Print
+          cat(paste("The", tf, "regulon", "has", nTars, 
+                    "targets, it's a", regsize, 
+                    "and", regbalance,
+                    "regulon.", "\n"))
+          message("-- DPI filtered network targets:")
+          print(regSummary$targets["DPInet",], quote = FALSE)
+          message("-- Reference network targets:")
+          print(regSummary$targets["Refnet",], quote = FALSE)
+          message("-- Regulators with mutual information:")
+          cat(textRegsMI)
+          #-- Warning for < 15 targets in a cloud
+          if (regSummary$targets["DPInet","Positive"] < 15) {
+            tp <- paste0("This regulon has less than 15 positive targets.",
+                         "Regulon activity readings may be unreliable.\n")
+            warning(tp)
+          } else if (regSummary$targets["DPInet","Negative"] < 15) {
+            tp <- paste("This regulon has less than 15 negative targets.",
+                        "Regulon activity readings may be unreliable.\n")
+            warning(tp)
+          }
+          cat("---\n")
+        }
+      }
+      invisible(allRegulonSummary)
+    }
+  }
+)
+
+##------------------------------------------------------------------------------
+##show summary information on screen
+setMethod(
+  "show",
+  "TNI",
+  function(object) {
+    cat("A TNI (Transcriptional Network Inference) object:\n")
+    message("--status:")
+    
+    #---check compatibility
+    object <- upgradeTNI(object)
+    
+    print(tni.get(object, what=c("status")), quote=FALSE)
+  }
+)
+
+##------------------------------------------------------------------------------
+##get slots from TNI 
+setMethod(
+  "tni.get",
+  "TNI",
+  function(object, what="summary", order=TRUE, ntop=NULL, reportNames=TRUE, 
+           idkey=NULL) {
+    
+    #---check compatibility
+    object <- upgradeTNI(object)
+    
+    ##-----check input arguments
+    tnai.checks(name="tni.what",para=what)
+    tnai.checks(name="ntop",para=ntop)
+    tnai.checks(name="idkey",para=idkey)
+    tnai.checks(name="reportNames",para=reportNames)
+    ##-----get query
+    query <- NULL
+    if(what=="regulonActivity"){
+      query <- object@results$regulonActivity
+    } else if(what=="subgroupEnrichment"){
+      query<-object@results$subgroupEnrichment
+    } else if(what=="regulonSize"){
+      query <- .regulonCounts(tni.get(object, what="regulons.and.mode"))
+      if(!is.null(idkey))
+        query<-translateQuery(query,idkey,object,"dataframeAndNames",
+                              reportNames)
+    } else if(what=="refregulonSize"){
+      query <- .regulonCounts(tni.get(object, what="refregulons.and.mode"))
+      query<-translateQuery(query,idkey,object,"dataframeAndNames",
+                            reportNames)
+    } else if(what=="gexp"){
+      query<-object@gexp
+      if(!is.null(idkey))
+        query<-translateQuery(query,idkey,object,"gexpAndNames",reportNames)
+    } else if(what=="regulatoryElements"){
+      query<-object@regulatoryElements
+      if(!is.null(idkey))
+        query<-translateQuery(query,idkey,object,"vecAndContent",reportNames)
+    } else if(what=="modulators"){
+      query<-object@modulators
+      if(!is.null(idkey))
+        query<-translateQuery(query,idkey,object,"vecAndContent",reportNames)
+    } else if(what=="targetElements"){
+      query<-object@targetElements
+      if(!is.null(idkey))
+        query<-translateQuery(query,idkey,object,"vecAndContent",reportNames)
+    } else if(what=="para"){
+      query<-object@para
+    } else if(what=="refnet"){
+      query<-object@results$tn.ref
+      if(is.null(query))stop("empty slot!",call.=FALSE)
+      if(!is.null(idkey))query<-translateQuery(query,idkey,object,
+                                               "rtnetAndNames",reportNames)
+    } else if(what=="tnet"){
+      query<-object@results$tn.dpi
+      if(is.null(query))stop("empty slot!",call.=FALSE)
+      if(!is.null(idkey))query<-translateQuery(query,idkey,object,
+                                               "rtnetAndNames",reportNames)
+    } else if(what=="refregulons" || what=="refregulons.and.mode"){
+      query<-list()
+      for(i in object@regulatoryElements){
+        idx<-object@results$tn.ref[,i]!=0
+        query[[i]]<-rownames(object@results$tn.ref)[idx]
+      }
+      if(what=="refregulons.and.mode"){
+        for(i in names(query)){
+          tp<-object@results$tn.ref[query[[i]],i]
+          names(tp)<-query[[i]]
+          query[[i]]<-tp
+        }
+        if(!is.null(idkey))query<-translateQuery(query,idkey,object,
+                                                 "listAndNames",reportNames)
+      } else {
+        if(!is.null(idkey))query<-translateQuery(query,idkey,object,
+                                                 "listAndContent",reportNames)
+      }
+    } else if(what=="regulons" || what=="regulons.and.mode"){
+      query<-list()
+      for(i in object@regulatoryElements){
+        idx<-object@results$tn.dpi[,i]!=0
+        query[[i]]<-rownames(object@results$tn.dpi)[idx]
+      }
+      if(what=="regulons.and.mode"){
+        for(i in names(query)){
+          tp<-object@results$tn.dpi[query[[i]],i]
+          names(tp)<-query[[i]]
+          query[[i]]<-tp
+        }
+        if(!is.null(idkey))query<-translateQuery(query,idkey,object,
+                                                 "listAndNames",reportNames)
+      } else {
+        if(!is.null(idkey))query<-translateQuery(query,idkey,object,
+                                                 "listAndContent",reportNames)
+      }
+    } else if(what=="cdt.list" || what=="cdt.table"){
+      query <- object@results$conditional$count
+      for(nm in names(query)){
+        qry <- query[[nm]]
+        qry <- qry[ !qry[,2 ] & !qry[,3 ],-c(2,3),drop=FALSE]
+        query[[nm]]<-qry
+      }
+      if(what=="cdt.table"){
+        query <- cdt.table(query)
+        query <- p.adjust.cdt.table(query,object@para$cdt$pAdjustMethod)
+        query <- query[query$AdjPvFET<= object@para$cdt$pValueCutoff,]
+        query <- query[query$AdjPvKS <= object@para$cdt$pValueCutoff,]
+        if(is.null(query$AdjPvSNR)){
+          idx <- order(query$PvKS, query$PvFET, decreasing = F)
+        } else {
+          query <- query[query$AdjPvSNR <= object@para$cdt$pValueCutoff,]
+          idx <- order(query$PvSNR, query$PvKS, query$PvFET, decreasing = F)
+        }
+        query <- query[idx,]
+        rownames(query)<-NULL
+        query <- p.format.cdt.table(query)
+        if(reportNames){
+          idx <- match(query$Modulator,object@modulators)
+          query$Modulator <- names(object@modulators)[idx]
+          idx <- match(query$TF,object@regulatoryElements)
+          query$TF <- names(object@regulatoryElements)[idx]
+        }
+      } else {
+        query <- cdt.list(query,object@para$cdt$pAdjustMethod)
+        for(nm in names(query)){
+          qry<-query[[nm]]
+          qry <- qry[qry$AdjPvFET<= object@para$cdt$pValueCutoff,]
+          qry <- qry[qry$AdjPvKS <= object@para$cdt$pValueCutoff,]
+          if(!is.null(qry$AdjPvSNR)){
+            qry <- qry[qry$AdjPvSNR <= object@para$cdt$pValueCutoff,]
+          }
+          query[[nm]]<-qry
+        }
+        query<-query[unlist(lapply(query,nrow))>0]
+        if(reportNames){
+          for(nm in names(query)){
+            if(nrow(query[[nm]])>0){
+              idx<-match(query[[nm]][,"Modulator"],object@modulators)
+              query[[nm]][,"Modulator"]<-names(object@modulators)[idx]
+              idx<-match(query[[nm]][,"TF"],object@regulatoryElements)
+              query[[nm]][,"TF"]<-names(object@regulatoryElements)[idx]
+            }
+          }
+        }
+        if(length(query)>0)query<-sortblock.cdt.list(query)
+      }
+      if(!is.null(ntop))
+        warning("'ntop' argument has no effect on this query!")
+      if(!is.null(idkey))
+        warning("'idkey' argument has no effect on this query!")
+    } else if(what=="summary"){
+      query<-object@summary
+      query$results$tnet <- .get.tnet.summary(object)
+      query$results$regulonSize <- .get.regulon.summary(object)
+    } else if(what=="rowAnnotation"){
+      query<-object@rowAnnotation
+    } else if(what=="colAnnotation"){
+      query<-object@colAnnotation      
+    } else if(what=="status"){
+      query<-object@status
+    } else if(what=="gsea2"){
+      getqs<-function(query,order=TRUE,reportNames=TRUE,ntop=NULL){
+        if(is.data.frame(query) && nrow(query)>0 ){
+          if(is.null(ntop)){
+            query<-query[
+              query[,"Adjusted.Pvalue"]<=object@para$gsea2$pValueCutoff,,
+              drop=FALSE]
+          } else {
+            if(ntop>nrow(query)|| ntop<0)ntop=nrow(query)
+            if(nrow(query)>1){
+              idx<-sort.list(query[,"Pvalue"]) 
+              query<-query[idx[1:ntop],,drop=FALSE]
+            }
+          }
+          if(order){
+            if(nrow(query)>1) query<-query[order(query[,"Observed.Score"]),,
+                                           drop=FALSE]
+          }
+          if(reportNames){
+            idx<-match(query[,1],object@regulatoryElements)
+            query[,1]<-names(object@regulatoryElements)[idx]
+          }
+        }
+        query
+      }
+      query<-list()
+      if(is.null(ntop)){
+        tp<-rownames(getqs(object@results$GSEA2.results$differential))
+        tp<-intersect(tp,rownames(getqs(object@results$GSEA2.results$positive)))
+        tp<-intersect(tp,rownames(getqs(object@results$GSEA2.results$negative)))
+        dft<-getqs(object@results$GSEA2.results$differential,order,reportNames)
+        dft<-dft[rownames(dft)%in%tp,,drop=FALSE]
+        query$differential<-dft
+        query$positive<-object@results$GSEA2.results$positive[rownames(dft),,
+                                                              drop=FALSE]
+        query$negative<-object@results$GSEA2.results$negative[rownames(dft),,
+                                                              drop=FALSE]
+      } else {
+        query$differential<-getqs(
+          object@results$GSEA2.results$differential,order,reportNames,ntop)
+        query$positive<-object@results$GSEA2.results$positive[
+          rownames(query$differential),,drop=FALSE]
+        query$negative<-object@results$GSEA2.results$negative[
+          rownames(query$differential),,drop=FALSE]
+      }
+    } else if(what=="regulons.and.mode.gmm"){
+      query <- .mi2gmm.dpi(object, idkey)
+    } else if(what=="refregulons.and.mode.gmm"){
+      query <- .mi2gmm.ref(object, idkey)
+    }
+    return(query)
   }
 )
 
@@ -2074,7 +2109,6 @@ setMethod(
 ##-------------------------TNI INTERNAL FUNCTIONS-------------------------------
 ##------------------------------------------------------------------------------
 ##------------------------------------------------------------------------------
-
 
 ##------------------------------------------------------------------------------
 #---check compatibility and upgrade tni objects
@@ -2087,6 +2121,14 @@ upgradeTNI <- function(object){
       ID <- colnames(object@gexp)
       object@colAnnotation <- data.frame(ID, row.names = ID, 
                                          stringsAsFactors = FALSE)
+    }
+    if(length(object@status)!=6){
+      status <- rep("[ ]", 1, 6)
+      names(status) <- c("Preprocess", "Permutation", 
+                         "Bootstrap", "DPI.filter", 
+                         "Conditional","Activity")
+      status[names(object@status)] <- object@status
+      object@status <- status
     }
     if(length(object@rowAnnotation)==0){
       tp <- rownames(object@gexp)

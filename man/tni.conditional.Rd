@@ -103,22 +103,23 @@ rtni <- tni.constructor(expData=tniData$expData,
         regulatoryElements=c("PTTG1","E2F2","FOXM1","E2F3","RUNX2"), 
         rowAnnotation=tniData$rowAnnotation)
 
-# permutation analysis (infers the reference/relevance network)
+# permutation/bootstrap analysis (infers the reference/relevance network)
 rtni <- tni.permutation(rtni)
+rtni <- tni.bootstrap(rtni)
 
 # dpi filter (infers the transcriptional network)
 rtni <- tni.dpi.filter(rtni)
 
-# ..and a few candidate modulators for demonstration!
+# get some candidate modulators for demonstration!
 mod4test <- rownames(rtni@gexp)[sample(1:nrow(rtni@gexp),200)]
 
 # conditional analysis
 rtni <- tni.conditional(rtni, modulators=mod4test, pValueCutoff=1e-3)
 
-#get results
+# get results
 cdt <- tni.get(rtni, what="cdt.table")
 
-#get summary on a graph object
+# get summary on a graph object
 g <- tni.graph(rtni, gtype="mmap")
 
 ###---------------------------------------------

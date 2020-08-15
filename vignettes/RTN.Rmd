@@ -89,7 +89,7 @@ head(regulons$FOXM1)
 The absolute value of a weight represents the MI value, while the sign (+/-) indicates the predicted mode of action based on the Pearson's correlation between the regulator and its targets. We can also retrieve the inferred regulons into an `igraph-class` object [@igraph2] using the `tni.graph()` function, which sets some basic graph attributes for visualization in the **RedeR** R package [@Castro2012].
 
 ```{r label='Get graph', eval=TRUE}
-g <- tni.graph(rtni, tfs = c("FOXM1","E2F2","PTTG1"))
+g <- tni.graph(rtni, regulatoryElements = c("FOXM1","E2F2","PTTG1"))
 ``` 
 
 The next chunk shows how to plot the `igraph-class` object using **RedeR** (**Figure 1**).
@@ -370,7 +370,8 @@ Regulon activity profiles (RAPs) characterize regulatory program similarities an
 
 ```{r eval=FALSE}
 # Compute regulon activity for individual samples
-metabric_regact <- tni.gsea2(rtni1st, tfs = risk.tfs)
+rtni1st <- tni.gsea2(rtni1st, regulatoryElements = risk.tfs)
+metabric_regact <- tni.get(rtni1st, what = "regulonActivity")
 ```
 
 The `tni.gsea2` returns a list with the calculated enrichment scores: ES*pos*, ES*neg* and dES, which represents the regulon activity of individual samples. Next, the **pheatmap** package is used to generate a heatmap showing RAPs along with some sample attributes (**Figure 4**).
@@ -424,7 +425,8 @@ rtni1st_tcgasamples <- tni.replace.samples(rtni1st, tcgaBRCA_mRNA_data)
 
 ```{r eval=FALSE}
 # Compute regulon activity for the new samples
-tcga_regact <- tni.gsea2(rtni1st_tcgasamples, tfs = risk.tfs)
+rtni1st_tcgasamples <- tni.gsea2(rtni1st_tcgasamples, regulatoryElements = risk.tfs)
+tcga_regact <- tni.get(rtni1st_tcgasamples, what = "regulonActivity")
 ```
 
 ```{r eval=FALSE}

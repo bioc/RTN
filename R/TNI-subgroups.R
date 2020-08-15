@@ -1,18 +1,26 @@
 #---------------------------------------------------------------------
 #Subgroup Regulon Enrichment for TNI-class objects
+# rtni_tmpLIHCCHOL <- tni.sre(rtni_tmpLIHCCHOL, sampleGroups, pValueCutoff=0.0001)
+
 setMethod(
   "tni.sre",
   "TNI",
   function(object, sampleGroups, regulatoryElements = NULL, pValueCutoff = 0.05, 
-           pAdjustMethod = "BH", ...) {
+           pAdjustMethod = "BH") {
+    
+    #--- check compatibility
+    object <- upgradeTNI(object)
     
     #-- Checks
     if(object@status["Preprocess"]!="[x]")
-      stop("TNI object is not compleate: requires preprocessing!")
+      stop("TNI object requires preprocessing!")
     if(object@status["Permutation"]!="[x]")
-      stop("TNI object is not compleate: requires permutation/bootstrap and DPI filter!")  
+      stop("TNI object requires permutation/bootstrap and DPI filter!")  
     if(object@status["DPI.filter"]!="[x]")
-      stop("TNI object is not compleate: requires DPI filter!")
+      stop("TNI object requires DPI filter!")
+    if(object@status["Activity"]!="[x]")
+      stop("TNI object requires regulon activity results! 
+           Please see 'tni.gsea2' function.")
     tnai.checks("sampleGroups", sampleGroups)
     tnai.checks("regulatoryElements",regulatoryElements)
     tnai.checks("pValueCutoff",pValueCutoff)
@@ -20,7 +28,6 @@ setMethod(
     
     #-- Get data
     colAnnotation <- tni.get(object, "colAnnotation")
-    regulatoryElements <- tni.get(object, "regulatoryElements")
     
     #-- check sampleGroups
     if(is.list(sampleGroups)){
@@ -54,8 +61,7 @@ setMethod(
     } else {
       regulatoryElements <- tni.get(object, "regulatoryElements")
     }
-    regulonActivity <- tni.gsea2(object, regulatoryElements=regulatoryElements, 
-                                 ...=...)
+    regulonActivity <- tni.get(object, what = "regulonActivity")
     regulonActivity <- regulonActivity$dif
     
     #-- Create results table
@@ -134,7 +140,7 @@ tni.plot.sre <- function(object, nGroupsEnriched = NULL, nTopEnriched = NULL,
   Enrichment_mode <- as.data.frame(
     dcast(filt_fet_res, Regulon ~ Group, value.var = "Enrichment_mode")
   )
-  rownames(Enrichment_mode) <- dESaverage$Regulon
+  rownames(Enrichment_mode) <- Enrichment_mode$Regulon
   Enrichment_mode <- Enrichment_mode[,-1]
   
   if(markEnriched){
@@ -174,9 +180,8 @@ tni.plot.sre <- function(object, nGroupsEnriched = NULL, nTopEnriched = NULL,
         Regulon = reg,
         Group = group,
         Enrichment_mode = 0,
-        FET_pValue = NA,
         dESaverage = 0,
-        lowerCI = NA
+        FET_pValue = NA
         )
     
     #-- For one regulon
@@ -185,8 +190,7 @@ tni.plot.sre <- function(object, nGroupsEnriched = NULL, nTopEnriched = NULL,
     act <- names(reg_dES[idx])
     rep <- names(reg_dES[!idx])
     
-    #-- Positively enriched test
-    length(act)
+    #-- ct table
     ct <- matrix(c(
         length(intersect(act, grouping[[grn]])),
         length(intersect(rep, grouping[[grn]])),
@@ -195,6 +199,7 @@ tni.plot.sre <- function(object, nGroupsEnriched = NULL, nTopEnriched = NULL,
     ), nrow = 2, dimnames = list(Regulon = c("Active", "Repressed"),
                                  Group = c("Belong", "Don't belong")))
     
+    #-- Positively enriched test
     ft_act <- fisher.test(ct, alternative = "greater")
     
     #-- Negatively enriched test
@@ -204,7 +209,6 @@ tni.plot.sre <- function(object, nGroupsEnriched = NULL, nTopEnriched = NULL,
     ft <- list(ft_act, ft_rep)
     idx <- which.min(c(ft_act$p.value, ft_rep$p.value))
     res$FET_pValue <- ft[[idx]]$p.value
-    res$lowerCI <- ft[[idx]]$conf.int[1]
     res$Enrichment_mode <- ifelse(idx == 1, 1, -1)
     res$Enrichment_mode <- ifelse(res$FET_pValue > pValueCutoff, 0, 
                                   res$Enrichment_mode)

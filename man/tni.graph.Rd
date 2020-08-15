@@ -10,7 +10,8 @@ Extract results from a TNI object and compute a graph.
 }
 
 \usage{
-tni.graph(object, tnet = "dpi", gtype="rmap", minRegulonSize=15, tfs=NULL, amapFilter="quantile", 
+tni.graph(object, tnet = "dpi", gtype="rmap", minRegulonSize=15, 
+regulatoryElements=NULL, amapFilter="quantile", 
 amapCutoff=NULL, ntop=NULL, ...)
 }
 
@@ -32,8 +33,8 @@ a single integer or numeric value specifying the minimum number of
 elements in a regulon. Regulons with fewer than this number are 
 removed from the graph.
 }
-\item{tfs}{
-a vector with transcription factor identifiers.
+\item{regulatoryElements}{
+an optional vector with transcription factor identifiers.
 }
 \item{amapFilter}{
 a single character value specifying which method should be used to filter association maps 
@@ -52,7 +53,7 @@ when gtype="mmapDetailed", ntop is an optional single integer value (>=1) specif
 }
 
 \value{
-a graph object.
+an igraph object.
 }
 
 \author{
@@ -73,7 +74,8 @@ rtni <- tni.bootstrap(rtni)
 rtni <- tni.dpi.filter(rtni, eps=0)
 
 # get the regulatory map
-g <- tni.graph(rtni, tnet="dpi", gtype="rmap", tfs=c("PTTG1","E2F2","FOXM1"))
+g <- tni.graph(rtni, tnet="dpi", gtype="rmap", 
+               regulatoryElements=c("PTTG1","E2F2","FOXM1"))
 
 # option: plot the igraph object using RedeR
 library(RedeR)

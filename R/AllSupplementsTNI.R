@@ -1211,17 +1211,17 @@ p.adjust.cdt.table <- function(cdt.tb, pAdjustMethod="bonferroni"){
   return(cdt.tb)
 }
 p.format.cdt.table <- function(cdt.tb, pAdjustMethod="bonferroni"){
-  cdt.tb$PvFET <- format(cdt.tb$PvFET, digits = 3)
-  cdt.tb$AdjPvFET <- format(cdt.tb$AdjPvFET, digits = 3)
-  cdt.tb$PvKS <- format(cdt.tb$PvKS, digits = 3)
-  cdt.tb$AdjPvKS <- format(cdt.tb$AdjPvKS, digits = 3)
+  cdt.tb$PvFET <- signif(cdt.tb$PvFET, digits = 3)
+  cdt.tb$AdjPvFET <- signif(cdt.tb$AdjPvFET, digits = 3)
+  cdt.tb$PvKS <- signif(cdt.tb$PvKS, digits = 3)
+  cdt.tb$AdjPvKS <- signif(cdt.tb$AdjPvKS, digits = 3)
+  if(!is.null(cdt.tb$R))cdt.tb$R <- round(cdt.tb$R, digits = 4)
   if(!is.null(cdt.tb$PvSNR)){
-    cdt.tb$PvSNR <- format(cdt.tb$PvSNR, digits = 3)
-    cdt.tb$AdjPvSNR <- format(cdt.tb$AdjPvSNR, digits = 3)
+    cdt.tb$PvSNR <- signif(cdt.tb$PvSNR, digits = 3)
+    cdt.tb$AdjPvSNR <- signif(cdt.tb$AdjPvSNR, digits = 3)
   }
   return(cdt.tb)
 }
-
 #---------------------------------------------------------------
 cdt.list<-function(cdt,pAdjustMethod="bonferroni"){
   cdt<-p.adjust.cdt.list(cdt=cdt,pAdjustMethod=pAdjustMethod,
@@ -1960,6 +1960,8 @@ treemap<-function(hc){
   counts <- data.frame(t(data.frame(counts, check.names = FALSE)), 
                        check.names = FALSE)
   colnames(counts) <- c("Size","Positive", "Negative")
+  idx <- counts$Positive > 0.75  *counts$Size | counts$Positive < 0.25*counts$Size
+  counts$TargetDistribution <- c("balanced","unbalanced")[1+idx]
   return(counts)
 }
 

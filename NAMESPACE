@@ -41,7 +41,8 @@ export(
   "upgradeTNI",
   "upgradeTNA",
   "tni.alpha.adjust",
-  "tni.plot.checks"
+  "tni.plot.checks",
+  "tni.plot.sre"
 )
 import(methods)
 importFrom(minet, aracne)

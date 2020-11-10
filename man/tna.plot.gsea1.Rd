@@ -116,7 +116,7 @@ rtna <- tni2tna.preprocess(rtni, phenotype=tnaData$phenotype,
         hits=tnaData$hits, phenoIDs=tnaData$phenoIDs)
 
 # run GSEA analysis pipeline
-rtna <- tna.gsea1(rtna, stepFilter=FALSE)
+rtna <- tna.gsea1(rtna)
 
 # plot available GSEA results
 tna.plot.gsea1(rtna, labPheno="test")

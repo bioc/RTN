@@ -170,15 +170,22 @@ make.plot1 <- function(tests, labPheno, file, filepath, heightPanels,
                        xlab, width, height, alpha, sparsity, 
                        plotpdf, ...) {
   if (plotpdf){
-    pdf(file=file.path(filepath, paste(file,".pdf", sep="")), width=width, 
-        height=height)
+    fname <- file.path(filepath, paste(file,".pdf", sep=""))
+    pdf(file=fname, width=width, height=height)
   }
-  gsplot1(tests$runningScore, tests$enrichmentScore, tests$positions, 
-          tests$adjpv, tests$geneList, 
-          tests$labels, heightPanels, ylimPanels, ylabPanels, xlab, 
+  gsplot1(runningScore=tests$runningScore, 
+          enrichmentScore=tests$enrichmentScore, 
+          positions=tests$positions, 
+          adjpv=tests$adjpv, geneList=tests$geneList, 
+          labels=tests$labels, heightPanels, ylimPanels, ylabPanels, xlab, 
           labPheno, alpha, sparsity, 
           ...=... )
-  if (plotpdf)dev.off()
+  if (plotpdf){
+    dev.off()
+    tp1 <- paste0("NOTE: file '",fname,"' should be available either in the ")
+    tp2 <- c("working directory or in a user's custom directory!\n")
+    cat(tp1,tp2)
+  }
 }
 
 #-------------------------------------------------------------------------------
@@ -222,37 +229,42 @@ gsplot1 <- function(runningScore, enrichmentScore, positions, adjpv,
   par(family="sans")
   if(heightPanels[1]>0){
     par(mar=c(0.5, 6.5, 1.5, 1.0),mgp=c(4.5,0.5,0),tcl=-0.2)
-    plot(x=c(1,max(rsc.vec[,1])),y=c(min(geneList),max(geneList)), type="n", 
-         axes= FALSE,xlab="", ylab=ylabPanels[1], cex.lab=cexlev[1], 
-         ylim=ylimPanels[1:2], ...=...)
-    if(min(geneList)<0)abline(h=0,lwd=0.6)
     sq<-c(1:length(geneList))%%sparsity;sq[sq>1]<-0
     sq<-as.logical(sq)
-    lines(x=c(1:length(geneList))[sq],y=geneList[sq],col="grey75",lwd=1.4)
+    # plot(x=c(1,max(rsc.vec[,1])),y=c(min(geneList),max(geneList)), type="n", 
+    #      axes= FALSE,xlab="", ylab=ylabPanels[1], cex.lab=cexlev[1], 
+    #      ylim=ylimPanels[1:2], ...=...)
+    # lines(x=c(1:length(geneList))[sq],y=geneList[sq],col="#008080",lwd=1.4)
+    barplot(height = geneList[sq], col = "#008080", border = "#008080", 
+            ylim = ylim, axes = F, axisnames = F, ylab=ylabPanels[1],
+            cex.lab=cexlev[1])
+    if(min(geneList)<0)abline(h=0,lwd=0.6)
     nn=ifelse(min(geneList)<0,4,2)
     pp<-pretty(c(geneList,ylimPanels[1:2]),n=nn)
-    axis(2,line=0, cex.axis=cexlev[2], las=2, at=pp, lwd=1.2, 
+    axis(2,line=0, cex.axis=cexlev[2], las=2, at=pp, lwd=1.4, 
          labels=pp,...=...)
     if(!is.null(labPheno)){
-      legend("topright", legend=labPheno, col="grey75", pch="---", 
-             bty="n",cex=cexlev[3], pt.cex=1.5, ...=...)
+      legend("topright", legend=labPheno, col="#008080", pch="---", 
+             bty="n",cex=cexlev[3], pt.cex=2, ...=...)
     }
   }
   #-------------------------------------------------
   # plot2
   if(heightPanels[2]>0){
     par(mar=c(0.0, 6.5, 0.0, 1.0),mgp=c(4.5,0.5,0),tcl=-0.2)
-    plot(x=c(1,max(rsc.vec[,1])),y=c(0,max(rsc.vec[,2])), type="n", 
-         axes=FALSE, xlab="",
-         ylab=ylabPanels[2],cex.lab=cexlev[1], ...=...)
+    ylim <- c(0,max(rsc.vec[,2]))
+    xlim <- c(1,max(rsc.vec[,1]))
+    plot(x=xlim,y=ylim, type="n", axes=FALSE, xlab="", ylab=ylabPanels[2],
+         cex.lab=cexlev[1], ...=...)
     for(i in 1:ng){
       idx<-rsc.vec[,2]==i
       xx<-rsc.vec[idx,1]
       yy<-rsc.vec[idx,2]
-      segments(xx,yy-0.9,xx, yy-0.1, col=rev(rsc.colors)[i],lwd=0.2)
+      polygon(x=c(xlim,rev(xlim)), y = c(i-0.9,i-0.9,i-0.1,i-0.1), border = NA, col = "grey95")
+      segments(xx,yy-0.9,xx, yy-0.1, col=rev(rsc.colors)[i],lwd=0.5)
     }
     axis(2,las=2, at=c(1:ng)-0.5,labels=rev(labels), line=0, 
-         cex.axis=cexlev[5],lwd=1.2 , ...=...)
+         cex.axis=cexlev[5],lwd=1.4 , ...=...)
   }
   #-------------------------------------------------
   # plot3
@@ -265,28 +277,28 @@ gsplot1 <- function(runningScore, enrichmentScore, positions, adjpv,
          cex.lab=cexlev[1], ...=...)
     par(mgp=c(3.0,0.5,0))
     title(xlab=xlab, cex.lab=cexlev[1], ...=...)
-    if(min(cc)<0)abline(h=0,lwd=1.2)
+    if(min(cc)<0)abline(h=0,lwd=1.4)
     for(i in 1:ng){
       yy<-cc[,i]
       xx<-c(1:nrow(cc))
       xx<-which(yy==enrichmentScore[[i]])
-      segments(xx,0, xx, yy[xx], col=rsc.colors[i],lwd=1, lty=3)
+      segments(xx,0, xx, yy[xx], col=rsc.colors[i],lwd=1.2, lty=3)
     }
     for(i in 1:ng){
       yy<-cc[,i]
       xx<-c(1:nrow(cc))
       sq<-c(1:length(xx))%%sparsity;sq[sq>1]<-0
       sq<-as.logical(sq)
-      lines(x=xx[sq],y=yy[sq],col=rsc.colors[i],lwd=0.7)
+      lines(x=xx[sq],y=yy[sq],col=rsc.colors[i],lwd=1)
     }
-    axis(1,cex.axis=cexlev[2], lwd=1.2, ...=...)
-    axis(2,las=2,cex.axis=cexlev[2], lwd=1.2, ...=...)
+    axis(1,cex.axis=cexlev[2], lwd=1.4, ...=...)
+    axis(2,las=2,cex.axis=cexlev[2], lwd=1.4, ...=...)
     labels<-paste(labels," (adj.p ",format(adjpv,scientific=TRUE,digits=2),")",
                   sep="")
     #labels=sub("=","<",labels)
     legend("topright", legend=labels, col=rsc.colors, pch="---", bty="n",
-           cex=cexlev[4], 
-           pt.cex=1.2, title=ylabPanels[2], title.adj = 0, ...=...)
+           cex=cexlev[4], pt.cex=2, title=ylabPanels[2], title.adj = 0, 
+           ...=...)
   }
 }
 
@@ -492,24 +504,34 @@ check.format2<-function(tests){
 make.plot2 <- function(tests, labPheno, file, filepath, heightPanels, 
                        ylimPanels, ylabPanels,
                        xlab, width, height, alpha, sparsity, plotpdf,...) {
-  if (plotpdf){
-    pdf(file=file.path(filepath, paste(file,"_",tests$label,".pdf", sep="")), 
-      width=width, height=height)
+  if(plotpdf){
+    fname <- file.path(filepath, paste(file,"_",tests$label,".pdf", sep=""))
+    pdf(file=fname, width=width, height=height)
   }
-  gsplot2(tests$testup$runningScore, tests$testup$enrichmentScore, 
-          tests$testdown$runningScore, 
-          tests$testdown$enrichmentScore,tests$dES, 
-          tests$positions, tests$adjpv, tests$geneList, tests$label,
-          tests$regsizes, 
-          heightPanels, ylimPanels, ylabPanels, xlab, labPheno, alpha, 
-          sparsity, ...=... )
-  if (plotpdf)dev.off()
+  gsplot2(
+    runningScoreUp=tests$testup$runningScore, 
+    enrichmentScoreUp=tests$testup$enrichmentScore, 
+    runningScoreDown=tests$testdown$runningScore, 
+    enrichmentScoreDown=tests$testdown$enrichmentScore,
+    dES=tests$dES, positions=tests$positions, 
+    adjpv=tests$adjpv, geneList=tests$geneList, 
+    label=tests$label, regsizes=tests$regsizes, 
+    heightPanels, ylimPanels, ylabPanels, xlab, labPheno, alpha, 
+    sparsity, ...=... 
+  )
+  if(plotpdf){
+    dev.off()
+    tp1 <- paste0("NOTE: file '",fname,"' should be available either in the ")
+    tp2 <- c("working directory or in a user's custom directory!\n")
+    cat(tp1,tp2)
+  }
 }
 
 #-------------------------------------------------------------------------------
 #--subfunction for tna.plot.gsea2
-gsplot2 <- function(runningScoreUp, enrichmentScoreUp, runningScoreDown, 
-                    enrichmentScoreDown, dES, positions, adjpv, 
+gsplot2 <- function(runningScoreUp, enrichmentScoreUp, 
+                    runningScoreDown, enrichmentScoreDown, 
+                    dES, positions, adjpv, 
                     geneList, label, 
                     regsizes, heightPanels, ylimPanels, ylabPanels, xlab, 
                     labPheno, alpha, sparsity, ...) {
@@ -551,14 +573,16 @@ gsplot2 <- function(runningScoreUp, enrichmentScoreUp, runningScoreDown,
     nn<-ifelse(min(geneList)<0,4,3)
     ylim<-ylimPanels[1:2]
     par(mar=c(0.1, 5.0, 1.5, 1.5),mgp=c(2.2,0.6,0),tcl=-0.2,family="sans")
-    plot(x=c(1,max(rsc.vec[,1])),y=c(min(geneList),max(geneList)), type="n", 
-         axes= FALSE,xlab="", ylab=ylabPanels[1], cex.lab=cexlev[1],
-         ylim=ylim,xlim=xlim, ...=...)
-    if(min(geneList)<0)
-      abline(h=0,lwd=1.1)#segments(0, 0, length(geneList), 0,col="grey70")
-    sq<-c(1:length(geneList))%%sparsity;sq[sq>1]<-0
-    sq<-as.logical(sq)
-    lines(x=c(1:length(geneList))[sq],y=geneList[sq],col="#008080",lwd=1.5)
+    sq <- c(1:length(geneList))%%sparsity;sq[sq>1]<-0
+    sq <- as.logical(sq)
+    # plot(x=c(1,max(rsc.vec[,1])),y=c(min(geneList),max(geneList)), type="n", 
+    #      axes= FALSE,xlab="", ylab=ylabPanels[1], cex.lab=cexlev[1],
+    #      ylim=ylim,xlim=xlim, ...=...)
+    # if(min(geneList)<0) abline(h=0,lwd=1.1)
+    # lines(x=c(1:length(geneList))[sq],y=geneList[sq],col="#008080",lwd=1.5)
+    barplot(height = geneList[sq], col = "#008080", border = "#008080", 
+            ylim = ylim, axes = F, axisnames = F, ylab=ylabPanels[1])
+    if(min(geneList)<0) abline(h=0,lwd=1.1)
     pp<-pretty(c(geneList,ylimPanels[1:2]),n=nn)
     pp<-pp[(pp >= ylim[1] & pp <= ylim[2])]
     axis(2,line=0, cex.axis=cexlev[2], las=2, at=pp, 

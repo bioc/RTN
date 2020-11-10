@@ -196,18 +196,18 @@ setMethod(
       }
     }
     else if(what=="gsea1"){
-      query<-object@results$GSEA1.results
+      query <- object@results$GSEA1.results
       if(is.data.frame(query) && nrow(query)>0 ){
         if(is.null(ntop)){
           query<-query[query[,"Adjusted.Pvalue"] <= object@para$gsea1$pValueCutoff,,
                        drop=FALSE]
           if(order && nrow(query)>1)
-            query<-query[order(query[,"Pvalue"],decreasing=TRUE),,drop=FALSE]
+            query <- query[with(query, order(Pvalue, -abs(Observed.Score))), ,drop=FALSE]
         } else {
           if(ntop>nrow(query)|| ntop<0)ntop=nrow(query)
           if(order && nrow(query)>1){
-            idx<-sort.list(query[,"Pvalue"]) 
-            query<-query[idx[1:ntop],,drop=FALSE]
+            query <-query[with(query, order(Pvalue, -abs(Observed.Score))), ,drop=FALSE]
+            query <- query[1:ntop,,drop=FALSE]
           }
         }
         if(reportNames){
@@ -215,7 +215,7 @@ setMethod(
           query[,1]<-names(object@regulatoryElements)[idx]
         }
       }
-      if(!is.null(idkey))warning("'idkey' argument has no effect on consolidated tables!")
+      if(!is.null(idkey))warning("'idkey' argument has no effect on this table!")
     } else if(what%in%c("gsea2","gsea2summary")){
       getqs<-function(query,order=TRUE,reportNames=TRUE,ntop=NULL){
         if(is.data.frame(query) && nrow(query)>0 ){
@@ -405,8 +405,8 @@ setMethod(
   "tna.gsea1",
   "TNA",
   function(object, pValueCutoff=0.05, pAdjustMethod="BH",  minRegulonSize=15, 
-           nPermutations=1000, exponent=1, tnet="dpi", orderAbsValue=TRUE, 
-           tfs=NULL, verbose=TRUE){
+           sizeFilterMethod="posORneg", nPermutations=1000, exponent=1, tnet="dpi", 
+           orderAbsValue=TRUE, tfs=NULL, verbose=TRUE){
     
     #---check compatibility
     object <- upgradeTNA(object)
@@ -419,6 +419,7 @@ setMethod(
     tnai.checks(name="pValueCutoff",para=pValueCutoff)
     tnai.checks(name="pAdjustMethod",para=pAdjustMethod)
     tnai.checks(name="minRegulonSize",para=minRegulonSize)
+    tnai.checks(name="sizeFilterMethod",para=sizeFilterMethod)
     tnai.checks(name="nPermutations",para=nPermutations)
     tnai.checks(name="exponent",para=exponent)
     tnai.checks(name="gsea.tnet",para=tnet)
@@ -452,17 +453,29 @@ setMethod(
       }
       if(length(tfs)==0)stop("NOTE: 'tfs' argument has no valid name!")
       rgcs<-rgcs[tfs]
+    } else {
+      tfs <- tna.get(object, what = "regulatoryElements")
     }
+    
+    ##-----check regulon size
+    regulonSize <- tna.get(object, what = "regulonSize")
+    if(sizeFilterMethod=="posANDneg"){
+      idx <- regulonSize$Positive>=minRegulonSize & regulonSize$Negative>=minRegulonSize 
+    } else if(sizeFilterMethod=="posORneg"){
+      idx <- regulonSize$Positive>=minRegulonSize | regulonSize$Negative>=minRegulonSize 
+    } else {
+      idx <- regulonSize$Size >= minRegulonSize
+    }
+    tfs <- tfs[tfs%in%rownames(regulonSize)[idx]]
+    rgcs<-rgcs[tfs]
     
     ##----count above min size (input)
-    gs.size<-unlist(lapply(rgcs, length))
-    object@summary$rgc[,"above.min.size"]<-sum(gs.size>=minRegulonSize)
+    object@summary$rgc[,"above.min.size"]<-length(tfs)
     
     ##-----filter 'rgcs' by 'minRegulonSize'
-    if(all(gs.size<minRegulonSize)){ 
+    if(length(tfs)<1){ 
       stop("NOTE: no regulon passed the 'minRegulonSize' requirement!")
     }
-    rgcs <- rgcs[which(gs.size >= minRegulonSize)]
     
     ##-----remove genes not listed in the phenotype
     for(i in names(rgcs)){

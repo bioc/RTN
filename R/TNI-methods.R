@@ -849,7 +849,7 @@ setMethod(
                    phenotype=phenotype,
                    hits=hits)
     if(nrow(object@rowAnnotation)>0)
-      .object@rowAnnotation <- object@rowAnnotation[object@targetElements,]
+      .object@rowAnnotation <- object@rowAnnotation[object@targetElements,,drop=FALSE]
     if(!is.null(object@results$conditional) && 
        length(object@results$conditional)>0){
       cdt<-tni.get(object,what="cdt.list")

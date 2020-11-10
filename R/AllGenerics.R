@@ -94,7 +94,8 @@ setGeneric("tna.mra",
              standardGeneric("tna.mra"), package="RTN")
 setGeneric("tna.gsea1",
            function(object, pValueCutoff=0.05, pAdjustMethod="BH",  
-                    minRegulonSize=15, nPermutations=1000, exponent=1, 
+                    minRegulonSize=15, sizeFilterMethod="posORneg",
+                    nPermutations=1000, exponent=1, 
                     tnet="dpi", orderAbsValue=TRUE, 
                     tfs=NULL, verbose=TRUE) 
              standardGeneric("tna.gsea1"), package="RTN")

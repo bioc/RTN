@@ -34,8 +34,8 @@ setGeneric("tni.conditional",
 setGeneric("tni.gsea2",
            function(object, minRegulonSize=15, sizeFilterMethod="posORneg", 
                     scale=FALSE, exponent=1, tnet="dpi",
-                    regulatoryElements=NULL, samples=NULL, 
-                    features=NULL, refsamp=NULL, log=TRUE,
+                    regulatoryElements=NULL, features=NULL, 
+                    samples=NULL, refsamp=samples, log=TRUE,
                     alternative=c("two.sided", "less", "greater"),
                     targetContribution=FALSE, additionalData=FALSE, 
                     verbose=TRUE, doSizeFilter=NULL)
@@ -67,7 +67,7 @@ setGeneric("tni.annotate.regulons",
              standardGeneric("tni.annotate.regulons"), package="RTN")
 setGeneric("tni.annotate.samples",
            function(object, geneSetList, minGeneSetSize = 15, exponent = 1, 
-                    verbose = TRUE)
+                    samples=NULL, verbose = TRUE)
              standardGeneric("tni.annotate.samples"), package="RTN")
 setGeneric("tni2tna.preprocess",
            function(object, phenotype=NULL, hits=NULL, phenoIDs=NULL, 
@@ -111,22 +111,27 @@ setGeneric("tna.get",
              standardGeneric("tna.get"), package="RTN")
 ##-------------------------------------------------------------------------
 setGeneric("avs.vse",
-           function(object, annotation, maxgap=0, pValueCutoff=0.05, 
-                    pAdjustMethod="bonferroni", boxcox=TRUE, lab="annotation", 
-                    glist=NULL, minSize=100, verbose=TRUE)
+           function(object, annotation, glist=NULL, maxgap=0, minSize=100, 
+                    pValueCutoff=0.05, pAdjustMethod="bonferroni", 
+                    boxcox=TRUE, verbose=TRUE)
              standardGeneric("avs.vse"), package="RTN")
 setGeneric("avs.evse",
-           function(object, annotation, gxdata, snpdata, maxgap=250, 
-                    pValueCutoff=0.05, pAdjustMethod="bonferroni",
-                    boxcox=TRUE, lab="annotation", glist=NULL, 
-                    minSize=100, fineMapping=TRUE, verbose=TRUE)
+           function(object, annotation, gxdata, snpdata, glist=NULL, 
+                    maxgap=250, minSize=100, pValueCutoff=0.05, 
+                    pAdjustMethod="bonferroni", 
+                    boxcox=TRUE, fineMapping=TRUE, verbose=TRUE)
              standardGeneric("avs.evse"), package="RTN")
 setGeneric("avs.pevse",
-           function(object, annotation, eqtls, maxgap=250, pValueCutoff=0.05, 
-                    pAdjustMethod="bonferroni", boxcox=TRUE, 
-                    lab="annotation", glist=NULL, 
-                    minSize=100, verbose=TRUE)
+           function(object, annotation, eqtls, glist, maxgap=250, minSize=100, 
+                    pValueCutoff=0.05, pAdjustMethod="bonferroni", boxcox=TRUE,
+                    verbose=TRUE)
              standardGeneric("avs.pevse"), package="RTN")
+setGeneric("avs.rvse",
+           function(object, annotation, regdata, snpdata, glist, 
+                    maxgap=250, minSize=100, pValueCutoff=0.05, 
+                    pAdjustMethod="bonferroni", 
+                    boxcox=TRUE, verbose=TRUE)
+             standardGeneric("avs.rvse"), package="RTN")
 setGeneric("avs.get",
            function(object, what="summary", report=FALSE, pValueCutoff=NULL) 
              standardGeneric("avs.get"), package="RTN")

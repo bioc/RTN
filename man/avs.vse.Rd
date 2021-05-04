@@ -9,16 +9,14 @@ in a genomic annotation.
 }
 
 \usage{
-avs.vse(object, annotation, maxgap=0, pValueCutoff=0.05, 
-pAdjustMethod="bonferroni", boxcox=TRUE, lab="annotation", 
-glist=NULL, minSize=100, verbose=TRUE)
+avs.vse(object, annotation, glist=NULL, maxgap=0, minSize=100,
+pValueCutoff=0.05, pAdjustMethod="bonferroni", boxcox=TRUE,
+verbose=TRUE)
 }
 
 \arguments{
 \item{object}{
-an object. When this function is implemented as the S4 method of class 
-\code{\link[RTN:AVS-class]{AVS-class}}, this argument is an object 
-of class 'AVS'.
+an object of class \code{\link[RTN:AVS-class]{AVS-class}}.
 }
 \item{annotation}{
 a data frame with genomic annotations listing chromosome coordinates to which 
@@ -29,9 +27,19 @@ any genomic identifier, while values in <CHROM> should be listed in
 correspond to chromosome positions mapped to the human genome assembly 
 used to build the AVS object.
 }
+\item{glist}{
+an optional list with character vectors mapped to the 'annotation' data 
+via <ID> column. This list is used to run a batch mode for gene 
+sets and regulons.
+}
 \item{maxgap}{
 a single integer value specifying the max distant (kb) between the AVS and 
 the annotation used to compute the enrichment analysis.
+}
+\item{minSize}{
+if 'glist' is provided, this argument is a single integer or numeric value 
+specifying the minimum number of elements for each gene set in the 'glist'. 
+Gene sets with fewer than this number are removed from the analysis.
 }
 \item{pValueCutoff}{
 a single numeric value specifying the cutoff for p-values considered 
@@ -46,20 +54,6 @@ a single logical value specifying to use Box-Cox procedure to find a
 transformation of the null that approaches normality (when boxcox=TRUE) or not 
 (when boxcox=FALSE). See \code{\link[car:powerTransform]{powerTransform}} 
 and \code{\link[car:bcPower]{bcPower}}.
-}
-\item{lab}{
-a single character value specifying a name for the annotation dataset 
-(this option is overrided if 'glist' is used).
-}
-\item{glist}{
-an optional list with character vectors mapped to the 'annotation' data 
-via <ID> column. This option can be used to run a batch mode for gene 
-sets and regulons.
-}
-\item{minSize}{
-if 'glist' is provided, this argument is a single integer or numeric value 
-specifying the minimum number of elements for each gene set in the 'glist'. 
-Gene sets with fewer than this number are removed from the analysis.
 }
 \item{verbose}{
 a single logical value specifying to display detailed messages 
@@ -113,12 +107,12 @@ data(miscellaneous)
 
 #--- step 3: run the avs.vse pipeline
 bcavs <- avs.vse(bcavs, annotation=ESR1bdsites$bdsites, 
-                 pValueCutoff=0.001, lab="ERa")
+                 pValueCutoff=0.001)
 bcavs <- avs.vse(bcavs, annotation=FOXA1bdsites$bdsites, 
-                 pValueCutoff=0.001, lab="FOXA1")
+                 pValueCutoff=0.001)
 
 #--- step 4: generate the VSE plots
-avs.plot2(bcavs,"vse",height=2.2)
+avs.plot2(bcavs,"vse",height=2.2, width.panels=c(1,2), rmargin=0)
 
 ##################################################
 ### Example of VSE analysis for sets of genomic 
@@ -144,14 +138,14 @@ glist <- glist[ c("FOXA1","GATA3","ESR1") ] #reduce the list for demonstration!
 bcavs<-avs.vse(bcavs, annotation=genemap, glist=glist, pValueCutoff=0.05)
 
 #--- step 5: generate the VSE plots
-avs.plot2(bcavs,"vse",height=2.5)
+avs.plot2(bcavs,"vse", height=2.5, width.panels=c(1,2), rmargin=0)
 
 ### NOTE REGARDING THIS EXAMPLE ####
 #- This example is for demonstration purposes only;
 #- we recommend using the EVSE/eQTL approach when analysing genes/regulons.
 #- Also, the AVS object here is not the same as the one used in the study that  
 #- extended the method (doi:10.1038/ng.3458), so the results are not comparable;
-#- (here fewer risk SNPs are considered, and without the eQTL step).
+#- (here fewer risk SNPs are considered, and without an eQTL step).
 ####################################
 
 }

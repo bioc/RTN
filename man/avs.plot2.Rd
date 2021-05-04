@@ -10,9 +10,10 @@ This function takes an AVS object and plots results from the VSE and EVSE method
 }
 
 \usage{
-avs.plot2(object, what="evse", fname=what, width=14, height=2.5, rmargin=1, 
-bxseq=seq(-4,8,2), decreasing=TRUE, ylab="Annotation", 
-xlab="Clusters of risk-associated and linked SNPs", tfs=NULL)
+avs.plot2(object, what="evse", fname=what, width=14, height=2.5, 
+width.panels=c(1,3), rmargin=1, at.x=seq(-4,8,2), decreasing=TRUE, 
+ylab="Annotation", xlab="Clusters of risk-associated and linked SNPs", 
+tfs=NULL)
 }
 
 \arguments{
@@ -31,10 +32,14 @@ a numeric value specifying the height of the graphics region in inches.
 \item{width}{
 a numeric value specifying the width of the graphics region in inches.
 }
-\item{rmargin}{
-a numeric value specifying the right margin size in inches.
+\item{width.panels}{
+a vector of the form c(width1, width2) specifying the proportional width 
+of the 1st and 2nd panels of the plot, respectively.
 }
-\item{bxseq}{
+\item{rmargin}{
+a numeric value specifying the right margin in inches.
+}
+\item{at.x}{
 a numeric vector specifying which x-axis tickpoints are to be drawn.
 }
 \item{decreasing}{

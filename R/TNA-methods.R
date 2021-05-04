@@ -1080,6 +1080,7 @@ run.gsea1 <- function(listOfRegulons, phenotype, pAdjustMethod="BH",
 ##This function takes a list of gene sets (regulons), a named phenotype 
 ##vector, and returns the results of gene set enrichment analysis for all 
 ##regulons (with multiple hypothesis testing correction).
+# fgseaRes <- fgsea(pathways=listOfRegulonsAndMode, nperm=10000, stats=object@phenotype, gseaParam=1)
 run.gsea2 <- function(listOfRegulonsAndMode, phenotype, pAdjustMethod="BH", 
                       nPermutations=1000, exponent=1, verbose=TRUE) {
   
@@ -1107,14 +1108,12 @@ run.gsea2 <- function(listOfRegulonsAndMode, phenotype, pAdjustMethod="BH",
       names(tp[tp<0])
     })
     names(listOfRegulonsDown) <- names(listOfRegulonsAndMode)
-    gs.size.up <- unlist(lapply(listOfRegulonsUp, length))
-    gs.size.down <- unlist(lapply(listOfRegulonsDown, length))
-    test.collection.up <- gsea2tna(listOfRegulonsUp, 
+    test.collection.up <- gsea2tna(listOfRegulons=listOfRegulonsUp, 
                                    phenotype=phenotype,
                                    exponent=exponent, 
                                    nPermutations=nPermutations, 
                                    verbose1=verbose, verbose2=TRUE)
-    test.collection.down <- gsea2tna(listOfRegulonsDown, 
+    test.collection.down <- gsea2tna(listOfRegulons=listOfRegulonsDown, 
                                      phenotype=phenotype,
                                      exponent=exponent, 
                                      nPermutations=nPermutations, 
@@ -1129,20 +1128,20 @@ run.gsea2 <- function(listOfRegulonsAndMode, phenotype, pAdjustMethod="BH",
   b2<-length(test.collection.up$Observed.scores) == 
     length(test.collection.down$Observed.scores)
   if(b1 && b2) {
+    gs.size.up <- unlist(lapply(listOfRegulonsUp, length))
+    gs.size.down <- unlist(lapply(listOfRegulonsDown, length))
     pvalues.up <- tna.perm.pvalues(permScores = test.collection.up$Permutation.scores,
                                    observedScores = test.collection.up$Observed.scores)    
     adjust.pval.up <- p.adjust(pvalues.up, method = pAdjustMethod, 
                                n=length(pvalues.up)*2)
     GSEA2.results.up <- cbind(gs.size.up, test.collection.up$Observed.scores, 
                               pvalues.up, adjust.pval.up)
-    
     pvalues.down <- tna.perm.pvalues(permScores = test.collection.down$Permutation.scores,
                                      observedScores = test.collection.down$Observed.scores)    
     adjust.pval.down <- p.adjust(pvalues.down, method = pAdjustMethod, 
                                  n=length(pvalues.down)*2)
     GSEA2.results.down <- cbind(gs.size.down,test.collection.down$Observed.scores,
                                 pvalues.down, adjust.pval.down)
-    
     test.collection.both<-list(Permutation.scores=test.collection.up$Permutation.scores-
                                test.collection.down$Permutation.scores,
                                Observed.scores=test.collection.up$Observed.scores-

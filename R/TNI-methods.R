@@ -403,7 +403,7 @@ setMethod(
   "tni.gsea2",
   "TNI",function(object, minRegulonSize=15, sizeFilterMethod="posORneg", 
                  scale=FALSE, exponent=1, tnet="dpi", regulatoryElements=NULL, 
-                 samples=NULL, features=NULL, refsamp=NULL, log=TRUE, 
+                 features=NULL, samples=NULL, refsamp=samples, log=TRUE, 
                  alternative=c("two.sided", "less", "greater"), 
                  targetContribution=FALSE, additionalData=FALSE, verbose=TRUE, 
                  doSizeFilter=NULL){
@@ -555,8 +555,7 @@ setMethod(
     listOfRegulons <- lapply(listOfRegulonsAndMode, names)
     for(i in names(listOfRegulonsAndMode)){
       reg <- listOfRegulonsAndMode[[i]]
-      names(listOfRegulonsAndMode[[i]]) <- match(names(reg),
-                                                 rownames(phenotypes))
+      names(listOfRegulonsAndMode[[i]]) <- match(names(reg), rownames(phenotypes))
     }
     rnames_phenotypes <- rownames(phenotypes)
     rownames(phenotypes)<-1:nrow(phenotypes)

@@ -36,8 +36,8 @@ avs.plot1<-function(object, what="vse", fname=what, ylab="genomic annotation",
 
 #--------------------------------------------------------------------------
 avs.plot2<-function(object, what="evse", fname=what, width=14, height=2.5,
-                    rmargin=1, bxseq=seq(-4,8,2), decreasing=TRUE, 
-                    ylab="Annotation",
+                    width.panels=c(1,3), rmargin=1, at.x=seq(-4,8,2), 
+                    decreasing=TRUE, ylab="Annotation",
                     xlab="Clusters of risk-associated and linked SNPs", 
                     tfs=NULL){
   if(!is(object,"AVS"))stop("not an 'AVS' object!")
@@ -47,8 +47,9 @@ avs.plot2<-function(object, what="evse", fname=what, width=14, height=2.5,
   tnai.checks(name="fname",para=fname)
   tnai.checks(name="width",para=width)
   tnai.checks(name="height",para=height)
+  tnai.checks(name="width.panels",para=width.panels)
   tnai.checks(name="rmargin",para=rmargin)
-  tnai.checks(name="bxseq",para=bxseq)
+  tnai.checks(name="at.x",para=at.x)
   tnai.checks(name="decreasing",para=decreasing)
   tnai.checks(name="ylab",para=ylab)
   tnai.checks(name="xlab",para=xlab)
@@ -64,8 +65,8 @@ avs.plot2<-function(object, what="evse", fname=what, width=14, height=2.5,
     }
     ucounts<-object@results$counts[[what]]
     avsplot2(stats=stats,ucounts=ucounts,fname=fname, height=height, 
-             width=width, rmargin=rmargin, 
-             bxseq=bxseq, ylab=ylab, xlab=xlab, label=toupper(what),
+             width=width, width.panels=width.panels, rmargin=rmargin, 
+             at.x=at.x, ylab=ylab, xlab=xlab, label=toupper(what),
              decreasing=decreasing, para=para)
   } else {
     warning(paste("NOTE:",toupper(what),"results not available!"),call. = FALSE)
@@ -123,29 +124,31 @@ avsplot1<-function(mtally,nulldist,fname,ylab, xlab, breaks, maxy,
 
 #-------------------------------------------------------------------------
 avsplot2<-function(stats,ucounts,para,fname="vseplot",height=2, width=14,
-                   rmargin=1, bxseq=seq(-4,8,2),ylab=ylab, 
+                   width.panels=c(1,3), rmargin=1, at.x=seq(-4,8,2),ylab=ylab, 
                    xlab="Clusters of risk-associated and linked SNPs",
                    label="EVSE",decreasing=TRUE){
-  #---shortcut to set left margin
-  lmargin=0.3
+  #---left margin
+  lmargin=1
+  at.x <- sort(at.x)
   if(label=="PEVSE")label <- "pEVSE"
-  #---universeCounts
-  clustersz<-ucounts[,"markers"]
-  annotsz<-ucounts[,"annotation"]
-  names(clustersz)<-rownames(ucounts)
-  names(annotsz)<-rownames(ucounts)
-  if(ncol(ucounts)==3){
-    ovlab<-"genes"
-  } else {
-    ovlab<-"overlaps"
-  }
+  
   #---mtally
   mtally<-stats$mtally
   labs<-rownames(mtally)
-  clustersz<-clustersz[labs]
-  annotsz<-annotsz[labs]
   nulldist<-stats$nulldist
   mtl<-colSums(mtally)
+  #---universeCounts
+  clustersz<-ucounts[,"markers"]
+  names(clustersz)<-rownames(ucounts)
+  clustersz<-clustersz[labs]
+  if(ncol(ucounts)==3){
+    ovlab<-TRUE
+    annotsz<-ucounts[,"annotation"]
+    names(annotsz)<-rownames(ucounts)
+    annotsz<-annotsz[labs]
+  } else {
+    ovlab<-FALSE
+  }
   #----stats
   nper<-nrow(nulldist)
   pvalue<-stats$pvalue
@@ -184,21 +187,26 @@ avsplot2<-function(stats,ucounts,para,fname="vseplot",height=2, width=14,
   nc<-ncol(nulldist)
   ylim<-c(0.35,nc+0.65)
   at.y<-seq(1,nc,1)
-  xlim=c(min(bxseq),max(bxseq))
-  layout(matrix(c(1,2), 1, 2),widths=c(1+(lmargin/3),3))
+  xlim <- range(at.x)
+  tp <- range(score)
+  if(tp[2]>xlim[2]){
+    st <- at.x[length(at.x)]-at.x[length(at.x)-1]
+    xlim[2] <- xlim[2]+st
+  }
+  layout(matrix(c(1,2), 1, 2),widths=width.panels)
   #---plot 1
   par(mai=c(0.4,2+lmargin,1.5,0.1),mgp=c(2,0.5,0), tcl=-0.2)
   plot.new()
   par(usr=c(xlim,ylim))
-  abline(v=ci, lmitre=5, col="gray75", lwd=1.0)
+  abline(v=ci, lmitre=5, col="gray75", lwd=1.4)
   boxplot(nulldist, horizontal=TRUE, axes=FALSE, add=TRUE, boxwex=0.7, 
           range=1.5, pch="|", 
           cex=0.6, lty=1, lwd=0.75, at=at.y, outline=FALSE)
-  axis(side=3,at=bxseq[-1], labels=bxseq[-1], cex.axis=0.7, padj=0.5, 
-       hadj=0.5, las=1, lwd=1.0)
+  axis(side=3,at=at.x[-1], labels=at.x[-1], cex.axis=0.7, padj=0.5, 
+       hadj=0.5, las=1, lwd=1.4)
   tx<-paste("Enrichment\nscore (",label,")",sep="")
-  mtext(tx, side=3, line=2, cex=0.75, las=1, adj=0, at=-0.5)
-  mtext(padjm, side=3, line=1.2, cex=0.75, las=1, col="gray75", adj=0, at=-0.5)
+  mtext(tx, side=3, line=2, cex=0.75, las=1, adj=0, at=mean(xlim)*0.3)
+  mtext(padjm, side=3, line=1.2, cex=0.75, las=1, col="gray75", adj=0, at=mean(xlim)*0.3)
   #----add stats
   pcol<-ifelse(score>ci,"red","black")
   points(x=score,y=at.y,col=pcol,pch=18,cex=1)
@@ -217,8 +225,8 @@ avsplot2<-function(stats,ucounts,para,fname="vseplot",height=2, width=14,
   mtext("P value\n(-log10)", side=2, line=1, cex=0.75, las=2, adj=0.5, 
         padj=0, at=nc+1)
   #---plot 2
-  binsp <- length(clustersz) * 0.07 * rmargin
-  par( mai = c( 0.4, 0.0, 1.5, 0.7 + binsp ) )
+  # rmargin <- length(clustersz) * 0.07 * rmargin
+  par( mai = c( 0.4, 0.0, 1.5, 0.7 + rmargin ) )
   mat.tally<-mtally
   mat.tally[,]<-as.numeric(mtally)
   mat.tally[,score>ci]<-2
@@ -247,9 +255,9 @@ avsplot2<-function(stats,ucounts,para,fname="vseplot",height=2, width=14,
   mtext(mtl, side=4, at=seq(0,1,sp2), line=0.5, cex=0.7, las=2, adj=0.5)
   mtext("mapping tally", side=3, at=1+sp1, 
         line=1.2, cex=0.7, las=2, adj=0, font=3)
-  if(ovlab=="genes"){
+  if(ovlab){
     mtext(annotsz, side=1, at=seq(0,1,sp1), line=0.3, cex=0.7, las=2, adj=1)
-    mtext(ovlab, side=1, at=1+sp1, line=-0.5, 
+    mtext("genes", side=1, at=1+sp1, line=-0.5, 
           cex=0.7, las=1, adj=0, padj=1, font=3)
   }
   dev.off()

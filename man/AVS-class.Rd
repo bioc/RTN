@@ -4,6 +4,7 @@
 \alias{AVS-class}
 \alias{avs.vse,AVS-method}
 \alias{avs.evse,AVS-method}
+\alias{avs.rvse,AVS-method}
 \alias{avs.pevse,AVS-method}
 \alias{avs.get,AVS-method}
 
@@ -52,6 +53,7 @@ Objects can be created by calls of the form \code{new("AVS", markers)}.
   \describe{
     \item{avs.vse}{\code{signature(object = "AVS")}: see \code{\link[RTN:avs.vse]{avs.vse}} } 
     \item{avs.evse}{\code{signature(object = "AVS")}: see \code{\link[RTN:avs.evse]{avs.evse}} }
+    \item{avs.rvse}{\code{signature(object = "AVS")}: see \code{\link[RTN:avs.rvse]{avs.rvse}} }
     \item{avs.pevse}{\code{signature(object = "AVS")}: see \code{\link[RTN:avs.pevse]{avs.pevse}} }    
     \item{avs.get}{\code{signature(object = "AVS")}: see \code{\link[RTN:avs.get]{avs.get}} }    
 	 }

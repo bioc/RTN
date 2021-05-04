@@ -28,6 +28,7 @@ exportMethods(
   "tna.get",
   "avs.vse",
   "avs.evse",
+  "avs.rvse",
   "avs.pevse",
   "avs.get"
 )
@@ -58,7 +59,7 @@ importFrom(stats, pchisq, complete.cases, optimize, var, fisher.test)
 importFrom(grDevices, col2rgb, colorRampPalette, dev.off, palette, pdf, rgb, adjustcolor)
 importFrom(graphics, lines, mtext, text, par, plot, plot.new, points, polygon, segments, title, legend)
 importFrom(graphics, plot.window, barplot, box, abline, axis, boxplot,hist, image, layout, grid)
-importFrom(stats, median, model.matrix, p.adjust, phyper, pnorm, qnorm, quantile, sd, shapiro.test, ecdf)
+importFrom(stats, pf, median, model.matrix, p.adjust, phyper, pnorm, qnorm, quantile, sd, shapiro.test, ecdf)
 importFrom(stats, aggregate, anova, aov, as.dist, coef, cor, formula ,hclust, ks.test, lm, manova)
 importFrom(utils, data, setTxtProgressBar, txtProgressBar, capture.output)
 importFrom(mixtools,normalmixEM)

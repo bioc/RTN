@@ -7,7 +7,7 @@ setMethod(
   "tni.annotate.samples",
   "TNI",
   function(object, geneSetList, minGeneSetSize = 15, exponent = 1, 
-           verbose = TRUE){
+           samples=NULL, verbose = TRUE){
     
     #--- check compatibility
     object <- upgradeTNI(object)
@@ -20,6 +20,7 @@ setMethod(
     tnai.checks("geneSetList", geneSetList)
     tnai.checks("minGeneSetSize", minGeneSetSize)
     tnai.checks("exponent", exponent)
+    tnai.checks(name="samples",para=samples)
     tnai.checks("verbose",verbose)
     
     #--- start preprocessing
@@ -36,8 +37,18 @@ setMethod(
     geneSetList <- .preprocess.genesets(object, geneSetList, 
                                         minGeneSetSize, verbose)
     
-    if(verbose) cat("--Checking log space... ")
+    ##----- get gexp and set samples
     gexp <- tni.get(object, "gexp")
+    if(!is.null(samples)){
+      idx <- samples %in% colnames(gexp)
+      if(!all(idx)){
+        stop("'samples' should list only valid names!")
+      }
+      samples <- colnames(gexp)[colnames(gexp) %in% samples]
+      gexp <- gexp[,samples, drop=FALSE]
+    }
+    
+    if(verbose) cat("--Checking log space... ")
     if(.isUnloggedData(gexp)){
       if(verbose) cat("applying log2 transformation!\n")
       gexp <- .log2transform(gexp)

@@ -13,9 +13,9 @@ Uses GSEA2 algorithm to compute regulon activity for
 
 \usage{
 tni.gsea2(object, minRegulonSize=15, sizeFilterMethod="posORneg", scale=FALSE, 
-exponent=1, tnet="dpi", regulatoryElements=NULL, samples=NULL, features=NULL, refsamp=NULL, 
-log=TRUE, alternative=c("two.sided", "less", "greater"), targetContribution=FALSE, 
-additionalData=FALSE, verbose=TRUE, doSizeFilter=NULL)
+exponent=1, tnet="dpi", regulatoryElements=NULL, features=NULL, samples=NULL, 
+refsamp=samples, log=TRUE, alternative=c("two.sided", "less", "greater"), 
+targetContribution=FALSE, additionalData=FALSE, verbose=TRUE, doSizeFilter=NULL)
 }
 
 \arguments{
@@ -44,15 +44,15 @@ regulatory network that will be used for GSEA analysis.
 \item{regulatoryElements}{
 an optional vector with transcription factor identifiers.
 }
+\item{features}{
+a string vector listing features for feature selection.
+}
 \item{samples}{
-an optional string vector containing the sample names for which 
+an optional string vector listing the sample names for which 
 will be computed the GSEA2.
 }
-\item{features}{
-a string vector containing features for feature selection.
-}
 \item{refsamp}{
-an optional string vector containing the names of the reference samples for 
+an optional string vector listing the names of the reference samples for 
 differential expression calculations. If not provided, then the average of 
 all samples will be used as reference.
 }

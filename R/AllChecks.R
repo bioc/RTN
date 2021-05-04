@@ -50,14 +50,14 @@ tnai.checks <- function(name, para, supp) {
   }
  else if(name=="avs.what"){
     opts<-c("markers","validatedMarkers","variantSet","randomSet","summary",
-            "status","linkedMarkers","randomMarkers","vse","evse","pevse",
+            "status","linkedMarkers","randomMarkers","vse","evse","rvse","pevse",
             "annotation.vse","annotation.evse","annotation.pevse")
     if(!is.character(para) || length(para)!=1 || !(para %in% opts))
       stop(paste("'what' should be any one of the options: ", 
                  paste(opts,collapse = ", ") ),call.=FALSE )
   }
  else if(name=="avs.plot.what"){
-    opts<-c("vse","evse","pevse")
+    opts<-c("vse","evse","rvse","pevse")
     if(!is.character(para) || length(para)!=1 || !(para %in% opts))
       stop(paste("'avs.plot.what' should be any one of the options: \n", 
                  paste(opts,collapse = ", ") ),call.=FALSE )
@@ -213,6 +213,17 @@ tnai.checks <- function(name, para, supp) {
       stop(
         "the 'gxdata' matrix should be named on rows and cols (unique names)!",
            call.=FALSE)
+  } else if(name=="regdata") {
+    if( !is.matrix(para) || !is.numeric(para[1,]))
+      stop(
+        "'regdata' should be a numeric matrix with regulons on rows and 
+        samples on cols!",
+        call.=FALSE)
+    if(  is.null(colnames(para)) || is.null(rownames(para)) || 
+         any(duplicated(rownames(para))) || any(duplicated(colnames(para))) )
+      stop(
+        "the 'regdata' matrix should be named on rows and cols (unique names)!",
+        call.=FALSE)
   } else if(name=="regulatoryElements") {
     if(!is.null(para)){
       if(!is.character(para) || any(is.na(para)) || any(para==""))
@@ -668,9 +679,6 @@ tnai.checks <- function(name, para, supp) {
     #---
     para$ID<-as.character(para$ID)
     para$CHROM<-as.character(para$CHROM)
-    if(is.numeric(para$CHROM) || is.integer(para$CHROM)){
-      para$CHROM <- paste("chr",para$CHROM,sep="")
-    }
     chrs<-c(paste("chr",1:22,sep=""),"chrX")
     chrChecks<-!para$CHROM%in%chrs
     if( any(chrChecks) ){
@@ -726,7 +734,7 @@ tnai.checks <- function(name, para, supp) {
                                             check.names=FALSE)
       for(i in seq_len(ncol(para))){
         tp<-para[,i]
-        if(is.list(tp))tp<-unlist(tp)
+        if(is.list(tp))tp<-unlist(lapply(tp, function(nm){sort(nm)[1]}))
         if(is.factor(tp))tp<-as.character(tp)
         para[,i]<-tp
       }
@@ -838,9 +846,9 @@ tnai.checks <- function(name, para, supp) {
       if(!(is.numeric(para) || is.integer(para)) || length(para)!=3 )
       stop("'heightPanels' should be a numeric vector with length =3 !",
            call.=FALSE)
-  } else if(name=="bxseq") {
+  } else if(name=="at.x" || name=="bxseq") {
     if(!(is.numeric(para) || is.integer(para)) || length(para)<2 )
-      stop("'bxseq' should be a numeric vector with length >=2 !",call.=FALSE)
+      stop("'at.x' should be a numeric vector with length >=2 !",call.=FALSE)
   } else if(name=="width") {
     if(!(is.integer(para) || is.numeric(para)) || length(para)!=1 || para<0 )
       stop("'width' should be an integer or numeric value >0 !",call.=FALSE)
@@ -851,8 +859,12 @@ tnai.checks <- function(name, para, supp) {
     if(!(is.integer(para) || is.numeric(para)) || length(para)!=1 || para<0)
       stop("'maxy' should be an integer or numeric value >0 !",call.=FALSE)
   } else if(name=="rmargin") {
-    if(!(is.integer(para) || is.numeric(para)) || length(para)!=1 || para<0 )
-      stop("'rmargin' should be an integer or numeric value >0 !",call.=FALSE)
+    if(!(is.integer(para) || is.numeric(para)) || length(para)!=1 || any(para<0) )
+      stop("'rmargin' should be an integer or numeric value >=0 !",call.=FALSE)
+  } else if(name=="width.panels") {
+    if(!(is.integer(para) || is.numeric(para)) || length(para)!=2 || any(para<0) )
+      stop("'width.panels' should be a numeric vector of length=2, values >=0 !",call.=FALSE)
+    return(para)
   } else if(name=="bxsp") {
     if(!(is.integer(para) || is.numeric(para)) || length(para)!=1 || para<0)
       stop("'bxsp' should be an integer or numeric value >0 !",call.=FALSE)

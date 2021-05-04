@@ -40,8 +40,8 @@ gsea1tna <- function(listOfRegulons, phenotype, exponent=1,
       cl<-getOption("cluster")
       snow::clusterExport(cl, list("gseaScoresBatch4RTN"), envir=environment())
       scores <- snow::parSapply(cl, 1:length(listOfRegulons), function(i){
-        gseaScoresBatch4RTN(geneList=phenotype, geneNames.perm=perm.gL, 
-                            geneSet=listOfRegulons[[i]], exponent=exponent,
+        gseaScoresBatch4RTN(phenotype=phenotype, geneNames.perm=perm.gL, 
+                            geneset=listOfRegulons[[i]], exponent=exponent,
                             nPermutations=nPermutations)
       })
       for(i in 1:nRegulons){
@@ -53,9 +53,9 @@ gsea1tna <- function(listOfRegulons, phenotype, exponent=1,
       if(verbose) cat("--For", length(listOfRegulons), "regulons...\n")
       if(verbose) pb <- txtProgressBar(style=3)
       for(i in 1:nRegulons) {
-        scores <- gseaScoresBatch4RTN(geneList=phenotype, 
+        scores <- gseaScoresBatch4RTN(phenotype=phenotype, 
                                       geneNames.perm=perm.gL, 
-                                      geneSet=listOfRegulons[[i]],
+                                      geneset=listOfRegulons[[i]],
                                       exponent=exponent,
                                       nPermutations=nPermutations)
         observedScores[i] <- scores$observedScores
@@ -95,8 +95,8 @@ gsea2tna <- function(listOfRegulons, phenotype, exponent=1,
       cl<-getOption("cluster")
       snow::clusterExport(cl, list("gseaScoresBatch4RTN"), envir=environment())
       scores <- snow::parSapply(cl, 1:length(listOfRegulons), function(i){
-        gseaScoresBatch4RTN(geneList=phenotype, geneNames.perm=perm.gL, 
-                            geneSet=listOfRegulons[[i]], exponent=exponent,
+        gseaScoresBatch4RTN(phenotype=phenotype, geneNames.perm=perm.gL, 
+                            geneset=listOfRegulons[[i]], exponent=exponent,
                             nPermutations=nPermutations)
       })
       for(i in 1:nRegulons){
@@ -110,9 +110,9 @@ gsea2tna <- function(listOfRegulons, phenotype, exponent=1,
         cat("--For", length(listOfRegulons), "regulons...\n")
       if(verbose1) pb <- txtProgressBar(style=3)
       for(i in 1:nRegulons) {
-        scores <- gseaScoresBatch4RTN(geneList=phenotype, 
+        scores <- gseaScoresBatch4RTN(phenotype=phenotype, 
                                       geneNames.perm=perm.gL, 
-                                      geneSet=listOfRegulons[[i]],
+                                      geneset=listOfRegulons[[i]],
                                       exponent=exponent, 
                                       nPermutations=nPermutations)
         observedScores[i] <- scores$observedScores
@@ -220,16 +220,16 @@ hyperGeoTest4RTN <- function(collectionOfGeneSets, universe, hits,
   }
   return(results)
 }
-.hyperGeoTest4RTN <- function(geneSet, universe, hits) {
+.hyperGeoTest4RTN <- function(geneset, universe, hits) {
   #number of genes in universe
   N <- length(universe) 			
   #remove genes from gene set that are not in universe			
-  geneSet <- intersect(geneSet[[1]], universe) 
+  geneset <- intersect(geneset[[1]], universe) 
   #size of gene set	
-  m <- length(geneSet) 							
+  m <- length(geneset) 							
   Nm <- N-m	
   #hits in gene set
-  overlap <- intersect(geneSet, hits) 	
+  overlap <- intersect(geneset, hits) 	
   #number of hits in gene set		
   k <- length(overlap) 							
   n <- length(hits)	
@@ -243,34 +243,71 @@ hyperGeoTest4RTN <- function(collectionOfGeneSets, universe, hits,
 }
 
 #--------------------------------------------------------------------
-##This function returns enrichment scores, running scores, and 
-##position of hits for a gene set.
-gseaScores4RTN <- function(geneList, geneSet, exponent=1, 
-                           mode=c("score","runningscores")) {
-  if( is.character(geneSet) || is.null(names(geneSet)) ){
-    geneSetType<-rep(1,length(geneSet))
-    names(geneSetType)<-geneSet
+##This function computes observed and permutation enrichment scores 
+gseaScoresBatch4RTN <- function(phenotype, geneNames.perm, geneset, 
+                                exponent=1, nPermutations=1000){
+  nh <- length(geneset)
+  N <- length(phenotype)
+  if(N>0 && nh>0){
+    geneset <- as.numeric(geneset)
+    ES <- sapply(1:(nPermutations+1), function(i){
+      setidx <- geneNames.perm[geneset,i]
+      .fgseaScores4TNA(phenotype,setidx,exponent)
+    })
   } else {
-    geneSetType<-geneSet
-    geneSet<-names(geneSet)
+    ES <- rep(0,nPermutations+1)
   }
-  geneList <- geneList[!is.na(geneList)]
-  geneSet<-intersect(names(geneList), geneSet)
-  nh <- length(geneSet)
-  N <- length(geneList)
+  ES <- list(observedScores=ES[1], permScores=ES[2:(nPermutations+1)])
+  return(ES)	
+}
+.fgseaScores4TNA <- function (phenotype, setidx, exponent=1){
+  if(length(setidx)>0){
+    setidx <- sort(setidx)
+    nh <- length(setidx)
+    N <- length(phenotype)
+    hits <- abs(phenotype[setidx])^exponent
+    NR <- sum(hits)
+    hcumsum <- cumsum(hits)/NR
+    topES <- hcumsum - (setidx - seq_along(setidx))/(N - nh)
+    botES <- topES - hits/NR
+    ESmax <- max(topES)
+    ESmin <- min(botES)
+    ES <- ifelse(abs(ESmin)>abs(ESmax), ESmin, ESmax)
+  } else {
+    ES <- 0
+  }
+  return(ES)
+}
+
+#--------------------------------------------------------------------
+##This function returns enrichment scores, running scores, and 
+##position of hits for a gene set; used only in the plotting functions
+gseaScores4RTN <- function(phenotype, geneset, exponent=1, 
+                           mode=c("score","runningscores")) {
+  if( is.character(geneset) || is.null(names(geneset)) ){
+    geneSetType<-rep(1,length(geneset))
+    names(geneSetType)<-geneset
+  } else {
+    geneSetType<-geneset
+    geneset<-names(geneset)
+  }
+  phenotype <- phenotype[!is.na(phenotype)]
+  geneset<-intersect(names(phenotype), geneset)
+  nh <- length(geneset)
+  N <- length(phenotype)
   ES <- 0
   Phit <- rep(0, N)
   Pmiss <- rep(0, N)
   runningES <- rep(0, N)
   hits <- rep(FALSE, N)
   hitsType <- rep(0, N)
-  hits[which(!is.na(match(names(geneList), geneSet)))] <- TRUE
+  hits[which(!is.na(match(names(phenotype), geneset)))] <- TRUE
   hitsType[which(!is.na(
-    match(names(geneList), names(geneSetType[geneSetType>0]))))] <- 1
+    match(names(phenotype), names(geneSetType[geneSetType>0]))))] <- 1
   hitsType[which(!is.na(
-    match(names(geneList), names(geneSetType[geneSetType<0]))))] <- -1
+    match(names(phenotype), names(geneSetType[geneSetType<0]))))] <- -1
   if(sum(hits)!=0){
-    Phit[which(hits)]<-abs(geneList[which(hits)])^exponent
+    Phit[which(hits)]<-abs(phenotype[which(hits)])^exponent
     NR=sum(Phit)
     Pmiss[which(!hits)]<-1/(N-nh)
     Phit=cumsum(Phit/NR)
@@ -290,35 +327,3 @@ gseaScores4RTN <- function(geneList, geneSet, exponent=1,
                 "positions"=hitsType))
   }
 }
-
-#--------------------------------------------------------------------
-##This function computes observed and permutation enrichment scores 
-gseaScoresBatch4RTN <- function(geneList, geneNames.perm, geneSet, 
-                                exponent=1, nPermutations=1000) {
-  nh <- length(geneSet)
-  N <- length(geneList)
-  if(N>0 && nh>0){
-    geneSet <- as.numeric(geneSet)
-    Phit <- Pmiss <- matrix(0,nrow=N,ncol=nPermutations+1)
-    runningES <- NULL
-    for(i in 1:(nPermutations+1)){
-      idx <- geneNames.perm[geneSet,i]
-      Phit[idx, i] <- abs(geneList[idx])^exponent
-      Pmiss[-idx, i] <- 1/(N-nh)
-    }
-    NR <- colSums(Phit)
-    Phit <- sapply(1:(nPermutations+1), function(i) cumsum(Phit[, i])/NR[i])		
-    Pmiss <- sapply(1:(nPermutations+1), function(i) cumsum(Pmiss[, i]))
-    runningES <- Phit-Pmiss		
-    runningES[is.nan(runningES)] <- 0
-    ES <- sapply(1:(nPermutations+1), function(i){
-      tp <- runningES[,i]
-      tp[which.max(abs(tp))]	
-    })
-  } else {
-    ES <- rep(0,nPermutations+1)
-  }
-  ES <- list(observedScores=ES[1], permScores=ES[2:(nPermutations+1)])
-  return(ES)	
-}
-

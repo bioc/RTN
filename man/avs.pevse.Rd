@@ -12,9 +12,9 @@ using precomputed expression quantitative trait loci (eQTLs).
 }
 
 \usage{
-avs.pevse(object, annotation, eqtls, maxgap=250, pValueCutoff=0.05, 
-pAdjustMethod="bonferroni", boxcox=TRUE, lab="annotation", glist=NULL, 
-minSize=100, verbose=TRUE)
+avs.pevse(object, annotation, eqtls, glist, maxgap=250, minSize=100, 
+pValueCutoff=0.05, pAdjustMethod="bonferroni", boxcox=TRUE,
+verbose=TRUE)
 }
 
 \arguments{
@@ -34,9 +34,22 @@ AVS object.
 object of class 'data.frame' with at least two columns, including the following 
 column names: <RSID> and <GENEID>. 
 }
+\item{glist}{
+a list with character vectors mapped to the 'annotation' data via 
+<ID> column. This list is used to run a batch mode for gene sets and 
+regulons.
+}
 \item{maxgap}{
 a single integer value specifying the max distant (kb) used to assign the eQTLs 
 in the 'eqtls' object.
+}
+\item{minSize}{
+if 'glist' is provided, this argument is a single integer or numeric value 
+specifying the minimum number of elements for each gene set in the 'glist'. 
+Gene sets with fewer than this number are removed from the analysis. 
+if 'fineMapping=FALSE', an alternative min size value can be provided as a 
+vector of the form c(minSize1, minSize2) used to space the null distributions 
+(see 'fineMapping').
 }
 \item{pValueCutoff}{
 a single numeric value specifying the cutoff for p-values considered 
@@ -51,23 +64,6 @@ a single logical value specifying to use Box-Cox procedure to find a
 transformation of the null that approaches normality (when boxcox=TRUE) or not 
 (when boxcox=FALSE). See \code{\link[car:powerTransform]{powerTransform}} 
 and \code{\link[car:bcPower]{bcPower}}.
-}
-\item{lab}{
-a single character value specifying a name for the annotation dataset (this 
-option is overrided if 'glist' is used).
-}
-\item{glist}{
-an optional list with character vectors mapped to the 'annotation' data via 
-<ID> column. This option can be used to run a batch mode for gene sets and 
-regulons.
-}
-\item{minSize}{
-if 'glist' is provided, this argument is a single integer or numeric value 
-specifying the minimum number of elements for each gene set in the 'glist'. 
-Gene sets with fewer than this number are removed from the analysis. 
-if 'fineMapping=FALSE', an alternative min size value can be provided as a 
-vector of the form c(minSize1, minSize2) used to space the null distributions 
-(see 'fineMapping').
 }
 \item{verbose}{
 a single logical value specifying to display detailed messages 

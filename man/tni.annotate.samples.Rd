@@ -11,7 +11,7 @@ This function calculates an enrichment score between gene sets and samples.
 
 \usage{
 tni.annotate.samples(object, geneSetList, minGeneSetSize = 15, 
-    exponent = 1, verbose = TRUE)
+    exponent = 1, samples=NULL, verbose = TRUE)
 }
 
 \arguments{
@@ -30,6 +30,10 @@ Gene sets with fewer than this number are removed from the analysis.
 \item{exponent}{
 a single integer or numeric value used in weighting phenotypes in GSEA
 (this parameter only affects the GSEA statistics).
+}
+\item{samples}{
+an optional string vector listing the sample names for which 
+will be computed the GSEA statistics.
 }
 \item{verbose}{
 a single logical value specifying to display detailed messages (when 

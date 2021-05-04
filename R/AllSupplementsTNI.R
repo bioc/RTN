@@ -1643,6 +1643,7 @@ treemap<-function(hc){
 }
 
 ##-----------------------------------------------------------------------------
+## Used only for .annotate.samples.gsea
 .run.tni.gsea1.alternative <- function(geneSetList, phenotype, phenorank, 
                                        exponent, alternative){
   GSEA2.results <- sapply(geneSetList, .fgseaScores4TNI, 
@@ -1661,11 +1662,9 @@ treemap<-function(hc){
                              exponent=1, alternative="two.sided"){
   if(length(geneSet)>0){
     nh <- length(geneSet)
-    N <- length(phenorank)
-    ES <- 0
+    N <- length(phenotype)
     Phit <- rep(0, N)
     Pmiss <- rep(0, N)
-    runningES <- rep(0, N)
     hits <- phenorank[geneSet]
     Phit[hits] <- abs(phenotype[geneSet])^exponent
     NR <- sum(Phit)
@@ -1673,7 +1672,6 @@ treemap<-function(hc){
     Phit <- cumsum(Phit/NR)
     Pmiss <- cumsum(Pmiss)
     runningES <- Phit-Pmiss
-    runningES[is.nan(runningES)] <- 0
     ESmax <- max(runningES)
     ESmin <- min(runningES)
     if(alternative=="greater"){

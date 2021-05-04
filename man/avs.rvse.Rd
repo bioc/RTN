@@ -1,20 +1,20 @@
-\name{avs.evse}
-\alias{avs.evse}
+\name{avs.rvse}
+\alias{avs.rvse}
 
-\title{An eQTL/VSE pipeline for variant set enrichment analysis.}
+\title{An rQTL/VSE pipeline for variant set enrichment analysis.}
 
 \description{
 The VSE method (\code{\link[RTN:avs.vse]{avs.vse}}) provides a robust framework 
 to cope with the heterogeneous structure of haplotype blocks, and has been 
 designed to test enrichment in cistromes and epigenomes. In order to extend 
 the variant set enrichment to genes this pipeline implements an additional 
-step using expression quantitative trait loci (eQTLs).
+step using regulon quantitative trait loci (rQTLs).
 }
 
 \usage{
-avs.evse(object, annotation, gxdata, snpdata, glist=NULL, maxgap=250, minSize=100, 
-pValueCutoff=0.05, pAdjustMethod="bonferroni", boxcox=TRUE, 
-fineMapping=TRUE, verbose=TRUE)
+avs.rvse(object, annotation, regdata, snpdata, glist, 
+maxgap=250, minSize=100, pValueCutoff=0.05, 
+pAdjustMethod="bonferroni", boxcox=TRUE, verbose=TRUE)
 }
 
 \arguments{
@@ -30,15 +30,15 @@ any genomic identifier, while values in <CHROM> should be listed in
 correspond to chromosome positions mapped to the human genome assembly 
 used to build the AVS object.
 }
-\item{gxdata}{
-object of class "matrix", a gene expression matrix.
+\item{regdata}{
+object of class "matrix", a regulon activity matrix.
 }
 \item{snpdata}{
 either an object of class "matrix" or "ff", a single nucleotide polymorphism 
 (SNP) matrix.
 }
 \item{glist}{
-an optional list with character vectors mapped to the 'annotation' data via 
+a list with character vectors mapped to the 'annotation' data via 
 <ID> column. This list is used to run a batch mode for gene sets 
 and regulons.
 }
@@ -49,10 +49,7 @@ annotation used to compute the eQTL analysis.
 \item{minSize}{
 if 'glist' is provided, this argument is a single integer or numeric value 
 specifying the minimum number of elements for each gene set in the 'glist'. 
-Gene sets with fewer than this number are removed from the analysis. 
-If 'fineMapping=FALSE', an alternative min size value can be provided as a 
-vector of the form c(minSize1, minSize2) used to space the null distributions 
-(see 'fineMapping').
+Gene sets with fewer than this number are removed from the analysis.
 }
 \item{pValueCutoff}{
 a single numeric value specifying the cutoff for p-values 
@@ -67,15 +64,6 @@ a single logical value specifying to use Box-Cox procedure to find a
 transformation of the null that approaches normality (when boxcox=TRUE) or 
 not (when boxcox=FALSE). See \code{\link[car:powerTransform]{powerTransform}} 
 and \code{\link[car:bcPower]{bcPower}}.
-}
-\item{fineMapping}{
-if 'glist' is provided, this argument is a single logical value specifying to 
-compute individual null distributions, sized for each gene set 
-(when fineMapping=TRUE). This option has a significant impact on the running 
-time required to perform the computational analysis, especially for large 
-gene set lists. When fineMapping=FALSE, a low resolution analysis is performed 
-by pre-computing a fewer number of null distributions of different sizes 
-(spaced by 'minSize'), and then used as a proxy of the nulls.
 }
 \item{verbose}{
 a single logical value specifying to display detailed messages 
@@ -113,8 +101,7 @@ data(bcarisk, package = "RTNdata.LDHapMapRel27.hg18")
 bcavs <- avs.preprocess.LDHapMapRel27.hg18(bcarisk, nrand=1000)
 
 ##################################################
-### Example of EVSE analysis for sets of genomic 
-### annotations (e.g. regulons, gene sets, etc.)
+### Example of RVSE analysis
 ##################################################
 
 #--- step 1: load a precomputed AVS (same 'bcavs' object as above!)
@@ -125,31 +112,35 @@ genemap <- as.data.frame(genes(TxDb.Hsapiens.UCSC.hg18.knownGene))
 genemap <- genemap[,c("seqnames","start","end","gene_id")]
 colnames(genemap) <- c("CHROM","START","END","ID")
 
-#--- step 3: load a TNI object, or any other source of regulons (e.g. gene sets)
-#--- and prepare a gene set list 
-#--- (gene ids should be the same as in the 'genemap' object)
+#--- step 3: load a TNI object and get a list with regulons
+#--- (ids should be the same as in 'genemap')
 data("rtni1st")
 glist <- tni.get(rtni1st,what="refregulons",idkey="ENTREZ")
 glist <- glist[ c("FOXA1","GATA3","ESR1") ] #reduce the list for demonstration!
 
-#--- step 4: input matched variation and gene expression datasets!
-#--- here we use two "toy" datasets for demonstration purposes only.
-data(toy_snpdata, package="RTNdata.LDHapMapRel27.hg18")
-data(toy_gxdata, package="RTNdata.LDHapMapRel27.hg18")
+#--- step 4: compute single-sample regulon activity
+rtni1st <- tni.gsea2(rtni1st, regulatoryElements = c("FOXA1","GATA3","ESR1"))
+regdata <- tni.get(rtni1st, what = "regulonActivity")$diff
 
-#--- step 5: run the avs.evse pipeline
-bcavs<-avs.evse(bcavs, annotation=genemap, gxdata=toy_gxdata, 
-                snpdata=toy_snpdata, glist=glist, pValueCutoff=0.01)
+#--- step 5: load a variation dataset matched with the regulon activity dataset
+#--- here we use a "toy" dataset for demonstration purposes only.
+data(toy_snpdata, package="RTNdata.LDHapMapRel27")
 
-#--- step 6: generate the EVSE plots
-avs.plot2(bcavs,"evse", height=2.5, width.panels=c(1,2), rmargin=0)
+#--- step 6: check "snpdata"" and "regdata"" alignment (samples on cols)
+regdata <- t(regdata)
+all(colnames(toy_snpdata)==colnames(regdata))
+#TRUE
 
-### NOTE REGARDING THIS EXAMPLE ####
-#- This example is for demonstration purposes only, using toy datasets. 
-#- Any eventual positive/negative associations derived from these datasets 
-#- are not comparable with the original studies that described the method 
-#- (doi: 10.1038/ng.3458; 10.1038/ncomms3464).
-####################################
+#--- step 7: run the avs.rvse pipeline
+bcavs <- avs.rvse(bcavs, 
+                  annotation=genemap,
+                  regdata=regdata, 
+                  snpdata=toy_snpdata, 
+                  glist=glist,
+                  pValueCutoff=0.01)
+
+#--- step 8: generate the RVSE plot
+avs.plot2(bcavs, "rvse", height=2.5)
 
 }
 }

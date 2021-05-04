@@ -121,7 +121,7 @@ plot.gsea1<-function(resgsea, rgcs, phenotype, orderAbsValue, nPermutations,
 get.merged.data1<-function(gs.names,phenotype,rgcs,resgsea,exponent){
   res<-list()
   for(gs.name in gs.names){
-    test<-gseaScores4RTN(geneList=phenotype,geneSet=rgcs[[gs.name]], 
+    test<-gseaScores4RTN(phenotype=phenotype,geneset=rgcs[[gs.name]], 
                          exponent=exponent,mode="runningscores")
     res$enrichmentScores[[gs.name]]<-test$enrichmentScore
     res$runningScores[[gs.name]]<-test$runningScore
@@ -236,7 +236,7 @@ gsplot1 <- function(runningScore, enrichmentScore, positions, adjpv,
     #      ylim=ylimPanels[1:2], ...=...)
     # lines(x=c(1:length(geneList))[sq],y=geneList[sq],col="#008080",lwd=1.4)
     barplot(height = geneList[sq], col = "#008080", border = "#008080", 
-            ylim = ylim, axes = F, axisnames = F, ylab=ylabPanels[1],
+            ylim = ylimPanels[1:2], axes = F, axisnames = F, ylab=ylabPanels[1],
             cex.lab=cexlev[1])
     if(min(geneList)<0)abline(h=0,lwd=0.6)
     nn=ifelse(min(geneList)<0,4,2)
@@ -444,14 +444,14 @@ plot.gsea2<-function(resgsea, rgcs, phenotype, nPermutations, exponent,
 get.merged.data2<-function(gs.name,phenotype,rgcs,resgsea,exponent){
   res<-list()
   gs<-rgcs[[gs.name]]
-  test<-gseaScores4RTN(geneList=phenotype, geneSet=gs, 
+  test<-gseaScores4RTN(phenotype=phenotype, geneset=gs, 
                        exponent=exponent, mode="runningscores")
   res$positions[[gs.name]]<-test$positions
   res$pvals[[gs.name]]<-resgsea[gs.name,][["Pvalue"]]
   res$adjpvals[[gs.name]]<-resgsea[gs.name,][["Adjusted.Pvalue"]]
-  testup<-gseaScores4RTN(geneList=phenotype, geneSet=gs[gs>0], 
+  testup<-gseaScores4RTN(phenotype=phenotype, geneset=gs[gs>0], 
                          exponent=exponent, mode="runningscores")
-  testdown<-gseaScores4RTN(geneList=phenotype, geneSet=gs[gs<0], 
+  testdown<-gseaScores4RTN(phenotype=phenotype, geneset=gs[gs<0], 
                            exponent=exponent, mode="runningscores")
   res$testup$enrichmentScores[[gs.name]]<-testup$enrichmentScore
   res$testup$runningScores[[gs.name]]<-testup$runningScore

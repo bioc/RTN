@@ -695,9 +695,10 @@ cv.filter<-function(gexp, ids){
   unids<-unique(ids[,2])
   idx<-match(unids,ids[,2])
   ids<-ids[idx,,drop=FALSE]
+  ids <- ids[sort.list(ids$CV,decreasing=FALSE),,drop=FALSE]
   # update and return gexp matrix
-  gexp<-gexp[rownames(ids),,drop=FALSE]
-  ids<-ids[,-ncol(ids),drop=FALSE]
+  gexp <- gexp[rownames(ids),,drop=FALSE]
+  ids <- ids[,-ncol(ids),drop=FALSE]
   return(list(gexp=gexp,ids=ids))
 }
 

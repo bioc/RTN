@@ -23,6 +23,7 @@ setGeneric("tni.get",
                     reportNames=TRUE, 
                     idkey=NULL) 
              standardGeneric("tni.get"), package="RTN")
+##-------------------------------------------------------------------------
 setGeneric("tni.conditional",
            function(object, modulators, tfs=NULL, sampling=35, 
                     pValueCutoff=0.01, 
@@ -54,25 +55,27 @@ setGeneric("tni.graph",
 setGeneric("tni.regulon.summary",
            function(object, regulatoryElements = NULL, verbose = TRUE)
                standardGeneric("tni.regulon.summary"), package="RTN")
+##-------------------------------------------------------------------------
 setGeneric("tni.overlap.genesets",
            function(object, geneSetList, regulatoryElements = NULL, 
-                    minGeneSetSize = 15, sizeFilterMethod="posORneg",
+                    minSetSize = 15, sizeFilterMethod="posORneg",
                     method = c("HT","JC"), pValueCutoff = 0.05, 
                     pAdjustMethod = "BH", verbose = TRUE)
              standardGeneric("tni.overlap.genesets"), package="RTN")
 setGeneric("tni.annotate.regulons",
-           function(object, geneSetList, regulatoryElements = NULL, 
-                    minGeneSetSize = 15, sizeFilterMethod="posORneg",
-                    exponent = 1, verbose = TRUE)
+           function(object, geneSetList, sampleSetList = NULL, 
+                    regulatoryElements = NULL, minSetSize = 15, 
+                    sizeFilterMethod="posORneg", exponent = 1, verbose = TRUE)
              standardGeneric("tni.annotate.regulons"), package="RTN")
 setGeneric("tni.annotate.samples",
-           function(object, geneSetList, minGeneSetSize = 15, exponent = 1, 
+           function(object, geneSetList, minSetSize = 15, exponent = 1, 
                     samples=NULL, verbose = TRUE)
              standardGeneric("tni.annotate.samples"), package="RTN")
-setGeneric("tni2tna.preprocess",
-           function(object, phenotype=NULL, hits=NULL, phenoIDs=NULL, 
-                    duplicateRemoverMethod="max", verbose=TRUE)
-             standardGeneric("tni2tna.preprocess"), package="RTN")
+##-------------------------------------------------------------------------
+setGeneric("tni.sre",
+           function(object, sampleGroups, regulatoryElements = NULL, 
+                    pValueCutoff = 0.05, pAdjustMethod = "BH")
+             standardGeneric("tni.sre"), package = "RTN")
 setGeneric("tni.prune",
            function(object, regulatoryElements = NULL, minRegCor = 0.95, 
                     tarPriorityMethod = "EC", minPrunedSize = 30, 
@@ -82,11 +85,10 @@ setGeneric("tni.replace.samples",
            function(object, expData, rowAnnotation=NULL, colAnnotation=NULL,
                     removeRegNotAnnotated=TRUE, verbose=TRUE)
              standardGeneric("tni.replace.samples"), package="RTN")
-setGeneric("tni.sre",
-           function(object, sampleGroups, regulatoryElements = NULL, 
-                    pValueCutoff = 0.05, pAdjustMethod = "BH")
-             standardGeneric("tni.sre"), package = "RTN")
-
+setGeneric("tni2tna.preprocess",
+           function(object, phenotype=NULL, hits=NULL, phenoIDs=NULL, 
+                    duplicateRemoverMethod="max", verbose=TRUE)
+             standardGeneric("tni2tna.preprocess"), package="RTN")
 ##-------------------------------------------------------------------------
 setGeneric("tna.mra",
            function(object, pValueCutoff=0.05, pAdjustMethod="BH", 
@@ -96,14 +98,16 @@ setGeneric("tna.gsea1",
            function(object, pValueCutoff=0.05, pAdjustMethod="BH",  
                     minRegulonSize=15, sizeFilterMethod="posORneg",
                     nPermutations=1000, exponent=1, 
-                    tnet="dpi", orderAbsValue=TRUE, 
-                    tfs=NULL, verbose=TRUE) 
+                    tnet="dpi", signature=c("phenotype","hits"),
+                    orderAbsValue=TRUE, tfs=NULL, 
+                    verbose=TRUE) 
              standardGeneric("tna.gsea1"), package="RTN")
 setGeneric("tna.gsea2",
            function(object, pValueCutoff=0.05, pAdjustMethod="BH",  
                     minRegulonSize=15, sizeFilterMethod="posORneg", 
                     nPermutations=1000, exponent=1, tnet="dpi", 
-                    tfs=NULL, verbose=TRUE, doSizeFilter=NULL) 
+                    signature=c("phenotype","hits"), tfs=NULL,  
+                    verbose=TRUE, doSizeFilter=NULL) 
              standardGeneric("tna.gsea2"), package="RTN")
 setGeneric("tna.get",
            function(object, what="summary", order=TRUE, ntop=NULL, 

@@ -25,32 +25,33 @@ sortAnnotation<-function(annotation){
 
 ##------------------------------------------------------------------------
 ##get markers from computed AVS
-getMarkers.vset<-function(variantSet,getlinked=TRUE){
-  markers<-NULL
-  lkmarkers<-unique(unlist(
-    lapply(variantSet,function(vset){
-      if(is(vset,"IRanges")){
-        markers<<-c(markers,names(vset@metadata$blocks))
-        tp<-lapply(vset@metadata$blocks,names)
-      } else {
-        markers<<-c(markers,names(vset))
-        tp<-lapply(vset,names)
-      }
-      tp
-    })
-  ))
-  if(getlinked){
-    return(lkmarkers)
-  } else {
-    return(markers)
+getMarkers.vset<-function(variantSet){
+  lkblocks <- lapply(variantSet,function(vset){
+    if(is(vset,"IRanges")){
+      tp <- lapply(vset@metadata$blocks,names)
+    } else {
+      tp <- lapply(vset,names)
+    }
+    tp
+  })
+  lkmarkers <- NULL
+  for(i in 1:length(lkblocks)){
+    tp <- lkblocks[[i]]
+    for(j in 1:length(tp)){
+      tpp <- tp[[j]]
+      names(tpp) <- rep(names(tp)[j],length(tpp))
+      lkmarkers <- c(lkmarkers, tpp)
+    }
   }
+  lkmarkers <- lkmarkers[!duplicated(lkmarkers)]
+  return(lkmarkers)
 }
 
 ##------------------------------------------------------------------------
 ##get markers from computed random AVS
-getMarkers.rset<-function(randomSet,getlinked=TRUE){
+getMarkers.rset<-function(randomSet){
   lkmarkers<-lapply(1:length(randomSet),function(i){
-    res<-getMarkers.vset(randomSet[[i]],getlinked)
+    res <- getMarkers.vset(randomSet[[i]])
   })
   unique(unlist(lkmarkers))
 }

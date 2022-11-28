@@ -10,7 +10,7 @@ This function calculates an enrichment score between gene sets and samples.
 }
 
 \usage{
-tni.annotate.samples(object, geneSetList, minGeneSetSize = 15, 
+tni.annotate.samples(object, geneSetList, minSetSize = 15, 
     exponent = 1, samples=NULL, verbose = TRUE)
 }
 
@@ -22,7 +22,7 @@ a preprocessed object of class 'TNI' \code{\link[RTN:TNI-class]{TNI-class}}.
 \item{geneSetList}{
 a list with gene sets.
 }
-\item{minGeneSetSize}{
+\item{minSetSize}{
 a single integer or numeric value specifying the minimum number of 
 elements in a gene set that must map to elements of the gene universe. 
 Gene sets with fewer than this number are removed from the analysis.

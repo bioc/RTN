@@ -167,23 +167,40 @@ tna.duplicate.remover <- function(phenotype, method = "max") {
 }
 
 ##------------------------------------------------------------------------
-##This function returns the nominal p-value for the GSEA results
-tna.perm.pvalues <- function(permScores, observedScores){
+## This function returns the nominal p-value for the GSEA results
+tna.perm.pvalues <- function(permScores, observedScores, exact=TRUE){
 	nPerm <- ncol(permScores)
-	pval <- rep(1, length(observedScores))
+	pvals <- rep(1, length(observedScores))
 	##check how many permScores are higher (in magnitude) than
 	##the observedScores; done separately for negative and positive
 	##scores; pseudocounts are added to avoid P-values of zero.
 	valid.id <- which(!is.na(observedScores) & observedScores!=0)
 	for(i in valid.id) {
-	  pval[i]<-ifelse(
+	  pvals[i] <- ifelse(
 			observedScores[i] > 0,
 			(sum(permScores[i, ] > observedScores[i])+1)/(nPerm+1),
 			(sum(permScores[i, ] < observedScores[i])+1)/(nPerm+1)
 		)
 	}
-	names(pval)<-names(observedScores)		
-	return(pval)
+	names(pvals) <- names(observedScores)
+	if(exact){
+	  p.resolution <- (1+1)/(nPerm+1)
+	  mu <- apply(permScores, 1, mean)
+	  std <- apply(permScores, 1, sd)
+	  idx1 <- pvals <= p.resolution & std!=0
+	  if(any(idx1)){
+	    ep <- .exact_pvalue(mu[idx1], std[idx1], val=observedScores[idx1])
+	    idx2 <- ep < pvals[idx1]
+	    pvals[idx1][idx2] <- ep[idx2]
+	  }
+	}
+	return(pvals)
+}
+## exact pvalues using permutational central limit theorem
+.exact_pvalue <- function(mu, std, val){
+  z <- (val - mu)/std
+  p_vals <- pnorm(-abs(z), lower.tail=TRUE)
+  return(p_vals)
 }
 
 #--------------------------------------------------------------------

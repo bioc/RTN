@@ -38,7 +38,7 @@ not (when verbose=FALSE).
 a single integer or numeric value used in weighting phenotypes in GSEA.
 }
 \item{tnet}{
-can take values of 'refnet', 'dpi' or 'cdt'. It refers to the version of the 
+can take values of 'ref', 'dpi' or 'cdt'. It refers to the version of the 
 regulatory network that will be used for GSEA analysis.
 }
 \item{regulatoryElements}{

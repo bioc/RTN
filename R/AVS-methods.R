@@ -733,9 +733,9 @@ setMethod(
     } else if(what=="randomSet"){
       query<-object@randomSet
     } else if(what=="randomMarkers"){
-      query<-getMarkers.rset(object@randomSet,getlinked=TRUE)
+      query <- getMarkers.rset(object@randomSet)
     } else if(what=="linkedMarkers"){
-      query<-getMarkers.vset(object@variantSet,getlinked=TRUE)
+      query <- getMarkers.vset(object@variantSet)
     } else if(what=="evse"){
       if(is.null(pValueCutoff))pValueCutoff<-object@para$evse$pValueCutoff
       if(!is.null(object@results$evse)){

@@ -12,7 +12,7 @@ This function takes a TNA object and returns a CMAP-like analysis obtained by tw
 \usage{
 tna.gsea2(object, pValueCutoff=0.05, pAdjustMethod="BH", minRegulonSize=15, 
 sizeFilterMethod="posORneg", nPermutations=1000, exponent=1, tnet="dpi", 
-tfs=NULL, verbose=TRUE, doSizeFilter=NULL)
+signature=c("phenotype","hits"), tfs=NULL, verbose=TRUE, doSizeFilter=NULL)
 }
 
 \arguments{
@@ -47,6 +47,9 @@ a single integer or numeric value used in weighting phenotypes in GSEA
 \item{tnet}{
 a single character value specifying which transcriptional network should to used to 
 compute the GSEA analysis. Options: "dpi" and "ref".
+}
+\item{signature}{
+a single character value specifying which signature to use in the GSEA method. This could be the 'phenotype' already provided by the user (usually log2 differential expression values) or a 'phenotype' derived from the 'hits'; see \code{\link[RTN:tni2tna.preprocess]{tni2tna.preprocess}} for details on 'phenotype' and 'hits' parameters.
 }
 \item{tfs}{
 an optional vector with transcription factor identifiers.

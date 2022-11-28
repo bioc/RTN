@@ -10,30 +10,36 @@ This function calculates an enrichment score between gene sets and regulons.
 }
 
 \usage{
-tni.annotate.regulons(object, geneSetList, regulatoryElements = NULL, 
-    minGeneSetSize = 15, sizeFilterMethod="posORneg",
-    exponent = 1, verbose = TRUE)
+tni.annotate.regulons(object, geneSetList, sampleSetList = NULL, 
+regulatoryElements = NULL, minSetSize = 15, sizeFilterMethod="posORneg", 
+exponent = 1, verbose = TRUE)
 }
 
 \arguments{
 
 \item{object}{
-a preprocessed object of class 'TNI' \code{\link[RTN:TNI-class]{TNI-class}} already evaluated by the 
-\code{\link[RTN:tni.dpi.filter]{tni.dpi.filter}} method.
+a preprocessed object of class 'TNI' \code{\link[RTN:TNI-class]{TNI-class}} 
+already evaluated by the \code{\link[RTN:tni.dpi.filter]{tni.dpi.filter}} 
+method.
 }
 \item{geneSetList}{
 a list with gene sets.
 }
+\item{sampleSetList}{
+an optional list with sample sets. The 'sampleSetList' should list numerical or 
+integer vectors, with '0s' and '1s', which are used to split samples into
+two groups. This option overrides the 'geneSetList' parameter (see Details).
+}
 \item{regulatoryElements}{
 a vector of valid regulatory elements (e.g. transcription factors).
 }
-\item{minGeneSetSize}{
+\item{minSetSize}{
 a single integer or numeric value specifying the minimum number of 
 elements in a gene set that must map to elements of the gene universe. 
 Gene sets with fewer than this number are removed from the analysis.
 }
 \item{sizeFilterMethod}{
-a single character value specifying the use of the 'minGeneSetSize' argument, which is applyed to regulon's positive and negative targets. Options: "posANDneg", "posORneg", "posPLUSneg". For "posANDneg", the number of both positive and negative targets should be > 'minGeneSetSize'; for "posORneg", the number of either positive or negative targets should be > 'minRegulonSize'; and for "posPLUSneg", the number of all targets should be > 'minGeneSetSize'.
+a single character value specifying the use of the 'minSetSize' argument, which is applyed to regulon's positive and negative targets. Options: "posANDneg", "posORneg", "posPLUSneg". For "posANDneg", the number of both positive and negative targets should be > 'minSetSize'; for "posORneg", the number of either positive or negative targets should be > 'minRegulonSize'; and for "posPLUSneg", the number of all targets should be > 'minSetSize'.
 }
 \item{exponent}{
 a single integer or numeric value used in weighting phenotypes in GSEA

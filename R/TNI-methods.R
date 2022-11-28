@@ -837,33 +837,29 @@ setMethod(
     tnai.checks(name="TNI",para=object)
     tnai.checks(name="phenotype",para=phenotype)
     tnai.checks(name="hits",para=hits)
-    phenoIDs<-tnai.checks(name="phenoIDs",para=phenoIDs)
+    phenoIDs <- tnai.checks(name="phenoIDs",para=phenoIDs)
     tnai.checks(name="duplicateRemoverMethod",para=duplicateRemoverMethod)
     tnai.checks(name="verbose",para=verbose)
     ##-----generate a new object of class TNA
     .object <- new("TNA",
-                   referenceNetwork=object@results$tn.ref,
-                   transcriptionalNetwork=object@results$tn.dpi, 
-                   regulatoryElements=object@regulatoryElements, 
+                   tni=object,
                    phenotype=phenotype,
                    hits=hits)
-    if(nrow(object@rowAnnotation)>0)
-      .object@rowAnnotation <- object@rowAnnotation[object@targetElements,,drop=FALSE]
     if(!is.null(object@results$conditional) && 
        length(object@results$conditional)>0){
-      cdt<-tni.get(object,what="cdt.list")
-      lmod<-lapply(cdt,function(reg){
+      cdt <- tni.get(object,what="cdt.list")
+      lmod <- lapply(cdt,function(reg){
         if(nrow(reg)>0){
-          tp<-reg$Mode
-          names(tp)<-rownames(reg)
+          tp <- reg$Mode
+          names(tp) <- rownames(reg)
         } else {
           tp=character()
         }
         tp
       })
-      .object@listOfModulators<-lmod
+      .object@listOfModulators <- lmod
     }
-    .object <- tna.preprocess(.object,phenoIDs=phenoIDs,
+    .object <- tna.preprocess(.object, phenoIDs=phenoIDs,
                               duplicateRemoverMethod=duplicateRemoverMethod,
                               verbose=verbose)
     return(.object)
@@ -1354,7 +1350,8 @@ setMethod(
     tnai.checks(name="amapCutoff",para=amapCutoff)
     tnai.checks(name="mask",para=mask)
     #---
-    if(gtype=="mmap" || gtype=="mmapDetailed")tnet="dpi"
+    if(gtype=="mmap" || gtype=="mmapDetailed")
+      tnet="dpi"
     if(tnet=="ref"){
       tnet<-object@results$tn.ref
     } else {
@@ -1430,9 +1427,9 @@ setMethod(
       if(gtype=="mmapDetailed"){
         #---experimental!!!
         #return a lista with:
-        #1st level: a TF
-        #2nd level: all MDs of a TF
-        #3rd level: a graph
+        #1st: a TF
+        #2nd: all MDs of a TF
+        #3rd: a graph
         if(is.null(mds)){
           mds <- modulators
         } else {
@@ -1561,7 +1558,11 @@ setMethod(
       return(g)
       
     } else if(gtype=="amapDend"){
-      
+      #---experimental!!!
+      #returns a lista with:
+      #1st: an igraph
+      #2nd: a list with nests
+      #3rd: an hclust object
       if(!is.null(hcl)){
         gg<-hclust2igraph(hcl)
       } else {
@@ -1590,7 +1591,7 @@ setMethod(
       V(gg$g)$nestSize[idx]<-nestsz
       #---set main attribs
       gg$g<-att.setv(g=gg$g, from="degree", to='nodeSize', xlim=xlim, 
-                     breaks=breaks, nquant=nquant, roundleg=0, 
+                     breaks=breaks, nquant=nquant, roundleg=1, 
                      title="Regulon size")
       V(gg$g)$internalNode <- FALSE
       V(gg$g)$internalNode[is.na(V(gg$g)$degree)] <- TRUE
@@ -1618,8 +1619,8 @@ setMethod(
     object <- upgradeTNI(object)
     
     #--- check arguments
-    if(object@status["Preprocess"]!="[x]")
-      stop("input 'object' needs preprocessing!")
+    if(object@status["DPI.filter"]!="[x]")
+      stop("input 'object' needs dpi analysis!")
     tnai.checks("verbose",verbose)
     tnai.checks("removeRegNotAnnotated",removeRegNotAnnotated)
     
@@ -1719,19 +1720,14 @@ setMethod(
     new_rowAnnotation <- new_rowAnnotation[,!names(new_rowAnnotation)=="NA", 
                                            drop=FALSE]
     
-    #--- Remove 'targetElements' not listed in the new_rowAnnotation
-    idx <- object@targetElements %in% rownames(new_rowAnnotation)
-    object@targetElements <- object@targetElements[idx]
+    #--- Update'targetElements'  listed in the new_rowAnnotation
     object@results$tn.ref <- object@results$tn.ref[
-      object@targetElements,,drop=FALSE]
+      rownames(new_rowAnnotation),,drop=FALSE]
     object@results$tn.dpi <- object@results$tn.dpi[
-      object@targetElements,,drop=FALSE]
-    
-    #--- Update 'targetElements' annotation
-    idx <- match(object@targetElements, rownames(new_rowAnnotation))
-    object@targetElements <- new_rowAnnotation$ID_NEW[idx]
-    rownames(object@results$tn.ref) <- object@targetElements
-    rownames(object@results$tn.dpi) <- object@targetElements
+      rownames(new_rowAnnotation),,drop=FALSE]
+    rownames(object@results$tn.ref) <- new_rowAnnotation$ID_NEW
+    rownames(object@results$tn.dpi) <- new_rowAnnotation$ID_NEW
+    object@targetElements <- new_rowAnnotation$ID_NEW
     
     #--- Remove 'regulatoryElements' not listed in the new_rowAnnotation
     if(removeRegNotAnnotated){
@@ -1857,12 +1853,12 @@ setMethod(
           cat(textRegsMI)
           #-- Warning for < 15 targets in a cloud
           if (regSummary$targets["DPInet","Positive"] < 15) {
-            tp <- paste0("This regulon has less than 15 positive targets.",
-                         "Regulon activity readings may be unreliable.\n")
+            tp <- paste0("This regulon has less than 15 positive targets; ",
+                         "regulon activity readings may be unreliable.\n")
             warning(tp)
           } else if (regSummary$targets["DPInet","Negative"] < 15) {
-            tp <- paste("This regulon has less than 15 negative targets.",
-                        "Regulon activity readings may be unreliable.\n")
+            tp <- paste("This regulon has less than 15 negative targets; ",
+                        "regulon activity readings may be unreliable.\n")
             warning(tp)
           }
           cat("---\n")

@@ -6,47 +6,29 @@
 ##initialization method
 setMethod("initialize",
 		"TNA",
-		function(.Object, transcriptionalNetwork, referenceNetwork, 
-             regulatoryElements, phenotype=NULL, hits=NULL) {
-		  
-		  #---check compatibility
-		  .Object <- upgradeTNA(.Object)
+		function(.Object, tni, phenotype=NULL, hits=NULL) {
 		  
 			##-----check arguments
-			if(missing(transcriptionalNetwork))
-			  stop("NOTE: 'transcriptionalNetwork' is missing!",call.=FALSE)
-			if(missing(referenceNetwork))referenceNetwork=transcriptionalNetwork
-			if(missing(regulatoryElements))
-			  stop("NOTE: 'regulatoryElements' is missing!",call.=FALSE)
-			tnai.checks(name="transcriptionalNetwork",transcriptionalNetwork)
-			tnai.checks(name="referenceNetwork",referenceNetwork)
+			if(missing(tni)) stop("NOTE: 'tni' is missing!",call.=FALSE)
 			tnai.checks(name="phenotype",phenotype)
 			tnai.checks(name="hits",hits)
-			tnai.checks(name="regulatoryElements",regulatoryElements)    
       if(is.null(phenotype) && is.null(hits)){
        stop("NOTE: either 'phenotype' or 'hits' should be available!",call.=FALSE)
       }
-      b1<-sum(!colnames(referenceNetwork)==colnames(transcriptionalNetwork)) > 0
-			b2<-sum(!rownames(referenceNetwork)==rownames(transcriptionalNetwork)) > 0
-			if(b1 || b2) 
-			  stop("NOTE: col and row names in 'referenceNetwork' should match 'transcriptionalNetwork'!",
-			       call.=FALSE)
-			if(sum(!regulatoryElements%in%colnames(transcriptionalNetwork))>0)
-			  stop("NOTE: one or more 'regulatoryElements' missing in the 'transcriptionalNetwork'!",
-			       call.=FALSE)
-      if(is.null(names(regulatoryElements)))names(regulatoryElements) <- regulatoryElements      
 			##-----initialization
-			.Object@transcriptionalNetwork<-transcriptionalNetwork
-			.Object@referenceNetwork<-referenceNetwork
-			.Object@regulatoryElements<-regulatoryElements
-			.Object@phenotype<-phenotype
-			.Object@hits<-hits
-			.Object@rowAnnotation<-data.frame()
-			.Object@listOfRegulons<-list()
-			.Object@listOfReferenceRegulons<-list()
-			.Object@listOfModulators<-list()
-			.Object@para<-list()
-			.Object@results<-list()
+			.Object@transcriptionalNetwork <- tni@results$tn.dpi
+			.Object@referenceNetwork <- tni@results$tn.ref
+			.Object@regulatoryElements <- tni@regulatoryElements
+			.Object@gexp <- tni@gexp
+			.Object@rowAnnotation <- tni@rowAnnotation
+			.Object@colAnnotation <- tni@colAnnotation
+			.Object@phenotype <- phenotype
+			.Object@hits <- hits
+			.Object@listOfRegulons <- list()
+			.Object@listOfReferenceRegulons <- list()
+			.Object@listOfModulators <- list()
+			.Object@para <- list()
+			.Object@results <- list()
 			#######summary info######
 			##-----tnet targets
 			sum.info.tar<-matrix(,1,3)
@@ -406,7 +388,8 @@ setMethod(
   "TNA",
   function(object, pValueCutoff=0.05, pAdjustMethod="BH",  minRegulonSize=15, 
            sizeFilterMethod="posORneg", nPermutations=1000, exponent=1, tnet="dpi", 
-           orderAbsValue=TRUE, tfs=NULL, verbose=TRUE){
+           signature=c("phenotype","hits"), orderAbsValue=TRUE, tfs=NULL,  
+           verbose=TRUE){
     
     #---check compatibility
     object <- upgradeTNA(object)
@@ -425,13 +408,15 @@ setMethod(
     tnai.checks(name="gsea.tnet",para=tnet)
     tnai.checks(name="tfs",para=tfs)
     tnai.checks(name="orderAbsValue",para=orderAbsValue)
-    tnai.checks(name="verbose",para=verbose)    
+    tnai.checks(name="verbose",para=verbose) 
+    signature <- match.arg(signature)
     object@para$gsea1<-list(pValueCutoff=pValueCutoff, 
                             pAdjustMethod=pAdjustMethod, 
                             minRegulonSize=minRegulonSize, 
                             nPermutations=nPermutations, 
                             exponent=exponent,tnet=tnet,
-                            orderAbsValue=orderAbsValue)
+                            orderAbsValue=orderAbsValue,
+                            signature=signature)
     object@summary$para$gsea1[1,]<-c(pValueCutoff, pAdjustMethod, 
                                      minRegulonSize, 
                                      nPermutations,exponent,
@@ -477,16 +462,23 @@ setMethod(
       stop("NOTE: no regulon passed the 'minRegulonSize' requirement!")
     }
     
+    ##-----get phenotype for gsea1
+    if(signature=="phenotype"){
+      signature <- object@phenotype
+    } else {
+      
+    }
+    
     ##-----remove genes not listed in the phenotype
     for(i in names(rgcs)){
       regs <- rgcs[[i]]
-      rgcs[[i]] <- regs[regs %in% names(object@phenotype)]
+      rgcs[[i]] <- regs[regs %in% names(signature)]
     }
     
     ##-----run gsea1
     GSEA1.results<-run.gsea1(
       listOfRegulons=rgcs,
-      phenotype=object@phenotype,
+      phenotype=signature,
       pAdjustMethod=object@para$gsea1$pAdjustMethod,
       nPermutations=object@para$gsea1$nPermutations,
       exponent=object@para$gsea1$exponent,
@@ -517,16 +509,22 @@ setMethod(
   "tna.gsea2",
   "TNA",
   function(object, pValueCutoff=0.05, pAdjustMethod="BH", minRegulonSize=15, 
-           sizeFilterMethod="posORneg", nPermutations=1000, exponent=1, tnet="dpi", 
-           tfs=NULL, verbose=TRUE, doSizeFilter=NULL){
+           sizeFilterMethod="posORneg", nPermutations=1000, exponent=1, 
+           tnet="dpi", signature=c("phenotype","hits"), tfs=NULL,
+           verbose=TRUE, doSizeFilter=NULL){
     
     #---check compatibility
     object <- upgradeTNA(object)
-    
+    signature <- match.arg(signature)
     if(object@status$preprocess["integration"]!="[x]")
       stop("NOTE: input 'object' needs preprocessing!")
-    if(object@status$preprocess["phenotype"]!="[x]")
-      stop("NOTE: input 'phenotype' is empty and/or needs preprocessing!")
+    if(signature=="phenotype"){
+      if(object@status$preprocess["phenotype"]!="[x]")
+        stop("NOTE: input 'phenotype' is empty!")
+    } else if(signature=="hits"){
+      if(object@status$preprocess["hits"]!="[x]")
+        stop("NOTE: input 'hits' is empty!")
+    }
     ##-----check and assign parameters
     tnai.checks(name="pValueCutoff",para=pValueCutoff)
     tnai.checks(name="pAdjustMethod",para=pAdjustMethod)
@@ -537,15 +535,16 @@ setMethod(
     tnai.checks(name="gsea.tnet",para=tnet)
     tnai.checks(name="tfs",para=tfs)
     tnai.checks(name="verbose",para=verbose)
-    object@para$gsea2<-list(pValueCutoff=pValueCutoff, 
-                            pAdjustMethod=pAdjustMethod, 
-                           minRegulonSize=minRegulonSize, 
-                           sizeFilterMethod=sizeFilterMethod,
-                           nPermutations=nPermutations, 
-                           exponent=exponent,tnet=tnet)
-    object@summary$para$gsea2[1,]<-c(pValueCutoff, 
-                                     pAdjustMethod, minRegulonSize, 
-                                     nPermutations, exponent, tnet)
+    object@para$gsea2 <- list(pValueCutoff=pValueCutoff, 
+                              pAdjustMethod=pAdjustMethod, 
+                              minRegulonSize=minRegulonSize, 
+                              sizeFilterMethod=sizeFilterMethod,
+                              nPermutations=nPermutations, 
+                              exponent=exponent,tnet=tnet,
+                              signature=signature)
+    object@summary$para$gsea2[1,] <- c(pValueCutoff, 
+                                       pAdjustMethod, minRegulonSize, 
+                                       nPermutations, exponent, tnet)
     
     if(!is.null(doSizeFilter)){
       warning("'doSizeFilter' is deprecated, please use the 'sizeFilterMethod' parameter.")
@@ -558,9 +557,25 @@ setMethod(
     }
     
     ##------check phenotype for gsea2
-    if(!min(object@phenotype)<0 || !max(object@phenotype)>0){
-      warning("NOTE: it is expected 'phenotype' data as differential expression values (e.g. logFC)!")
+    if(signature=="phenotype"){
+      if(!min(object@phenotype)<0 || !max(object@phenotype)>0){
+        warning("NOTE: it is expected 'phenotype' data as differential expression values (e.g. logFC)!")
+      }
+      signature <- object@phenotype
+    } else {
+      if(verbose) cat("-Generating 'phenotype' from 'hits' signature...\n")
+      hits <- object@hits
+      gexp <- object@gexp
+      if(.isUnloggedData(gexp)){
+        if(verbose) cat("-Applying log2 transformation!\n")
+        gexp <- .log2transform(gexp)
+      }
+      samps <- apply(gexp[hits,], 2, mean)
+      sp1 <- names(samps[samps>median(samps)])
+      sp2 <- names(samps[samps<median(samps)])
+      signature <- apply(gexp[,sp1], 1, mean) - apply(gexp[,sp2], 1, mean)
     }
+
     ##-----get tnet and regulons
     if(tnet=="ref"){
       tnet <- object@referenceNetwork
@@ -606,13 +621,13 @@ setMethod(
     ##-----remove genes not listed in phenotype
     for(i in names(listOfRegulonsAndMode)){
       regs <- listOfRegulonsAndMode[[i]] 
-      listOfRegulonsAndMode[[i]] <- regs[names(regs)%in%names(object@phenotype)]
+      listOfRegulonsAndMode[[i]] <- regs[names(regs)%in%names(signature)]
     }
     
     ##-----run gsea2
-    GSEA2.results<-run.gsea2(
+    GSEA2.results <- run.gsea2(
       listOfRegulonsAndMode=listOfRegulonsAndMode,
-      phenotype=object@phenotype,
+      phenotype=signature,
       pAdjustMethod=object@para$gsea2$pAdjustMethod,
       nPermutations=object@para$gsea2$nPermutations, 
       exponent=object@para$gsea2$exponent,
@@ -661,12 +676,12 @@ tna.preprocess<-function(object, phenoIDs=NULL, duplicateRemoverMethod="max",
   if(verbose)cat("-Preprocessing for input data...\n")
   ##-----data preprocessing: phenotype
   if(!is.null(object@phenotype))
-    object<-pheno.preprocess(object, phenoIDs, duplicateRemoverMethod, verbose)
+    object <- pheno.preprocess(object, phenoIDs, duplicateRemoverMethod, verbose)
   ##-----data preprocessing: hits
   if(!is.null(object@hits))
-    object<-hits.preprocess(object, phenoIDs, verbose)
+    object <- hits.preprocess(object, phenoIDs, verbose)
   ##-----data preprocessing: integration
-  object<-data.integration(object, verbose)
+  object <- data.integration(object, verbose)
   ##-----update and return preprocessing
   if(verbose)cat("-Preprocessing complete!\n\n")
   object@status$analysis[c("MRA", "Overlap", "GSEA1", "GSEA2")] <- "[ ]"
@@ -679,47 +694,34 @@ pheno.preprocess<-function(object, phenoIDs, duplicateRemoverMethod, verbose){
   ##-----check phenoIDs if available
   if(!is.null(phenoIDs)){
     if(verbose)cat("--Mapping 'phenotype' to 'phenoIDs'...\n")
-    ids<-phenoIDs[,2]
+    ids <- phenoIDs[,2]
     names(ids)<-phenoIDs[,1]
     if( !all(names(object@phenotype) %in% names(ids)) ){
       stop("NOTE: all names in 'phenotype' should be available in col1 of 'phenoIDs'!",
            call.=FALSE)
     }
-    names(object@phenotype)<-ids[names(object@phenotype)]
+    names(object@phenotype) <- ids[names(object@phenotype)]
   }
   ##-----remove NAs in phenotype
-  pheno<-object@phenotype
-  idx<-!is.na(pheno) & names(pheno)!="" & !is.na(names(pheno))
+  pheno <- object@phenotype
+  idx <- !is.na(pheno) & names(pheno)!="" & !is.na(names(pheno))
   if(any(!idx)){
     if(verbose) cat("--Removing genes without names or values in 'phenotype'...\n")
-    pheno<-pheno[idx]
+    pheno <- pheno[idx]
   }
-  object@summary$gl[,"valid"]<-length(pheno) #genes with valid values
-  if(length(pheno)==0)stop("NOTE: input 'phenotype' contains no useful data!\n",
-                           call.=FALSE)
+  object@summary$gl[,"valid"] <- length(pheno) #genes with valid values
+  if(length(pheno)==0) stop("NOTE: input 'phenotype' contains no useful data!\n",
+                            call.=FALSE)
   ##-----duplicate remover in phenotype
-  uninames<-unique(names(pheno))
+  uninames <- unique(names(pheno))
   if(length(names(pheno))>length(uninames)){
     if(verbose) cat("--Removing duplicated genes...\n")
-    pheno<-tna.duplicate.remover(phenotype=pheno,method=duplicateRemoverMethod)
+    pheno <- tna.duplicate.remover(phenotype=pheno, method=duplicateRemoverMethod)
   }
   object@summary$gl[,"duplicate.removed"]<-length(pheno)	#after removing duplicates
   if(length(pheno)==0)stop("NOTE: input 'phenotype' contains no useful data!\n",
                            call.=FALSE)
   object@phenotype<-pheno
-
-  ##-----check phenotype names in transcriptionalNetwork
-  #if(verbose)cat("--Checking 'transcriptionalNetwork' targets in 'phenotype'...")
-  #idx<-rownames(object@transcriptionalNetwork) %in% names(object@phenotype)
-  #checkmatch<-sum(idx)/length(idx)
-  #if(checkmatch==0){
-  #  stop("NOTE: 'no agreement between names in 'transcriptionalNetwork' targets and 'phenotype'!")
-  #} else if(checkmatch<0.9){
-   # warning(paste("Only",round(checkmatch*100,1),
-   #               "% of 'transcriptionalNetwork' targets can be mapped to 'phenotype'!"))
-  #} else {
-  #  if(verbose)cat(paste(round(checkmatch*100,1),"% agreement! \n"))
-  #}
   
   ##-----update and return
   object@status$preprocess["phenotype"] <- "[x]"
@@ -730,25 +732,27 @@ pheno.preprocess<-function(object, phenoIDs, duplicateRemoverMethod, verbose){
 ##This function returns a preprocessed tna object
 hits.preprocess<-function(object, phenoIDs, verbose){
   ##-----make sure vector 'hits' is set to character
-  object@hits<-as.character(object@hits)
+  object@hits <- as.character(object@hits)
   ##-----input summary         
   object@summary$hts[,"input"]<-length(object@hits)
   ##-----check phenoIDs if available
   if(!is.null(phenoIDs)){
-    if(verbose)cat("--Mapping 'hits' to 'phenoIDs'...\n")
-    ids<-phenoIDs[,2]
-    names(ids)<-phenoIDs[,1]
+    if(verbose) cat("--Mapping 'hits' to 'phenoIDs'...\n")
+    ids <- phenoIDs[,2]
+    names(ids) <- phenoIDs[,1]
     if(sum( !(names(object@hits) %in% names(ids)) )>0 ){
       stop("NOTE: all names in 'hits' should be available in 'phenoIDs'!",
            call.=FALSE)
     }
-    object@hits<-ids[object@hits]
+    object@hits <- ids[object@hits]
   }
   ##-----remove duplicated hits
-  if(verbose) cat("--Removing duplicated hits...\n")
-  object@hits<-unique(object@hits)
-  object@hits<-object@hits[!is.na(object@hits)]
-  object@summary$hts[,"duplicate.removed"]<-length(object@hits)
+  if(anyDuplicated(object@hits) || anyNA(object@hits)){
+    if(verbose) cat("--Removing duplicated hits...\n")
+    object@hits <- unique(object@hits)
+    object@hits <- object@hits[!is.na(object@hits)]
+  }
+  object@summary$hts[,"duplicate.removed"] <- length(object@hits)
   if(length(object@hits)==0)
     stop("NOTE: input 'hits' contains no useful data!\n",call.=FALSE)
   
@@ -762,198 +766,137 @@ hits.preprocess<-function(object, phenoIDs, verbose){
 data.integration<-function(object, verbose){
   
   ##-----input summary
-  object@summary$tar[,"input"]<-nrow(object@transcriptionalNetwork)
-  object@summary$rgc[,"input"]<-length(object@regulatoryElements)
+  object@summary$tar[,"input"] <- nrow(object@transcriptionalNetwork)
+  object@summary$rgc[,"input"] <- length(object@regulatoryElements)
   
-  ##-----check rowAnnotation if available  
-  if(nrow(object@rowAnnotation)>0){
-    if(verbose)
-      cat("--Mapping 'transcriptionalNetwork' annotation to 'phenotype'...\n")
-    annot<-object@rowAnnotation
-    #col with possible current refids
-    col0<-sapply(1:ncol(annot),function(i){
-      sum(rownames(annot)%in%annot[,i],na.rm=TRUE)
-    })
-    if(max(col0)==nrow(annot)){
-      col0 <- which(col0==max(col0))[1]
-    } else {
-      col0 <- 0
+  ##-----check rowAnnotation
+  if(verbose)
+    cat("--Mapping 'transcriptionalNetwork' annotation to 'phenotype'...\n")
+  annot <- object@rowAnnotation
+  #col with possible current refids
+  col0 <- sapply(1:ncol(annot),function(i){
+    sum(rownames(annot)%in%annot[,i],na.rm=TRUE)
+  })
+  if(max(col0)==nrow(annot)){
+    col0 <- which(col0==max(col0))[1]
+  } else {
+    col0 <- 0
+  }
+  #col with possible phenoIDs (phenotype and hits)
+  phenoIDs <- unique(c(names(object@phenotype),object@hits))
+  col1 <- sapply(1:ncol(annot),function(i){
+    sum(phenoIDs%in%annot[,i],na.rm=TRUE)
+  })
+  col1 <- which(col1==max(col1))[1]
+  #col with possible gene symbols
+  col2 <- which(colnames(annot)=="SYMBOL")[1]
+  col2 <- ifelse(!is.na(col2),col2,0)
+  col2 <- ifelse(col1!=col2,col2,0)
+  othercols <- 1:ncol(annot)
+  othercols <- othercols[!othercols%in%c(col0,col1,col2)]
+  if(col0!=col1){
+    object@rowAnnotation <- annot[,c(col1,col2,col0,othercols),drop=FALSE]
+    uninames <- unique(object@rowAnnotation[,1])
+    uninames <- uninames[!is.na(uninames) & uninames!=""]
+    if(nrow(object@rowAnnotation)>length(uninames)){
+      if(verbose) cat("--Removing duplicated targets...\n")
+      idx <- match(uninames, object@rowAnnotation[,1])
+      object@rowAnnotation <- object@rowAnnotation[idx,,drop=FALSE]
+      object@referenceNetwork <- object@referenceNetwork[idx,,drop=FALSE]
+      object@transcriptionalNetwork <- object@transcriptionalNetwork[idx,,drop=FALSE]
+      object@gexp <- object@gexp[idx,,drop=FALSE]
     }
-    #col with possible phenoIDs (phenotype and hits)
-    phenoIDs<-unique(c(names(object@phenotype),object@hits))
-    col1<-sapply(1:ncol(annot),function(i){
-      sum(phenoIDs%in%annot[,i],na.rm=TRUE)
+    rownames(object@rowAnnotation) <- object@rowAnnotation[,1]
+    rownames(object@referenceNetwork) <- object@rowAnnotation[,1]
+    rownames(object@transcriptionalNetwork) <- object@rowAnnotation[,1]
+    rownames(object@gexp) <- object@rowAnnotation[,1]
+    #update TFs and colnames
+    tfs <- object@regulatoryElements
+    coltf <- sapply(1:ncol(object@rowAnnotation),function(i){
+      sum(tfs%in%object@rowAnnotation[,i],na.rm=TRUE)
     })
-    col1<-which(col1==max(col1))[1]
-    #col with possible gene symbols
-    #..obs. posso chamar SYMBOL aqui sem problema! a entrada e' unica, via objetos TNI,
-    #..ja verificados exaustivamente em pipeline anterior.
-    col2<-which(colnames(annot)=="SYMBOL")[1]
-    col2<-ifelse(!is.na(col2),col2,0)
-    col2<-ifelse(col1!=col2,col2,0)
-    #other cols
-    othercols<-1:ncol(annot)
-    othercols<-othercols[!othercols%in%c(col0,col1,col2)]
-    if(col0!=col1){
-      #set rowAnnotation to correct order
-      object@rowAnnotation<-annot[,c(col1,col2,col0,othercols),drop=FALSE]
-      #update rownames 
-      #(na anotacao somente mais adiante por nao aceitar nomes duplicados)
-      ids<-object@rowAnnotation[,1]
-      names(ids)<-rownames(object@rowAnnotation)
-      rownames(object@referenceNetwork)<-ids[
-        rownames(object@referenceNetwork)]
-      rownames(object@transcriptionalNetwork)<-ids[
-        rownames(object@transcriptionalNetwork)]
-      #update TFs and colnames
-      tfs<-object@regulatoryElements
+    coltf <- which(coltf==max(coltf))[1]
+    idx <- match(tfs,object@rowAnnotation[,coltf])
+    tnames <- object@rowAnnotation[idx,1]
+    names(tnames) <- names(tfs)
+    object@regulatoryElements <- tnames
+    #update transcriptionalNetwork colnames
+    tfs <- colnames(object@transcriptionalNetwork)
+    coltf <- sapply(1:ncol(object@rowAnnotation),function(i){
+      sum(tfs%in%object@rowAnnotation[,i],na.rm=TRUE)
+    })
+    coltf <- which(coltf==max(coltf))[1]
+    idx <- match(tfs,object@rowAnnotation[,coltf])
+    tnames <- object@rowAnnotation[idx,1]
+    names(tnames) <- names(tfs)  
+    colnames(object@transcriptionalNetwork) <- tnames
+    #update referenceNetwork colnames
+    tfs <- colnames(object@referenceNetwork)
+    coltf<-sapply(1:ncol(object@rowAnnotation),function(i){
+      sum(tfs%in%object@rowAnnotation[,i],na.rm=TRUE)
+    })
+    coltf <- which(coltf==max(coltf))[1]      
+    idx <- match(tfs,object@rowAnnotation[,coltf])
+    tnames <- object@rowAnnotation[idx,1]
+    names(tnames) <- names(tfs)  
+    colnames(object@referenceNetwork) <- tnames
+    object@summary$tar[,"duplicate.removed"] <- nrow(object@transcriptionalNetwork)
+    if(prod(dim(object@transcriptionalNetwork))==0)
+      stop("NOTE: input 'transcriptionalNetwork' contains no useful data!\n",
+           call.=FALSE)
+    ##-----update modulator list if available
+    if(length(object@listOfModulators)>0){
+      tfs<-names(object@listOfModulators)
       coltf<-sapply(1:ncol(object@rowAnnotation),function(i){
         sum(tfs%in%object@rowAnnotation[,i],na.rm=TRUE)
       })
-      coltf<-which(coltf==max(coltf))[1]
+      coltf<-which(coltf==max(coltf))[1]    
       idx<-match(tfs,object@rowAnnotation[,coltf])
-      tnames<-object@rowAnnotation[idx,1]
-      names(tnames)<-names(tfs)
-      object@regulatoryElements<-tnames
-      #update transcriptionalNetwork colnames
-      tfs<-colnames(object@transcriptionalNetwork)
-      coltf<-sapply(1:ncol(object@rowAnnotation),function(i){
-        sum(tfs%in%object@rowAnnotation[,i],na.rm=TRUE)
-      })
-      coltf<-which(coltf==max(coltf))[1]
-      idx<-match(tfs,object@rowAnnotation[,coltf])
-      tnames<-object@rowAnnotation[idx,1]
-      names(tnames)<-names(tfs)  
-      colnames(object@transcriptionalNetwork)<-tnames
-      #update referenceNetwork colnames
-      tfs<-colnames(object@referenceNetwork)
-      coltf<-sapply(1:ncol(object@rowAnnotation),function(i){
-        sum(tfs%in%object@rowAnnotation[,i],na.rm=TRUE)
-      })
-      coltf<-which(coltf==max(coltf))[1]      
-      idx<-match(tfs,object@rowAnnotation[,coltf])
-      tnames<-object@rowAnnotation[idx,1]
-      names(tnames)<-names(tfs)  
-      colnames(object@referenceNetwork)<-tnames
-      ##-----remove unnamed nodes in the tnets
-      ##tnet
-      tnames<-rownames(object@transcriptionalNetwork)
-      tnames<-!is.na(tnames) & tnames!=""
-      object@transcriptionalNetwork<-object@transcriptionalNetwork[
-        tnames,,drop=FALSE]
-      ##refnet
-      tnames<-rownames(object@referenceNetwork)
-      tnames<-!is.na(tnames) & tnames!=""
-      object@referenceNetwork<-object@referenceNetwork[tnames,,drop=FALSE]
-      ##rowAnnotation
-      tnames<-object@rowAnnotation[,1]
-      tnames<-!is.na(tnames) & tnames!=""
-      object@rowAnnotation<-object@rowAnnotation[tnames,,drop=FALSE]
-      ##-----remove duplicate nodes in tnet
-      uninames<-unique(rownames(object@transcriptionalNetwork))
-      if(length(rownames(object@transcriptionalNetwork))>length(uninames)){
-        if(verbose) cat("--Removing duplicated targets...\n")
-        abmax<-function(x){
-          imax<-max(x);imin<-min(x)
-          ifelse(imax>abs(imin),imax,imin)
+      tnames<-object@rowAnnotation[idx,1] 
+      names(object@listOfModulators)<-tnames
+      lmod<-sapply(object@listOfModulators,function(reg){
+        if(length(reg)>0){
+          idx<-match(names(reg),object@rowAnnotation[,coltf])
+          mnames<-object@rowAnnotation[idx,1]
+          mnames<-aggregate(reg,by=list(mnames),max, simplify=TRUE)
+          reg<-mnames[,2]
+          names(reg)<-mnames[,1]
         }
-        tnet<-object@transcriptionalNetwork
-        idx<-rownames(tnet)[duplicated(rownames(tnet))]
-        idx<-which(rownames(tnet)%in%idx)
-        tnetdp<-tnet[idx,,drop=FALSE];tnet<-tnet[-idx,,drop=FALSE]
-        #---
-        tnetdp<-aggregate(tnetdp,by=list(rownames(tnetdp)),abmax, simplify=TRUE)
-        rownames(tnetdp)<-tnetdp[,1]
-        tnetdp<-as.matrix(tnetdp[,-1,drop=FALSE])
-        #---
-        tnetdp<-tnetdp[,object@regulatoryElements,drop=FALSE]
-        tnet<-tnet[,object@regulatoryElements,drop=FALSE]
-        tnet<-rbind(tnet,tnetdp)
-        #---
-        object@transcriptionalNetwork<-tnet    
-      }
-      object@summary$tar[,"duplicate.removed"]<-nrow(object@transcriptionalNetwork)
-      if(prod(dim(object@transcriptionalNetwork))==0)
-        stop("NOTE: input 'transcriptionalNetwork' contains no useful data!\n",
-             call.=FALSE)
-      ##-----duplicate remover in refnet
-      uninames<-unique(rownames(object@referenceNetwork))
-      if(length(rownames(object@referenceNetwork))>length(uninames)){
-        abmax<-function(x){
-          imax<-max(x);imin<-min(x)
-          ifelse(imax>abs(imin),imax,imin)
-        }
-        tnet<-object@referenceNetwork
-        idx<-rownames(tnet)[duplicated(rownames(tnet))]
-        idx<-which(rownames(tnet)%in%idx)
-        tnetdp<-tnet[idx,,drop=FALSE];tnet<-tnet[-idx,,drop=FALSE]
-        #---
-        tnetdp<-aggregate(tnetdp,by=list(rownames(tnetdp)),abmax, simplify=TRUE)
-        rownames(tnetdp)<-tnetdp[,1]
-        tnetdp<-as.matrix(tnetdp[,-1,drop=FALSE])
-        #---        
-        tnetdp<-tnetdp[,object@regulatoryElements,drop=FALSE]
-        tnet<-tnet[,object@regulatoryElements,drop=FALSE]
-        tnet<-rbind(tnet,tnetdp)
-        #---
-        object@referenceNetwork<-tnet    
-      }
-      ##-----update modulator list if available
-      if(length(object@listOfModulators)>0){
-        tfs<-names(object@listOfModulators)
-        coltf<-sapply(1:ncol(object@rowAnnotation),function(i){
-          sum(tfs%in%object@rowAnnotation[,i],na.rm=TRUE)
-        })
-        coltf<-which(coltf==max(coltf))[1]    
-        idx<-match(tfs,object@rowAnnotation[,coltf])
-        tnames<-object@rowAnnotation[idx,1] 
-        names(object@listOfModulators)<-tnames
-        lmod<-sapply(object@listOfModulators,function(reg){
-          if(length(reg)>0){
-            idx<-match(names(reg),object@rowAnnotation[,coltf])
-            mnames<-object@rowAnnotation[idx,1]
-            mnames<-aggregate(reg,by=list(mnames),max, simplify=TRUE)
-            reg<-mnames[,2]
-            names(reg)<-mnames[,1]
-          }
-          reg
-        })
-        object@listOfModulators<-lmod
-      }
-      ##-----duplicate remover in rowAnnotation
-      #..get current refids col
-      col0<-sapply(1:ncol(object@rowAnnotation),function(i){
-        sum(rownames(object@rowAnnotation)%in%object@rowAnnotation[,i],
-            na.rm=TRUE)
+        reg
       })
-      if(max(col0)==nrow(object@rowAnnotation)){
-        col0 <- which(col0==max(col0))[1]
-      } else {
-        col0<-0
-      }
-      uninames<-unique(object@rowAnnotation[,1])
-      idx<-match(uninames,object@rowAnnotation[,1])
-      object@rowAnnotation<-object@rowAnnotation[idx,,drop=FALSE]
-      rownames(object@rowAnnotation)<-object@rowAnnotation[,1]
-      object@rowAnnotation<-object@rowAnnotation[,-col0,drop=FALSE] #agora ok p/ retirar!
-      ##-----check ordering
-      tp1<-rownames(object@rowAnnotation)
-      tp2<-rownames(object@transcriptionalNetwork)
-      tp3<-rownames(object@referenceNetwork)
-      b1<-all(tp1%in%tp2) & all(tp1%in%tp3)
-      b2<-length(tp1)==length(tp2) && length(tp1)==length(tp3)
-      if(b1 && b2){
-        object@transcriptionalNetwork<-object@transcriptionalNetwork[
-          rownames(object@rowAnnotation),,drop=FALSE]
-        object@referenceNetwork<-object@referenceNetwork[
-          rownames(object@rowAnnotation),,drop=FALSE]
-      } else {
-        warning("NOTE: possible mismatched names between 'transcriptionalNetwork' and 'rowAnnotation'!",
-                call.=FALSE)
-      }
+      object@listOfModulators<-lmod
+    }
+    ##-----check current refids col
+    # col0 <- sapply(1:ncol(object@rowAnnotation),function(i){
+    #   sum(rownames(object@rowAnnotation)%in%object@rowAnnotation[,i],
+    #       na.rm=TRUE)
+    # })
+    # if(max(col0)==nrow(object@rowAnnotation)){
+    #   col0 <- which(col0==max(col0))[1]
+    #   object@rowAnnotation <- object@rowAnnotation[,-col0,drop=FALSE]
+    # }
+    ##-----check ordering
+    tp1 <- rownames(object@rowAnnotation)
+    tp2 <- rownames(object@transcriptionalNetwork)
+    tp3 <- rownames(object@referenceNetwork)
+    tp4 <- rownames(object@gexp)
+    b1 <- all(tp1%in%tp2) & all(tp1%in%tp3) & all(tp1%in%tp4)
+    b2 <- length(tp1)==length(tp2) && length(tp1)==length(tp3) && 
+      length(tp1)==length(tp4)
+    if(b1 && b2){
+      object@transcriptionalNetwork <- object@transcriptionalNetwork[
+        rownames(object@rowAnnotation),,drop=FALSE]
+      object@referenceNetwork<-object@referenceNetwork[
+        rownames(object@rowAnnotation),,drop=FALSE]
+      object@gexp <- object@gexp[
+        rownames(object@rowAnnotation),,drop=FALSE]
+    } else {
+      warning("NOTE: possible mismatch between annotations!",
+              call.=FALSE)
     }
   }
-  ##update
+  
+  #-----update
   object@summary$tar[,"valid"]<-nrow(object@transcriptionalNetwork)
   if(nrow(object@transcriptionalNetwork)==0)
     stop("NOTE: input 'transcriptionalNetwork' contains no useful data!\n",
@@ -962,10 +905,10 @@ data.integration<-function(object, verbose){
   #-----check phenotype names in transcriptionalNetwork
   if(!is.null(object@phenotype)){
     if(verbose)cat("--Checking agreement between 'transcriptionalNetwork' and 'phenotype'... ")
-    phenoIDs<-unique(c(names(object@phenotype),object@hits))
-    idx<-rownames(object@transcriptionalNetwork) %in% phenoIDs
-    agreement<-sum(idx)/length(idx)*100
-    if(verbose)cat(paste(round(agreement,1),"% ! \n",sep=""))
+    phenoIDs <- unique(c(names(object@phenotype),object@hits))
+    idx <- rownames(object@transcriptionalNetwork) %in% phenoIDs
+    agreement <- sum(idx)/length(idx)*100
+    if(verbose) cat(paste(round(agreement,1),"% ! \n",sep=""))
     if(agreement<30){
       idiff<-round(100-agreement,1)
       tp<-paste("NOTE: ",idiff,
@@ -973,23 +916,23 @@ data.integration<-function(object, verbose){
                 sep="")
       stop(tp,call.=FALSE)
     } else if(agreement<90){
-      idiff<-round(100-agreement,1)
-      tp<-paste("NOTE: ",idiff,
+      idiff <- round(100-agreement,1)
+      tp <- paste("NOTE: ",idiff,
                 "% of 'transcriptionalNetwork' targets not represented in the 'phenotype'!",
                 sep="")
-      warning(tp,call.=FALSE)
+      warning(tp, call.=FALSE)
     }
   }
   
   #-----check and remove hits not listed in the universe
   if(!is.null(object@hits)){
-    hits.int<-intersect(object@hits,rownames(object@referenceNetwork))
+    hits.int <- intersect(object@hits,rownames(object@referenceNetwork))
     if(length(hits.int)<length(object@hits)){
       if(verbose) 
         cat("--Removing 'hits' not listed in 'transcriptionalNetwork' universe...\n")
-      object@hits<-hits.int
+      object@hits <- hits.int
     }
-    object@summary$hts[,"valid"]<-length(object@hits)
+    object@summary$hts[,"valid"] <- length(object@hits)
     if(length(object@hits)==0)
       stop("NOTE: input 'hits' contains no useful data!\n", call.=FALSE)
   }
@@ -997,20 +940,20 @@ data.integration<-function(object, verbose){
   ##-----extracting regulons from 'transcriptionalNetwork' 
   if(verbose) cat("--Extracting regulons...\n")
   #Regulons from tnet
-  listOfRegulons<-list()
+  listOfRegulons <- list()
   for(i in object@regulatoryElements){
-    idx<-object@transcriptionalNetwork[,i]!=0
-    listOfRegulons[[i]]<-rownames(object@transcriptionalNetwork)[idx]
+    idx <- object@transcriptionalNetwork[,i]!=0
+    listOfRegulons[[i]] <- rownames(object@transcriptionalNetwork)[idx]
   }
-  object@listOfRegulons<-listOfRegulons
+  object@listOfRegulons <- listOfRegulons
   
   #Regulons refnet
-  listOfReferenceRegulons<-list()
+  listOfReferenceRegulons <- list()
   for(i in object@regulatoryElements){
     idx<-object@referenceNetwork[,i]!=0
-    listOfReferenceRegulons[[i]]<-rownames(object@referenceNetwork)[idx]
+    listOfReferenceRegulons[[i]] <- rownames(object@referenceNetwork)[idx]
   }
-  object@listOfReferenceRegulons<-listOfReferenceRegulons
+  object@listOfReferenceRegulons <- listOfReferenceRegulons
   if(length(object@listOfRegulons)==0)
     stop("NOTE: derived 'listOfRegulons' contains no useful data!\n",
          call.=FALSE)

@@ -434,10 +434,10 @@ tnai.checks <- function(name, para, supp) {
     if(!(is.integer(para) || is.numeric(para)) || length(para)!=1 || 
        para<1 || round(para,0)!=para)
       stop("'minRegulonSize' should be an integer >=1 !",call.=FALSE) 
-  } else if(name=="minGeneSetSize") {
+  } else if(name=="minSetSize") {
     if(!(is.integer(para) || is.numeric(para)) || length(para)!=1 || 
        para<1 || round(para,0)!=para)
-      stop("'minGeneSetSize' should be an integer >=1 !",call.=FALSE) 
+      stop("'minSetSize' should be an integer >=1 !",call.=FALSE) 
   } else if(name=="minPrunedSize") {
     if(!(is.integer(para) || is.numeric(para)) || length(para)!=1 || 
        para<1 || round(para,0)!=para)
@@ -600,12 +600,12 @@ tnai.checks <- function(name, para, supp) {
     colnames(para)[1]<-"ID"
     #---
     for(i in seq_len(ncol(para))){
-      tp<-para[,i]
-      if( any( is.na(tp) || any(tp=="") ) ){
+      tp <- para[,i]
+      if( anyNA(tp) || any(tp=="") ){
         stop("'annotation' matrix should have no 'NA' or empty values!",
              call.=FALSE)      
       }
-      if(is.list(tp))para[,i]<-unlist(tp)
+      if(is.list(tp)) para[,i] <- unlist(tp)
     }
     #---
     para$ID<-as.character(para$ID)
@@ -670,7 +670,7 @@ tnai.checks <- function(name, para, supp) {
     #---
     for(i in seq_len(ncol(para))){
       tp<-para[,i]
-      if( any( is.na(tp) || any(tp=="") ) ){
+      if( anyNA(tp) || any(tp=="") ){
         stop("'annotation' matrix should have no 'NA' or empty values!",
              call.=FALSE)      
       }
@@ -905,6 +905,11 @@ tnai.checks <- function(name, para, supp) {
   } else if (name=="geneSetList") {
     if(!is.list(para))
       stop("'geneSetList' should be a list!", call.=FALSE)
+  } else if (name=="sampleSetList") {
+    if(!is.null(para)){
+      if(!is.list(para))
+        stop("'sampleSetList' should be a list!", call.=FALSE)
+    }
   } else if (name=="sampleGroups") {
     if(!is.list(para) && !is.singleString(para))
       stop("'sampleGroups' should be either a list or a string", call.=FALSE)
@@ -945,7 +950,8 @@ is.singleLogical <- function(para){
   is.logical(para) && length(para) == 1L && !is.na(para)
 }
 all.binaryValues <- function(para){
-  all( para %in% c(0, 1, NA) )
+  ( all(is.integer(para)) || all(is.numeric(para)) ) && 
+    all( para %in% c(0, 1, NA) )
 }
 all.integerValues <- function(para){
   lg <- ( all(is.integer(para)) || all(is.numeric(para)) ) && 

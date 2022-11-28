@@ -26,7 +26,7 @@ Options: "ref" and "dpi".
 \item{gtype}{
 a single character value specifying the graph type.
 Options: "rmap", "amap", "mmap" and "mmapDetailed". The "rmap" option returns regulatory maps represented by 
-TFs and targets (regulons); "amap" computes association maps among regulons (estimates the overlap using the Jaccard Coefficient); "mmap" and "mmapDetailed" return modulated maps derived from the \code{\link[RTN:tni.conditional]{tni.conditional}} function.
+TFs and targets (regulons); "amap" computes association maps among regulons (estimates the overlap using the Jaccard Coefficient); "mmap" and "mmapDetailed" returns modulated maps derived from the \code{\link[RTN:tni.conditional]{tni.conditional}} function.
 }
 \item{minRegulonSize}{
 a single integer or numeric value specifying the minimum number of 
@@ -73,7 +73,7 @@ rtni <- tni.permutation(rtni)
 rtni <- tni.bootstrap(rtni)
 rtni <- tni.dpi.filter(rtni, eps=0)
 
-# get the regulatory map
+# get a regulatory map
 g <- tni.graph(rtni, tnet="dpi", gtype="rmap", 
                regulatoryElements=c("PTTG1","E2F2","FOXM1"))
 
@@ -87,7 +87,7 @@ addLegend.color(rdp, g, type="edge")
 relax(rdp, p1=20, p3=50, p4=50, p5=10, p8=50, ps=TRUE)
 #...it should take some time to relax!
 
-# get the association map
+# get an association map
 resetd(rdp)
 g <- tni.graph(rtni, tnet="ref", gtype="amap")
 addGraph(rdp,g)

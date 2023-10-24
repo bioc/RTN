@@ -1,7 +1,7 @@
 Package: RTN
 Type: Package
 Title: RTN: Reconstruction of Transcriptional regulatory Networks and analysis of regulons
-Version: 2.26.0
+Version: 2.27.0
 Author: Clarice Groeneveld [ctb], Gordon Robertson [ctb], Xin Wang [aut], Michael Fletcher [aut], Florian Markowetz [aut], Kerstin Meyer [aut], and Mauro Castro [aut]
 Maintainer: Mauro Castro <mauro.a.castro@gmail.com>
 Depends: R (>= 3.6.3), methods,

@@ -86,27 +86,7 @@ regulons <- tni.get(rtni, what = "regulons.and.mode", idkey = "SYMBOL")
 head(regulons$FOXM1)
 ``` 
 
-The absolute value of a weight represents the MI value, while the sign (+/-) indicates the predicted mode of action based on the Pearson's correlation between the regulator and its targets. We can also retrieve the inferred regulons into an `igraph-class` object [@igraph2] using the `tni.graph()` function, which sets some basic graph attributes for visualization in the **RedeR** R package [@Castro2012].
-
-```{r label='Get graph', eval=TRUE}
-g <- tni.graph(rtni, regulatoryElements = c("FOXM1","E2F2","PTTG1"))
-``` 
-
-The next chunk shows how to plot the `igraph-class` object using **RedeR** (**Figure 1**).
-
-```{r label='Plot graph', eval=FALSE}
-library(RedeR)
-rdp <- RedPort()
-calld(rdp)
-addGraph(rdp, g, layout=NULL)
-addLegend.color(rdp, g, type="edge")
-addLegend.shape(rdp, g)
-relax(rdp, ps = TRUE)
-``` 
-
-![title](fig1.png)
-<b>Figure 1.</b> Graph representation of three regulons inferred by the <b>RTN</b> package.
-
+The absolute value of a weight represents the MI value, while the sign (+/-) indicates the predicted mode of action based on the Pearson's correlation between the regulator and its targets.
 
 ## Transcriptional Network Analysis (TNA)
 

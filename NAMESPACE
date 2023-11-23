@@ -10,7 +10,6 @@ exportMethods(
   "tni.bootstrap",
   "tni.dpi.filter",
   "tni.get",
-  "tni.graph",
   "tni.conditional",
   "tni.gsea2",
   "tni.area3",
@@ -43,7 +42,9 @@ export(
   "upgradeTNA",
   "tni.alpha.adjust",
   "tni.plot.checks",
-  "tni.plot.sre"
+  "tni.plot.sre",
+  
+  "tni.graph"
 )
 import(methods)
 importFrom(minet, aracne)

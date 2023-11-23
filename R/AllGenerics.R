@@ -47,11 +47,6 @@ setGeneric("tni.area3",
                     samples=NULL, features=NULL, 
                     refsamp=NULL, log=FALSE, verbose=TRUE, doSizeFilter=NULL)
              standardGeneric("tni.area3"), package="RTN")
-setGeneric("tni.graph",
-           function(object, tnet="dpi", gtype="rmap", 
-                    minRegulonSize=15, regulatoryElements=NULL, 
-                    amapFilter="quantile", amapCutoff=NULL, ntop=NULL, ...)
-             standardGeneric("tni.graph"), package="RTN")
 setGeneric("tni.regulon.summary",
            function(object, regulatoryElements = NULL, verbose = TRUE)
                standardGeneric("tni.regulon.summary"), package="RTN")

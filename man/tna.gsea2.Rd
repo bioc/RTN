@@ -6,13 +6,15 @@ Two-tailed Gene Set Enrichment Analysis (GSEA) over a list of regulons.
 }
 
 \description{
-This function takes a TNA object and returns a CMAP-like analysis obtained by two-tailed GSEA over a list of regulons in a transcriptional network (with multiple hypothesis testing corrections).
+This function takes a TNA object and returns a CMAP-like analysis obtained
+by two-tailed GSEA over a list of regulons in a transcriptional network 
+(with multiple hypothesis testing corrections).
 }
 
 \usage{
 tna.gsea2(object, pValueCutoff=0.05, pAdjustMethod="BH", minRegulonSize=15, 
 sizeFilterMethod="posORneg", nPermutations=1000, exponent=1, tnet="dpi", 
-signature=c("phenotype","hits"), tfs=NULL, verbose=TRUE, doSizeFilter=NULL)
+signature=c("phenotype","hits"), tfs=NULL, verbose=TRUE)
 }
 
 \arguments{
@@ -34,7 +36,17 @@ elements in a regulon that must map to elements of the gene universe.
 Gene sets with fewer than this number are removed from the analysis.
 }
 \item{sizeFilterMethod}{
-a single character value specifying the use of the 'minRegulonSize' argument, which is applyed to regulon's positive and negative targets. Options: "posANDneg", "posORneg", "posPLUSneg". For "posANDneg", the number of both positive and negative targets should be > 'minRegulonSize'; for "posORneg", the number of either positive or negative targets should be > 'minRegulonSize'; and for "posPLUSneg", the number of all targets should be > 'minRegulonSize'.
+a single character value specifying the use of the 'minRegulonSize' argument, 
+which is applyed to regulon's positive and negative targets. 
+Options: "posANDneg", "posORneg", "posORnegTrim", "posSUMneg".
+For "posANDneg", both the number of positive and the number of negative targets 
+must be >= 'minRegulonSize';  
+for "posORneg", either the number of positive or the number of negative targets 
+must be >= 'minRegulonSize' (both subsets are retained);  
+for "posORnegTrim", either the number of positive or the number of negative targets 
+must be >= 'minRegulonSize', and subsets with size < 'minRegulonSize' are discarded;  
+and for "posSUMneg", the combined number of positive and negative targets 
+must be >= 'minRegulonSize'.
 }
 \item{nPermutations}{
 a single integer or numeric value specifying the number of permutations 
@@ -45,11 +57,15 @@ a single integer or numeric value used in weighting phenotypes in GSEA
 (see 'gseaScores' function at HTSanalyzeR).
 }
 \item{tnet}{
-a single character value specifying which transcriptional network should to used to 
-compute the GSEA analysis. Options: "dpi" and "ref".
+a single character value specifying which transcriptional network should to 
+used to compute the GSEA analysis. Options: "dpi" and "ref".
 }
 \item{signature}{
-a single character value specifying which signature to use in the GSEA method. This could be the 'phenotype' already provided by the user (usually log2 differential expression values) or a 'phenotype' derived from the 'hits'; see \code{\link[RTN:tni2tna.preprocess]{tni2tna.preprocess}} for details on 'phenotype' and 'hits' parameters.
+a single character value specifying which signature to use in the GSEA method. 
+This could be the 'phenotype' already provided by the user 
+(usually log2 differential expression values) or a 'phenotype' derived from 
+the 'hits'; see \code{\link[RTN:tni2tna.preprocess]{tni2tna.preprocess}} for 
+details on 'phenotype' and 'hits' parameters.
 }
 \item{tfs}{
 an optional vector with transcription factor identifiers.
@@ -58,13 +74,11 @@ an optional vector with transcription factor identifiers.
 a single logical value specifying to display detailed messages (when 
 verbose=TRUE) or not (when verbose=FALSE).
 }
-\item{doSizeFilter}{
-'doSizeFilter' is deprecated, please use the 'filterSize' parameter.
-}
 }
 
 \value{
-a data frame in the slot "results", see 'gsea2' option in \code{\link[RTN:tna.get]{tna.get}}.
+a data frame in the slot "results", see 'gsea2' option in 
+\code{\link[RTN:tna.get]{tna.get}}.
 }
 
 \author{

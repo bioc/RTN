@@ -511,7 +511,7 @@ setMethod(
   function(object, pValueCutoff=0.05, pAdjustMethod="BH", minRegulonSize=15, 
            sizeFilterMethod="posORneg", nPermutations=1000, exponent=1, 
            tnet="dpi", signature=c("phenotype","hits"), tfs=NULL,
-           verbose=TRUE, doSizeFilter=NULL){
+           verbose=TRUE){
     
     #---check compatibility
     object <- upgradeTNA(object)
@@ -545,16 +545,6 @@ setMethod(
     object@summary$para$gsea2[1,] <- c(pValueCutoff, 
                                        pAdjustMethod, minRegulonSize, 
                                        nPermutations, exponent, tnet)
-    
-    if(!is.null(doSizeFilter)){
-      warning("'doSizeFilter' is deprecated, please use the 'sizeFilterMethod' parameter.")
-      tnai.checks(name="doSizeFilter",para=doSizeFilter)
-      if(doSizeFilter){
-        sizeFilterMethod="posANDneg"
-      } else {
-        sizeFilterMethod="posORneg"
-      }
-    }
     
     ##------check phenotype for gsea2
     if(signature=="phenotype"){
@@ -603,7 +593,7 @@ setMethod(
     if(sizeFilterMethod=="posANDneg"){
       idx <- regcounts$Positive >= minRegulonSize & 
         regcounts$Negative >= minRegulonSize
-    } else if(sizeFilterMethod=="posORneg"){
+    } else if(sizeFilterMethod %in% c("posORneg", "posORnegTrim")){
       idx <- regcounts$Positive >= minRegulonSize | 
         regcounts$Negative >= minRegulonSize
     } else {
@@ -611,6 +601,20 @@ setMethod(
     }
     tfs <- tfs[tfs%in%rownames(regcounts)[idx]]
     listOfRegulonsAndMode <- listOfRegulonsAndMode[tfs]
+    
+    ##-----remove partial regs, below the minRegulonSize
+    if(sizeFilterMethod=="posORnegTrim"){
+        for(nm in names(listOfRegulonsAndMode)){
+            reg <- listOfRegulonsAndMode[[nm]]
+            if(sum(reg <0 ) < minRegulonSize){
+                reg <- reg[reg > 0]
+            }
+            if(sum(reg>0) < minRegulonSize){
+                reg <- reg[reg < 0]
+            }
+            listOfRegulonsAndMode[[nm]] <- reg
+        } 
+    }
     
     ##-----stop when no regulon passes the size requirement
     if(length(listOfRegulonsAndMode)==0){

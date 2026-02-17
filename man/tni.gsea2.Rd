@@ -15,7 +15,7 @@ Uses GSEA2 algorithm to compute regulon activity for
 tni.gsea2(object, minRegulonSize=15, sizeFilterMethod="posORneg", scale=FALSE, 
 exponent=1, tnet="dpi", regulatoryElements=NULL, features=NULL, samples=NULL, 
 refsamp=samples, log=TRUE, alternative=c("two.sided", "less", "greater"), 
-targetContribution=FALSE, additionalData=FALSE, verbose=TRUE, doSizeFilter=NULL)
+targetContribution=FALSE, additionalData=FALSE, verbose=TRUE)
 }
 
 \arguments{
@@ -28,11 +28,21 @@ a single integer or numeric value specifying the minimum number of elements in
 a regulon. Regulons smaller than this number are removed from the analysis.
 }
 \item{sizeFilterMethod}{
-a single character value specifying the use of the 'minRegulonSize' argument, which is applyed to regulon's positive and negative targets. Options: "posANDneg", "posORneg", "posPLUSneg". For "posANDneg", the number of both positive and negative targets should be > 'minRegulonSize'; for "posORneg", the number of either positive or negative targets should be > 'minRegulonSize'; and for "posPLUSneg", the number of all targets should be > 'minRegulonSize'.
+a single character value specifying the use of the 'minRegulonSize' argument, 
+which is applyed to regulon's positive and negative targets. 
+Options: "posANDneg", "posORneg", "posORnegTrim", "posSUMneg".
+For "posANDneg", both the number of positive and the number of negative targets 
+must be >= 'minRegulonSize';  
+for "posORneg", either the number of positive or the number of negative targets 
+must be >= 'minRegulonSize' (both subsets are retained);
+for "posORnegTrim", either the number of positive or the number of negative targets 
+must be >= 'minRegulonSize', and subsets with size < 'minRegulonSize' are discarded;  
+and for "posSUMneg", the combined number of positive and negative targets 
+must be >= 'minRegulonSize'.s
 }
 \item{scale}{A logical value specifying if expression values should be 
-centered and scaled across samples (when verbose=TRUE) or 
-not (when verbose=FALSE).
+centered and scaled across samples (when scale=TRUE) or 
+not (when scale=FALSE).
 }
 \item{exponent}{
 a single integer or numeric value used in weighting phenotypes in GSEA.
@@ -57,7 +67,9 @@ differential expression calculations. If not provided, then the average of
 all samples will be used as reference.
 }
 \item{log}{
-a logical value. If TRUE, it will check whether the expression values are provided as logged data; if not, it will performe a log2 transformation on expression values before the differential expression calculations.
+a logical value. If TRUE, it will check whether the expression values are 
+provided as logged data; if not, it will performe a log2 transformation on 
+expression values before the differential expression calculations.
 }
 \item{alternative}{
 a character string specifying the alternative hypothesis, must be one 
@@ -76,9 +88,6 @@ to return the additional data objects (when verbose=TRUE) or not
 \item{verbose}{
 a single logical value specifying to display detailed messages (when verbose=TRUE) 
 or not (when verbose=FALSE).
-}
-\item{doSizeFilter}{
-'doSizeFilter' is deprecated, please use the 'sizeFilterMethod' parameter.
 }
 }
 

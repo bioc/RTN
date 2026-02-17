@@ -405,8 +405,7 @@ setMethod(
                  scale=FALSE, exponent=1, tnet="dpi", regulatoryElements=NULL, 
                  features=NULL, samples=NULL, refsamp=samples, log=TRUE, 
                  alternative=c("two.sided", "less", "greater"), 
-                 targetContribution=FALSE, additionalData=FALSE, verbose=TRUE, 
-                 doSizeFilter=NULL){
+                 targetContribution=FALSE, additionalData=FALSE, verbose=TRUE){
     
     #---check compatibility
     object <- upgradeTNI(object)
@@ -436,16 +435,6 @@ setMethod(
     object@para$gsea2<-list(minRegulonSize=minRegulonSize, exponent=exponent,
                             tnet=tnet, sizeFilterMethod=sizeFilterMethod, 
                             alternative=alternative, scale=scale, log=log)
-    
-    if(!is.null(doSizeFilter)){
-      warning("'doSizeFilter' is deprecated, please use the 'sizeFilterMethod' parameter.")
-      tnai.checks(name="doSizeFilter",para=doSizeFilter)
-      if(doSizeFilter){
-        sizeFilterMethod="posANDneg"
-      } else {
-        sizeFilterMethod="posORneg"
-      }
-    }
     
     ##------ get gexp
     gexp <- object@gexp[object@targetElements,,drop=FALSE]
@@ -487,9 +476,9 @@ setMethod(
       if(!all(idx)){
         stop("'samples' should list only valid names!")
       }
-      samples<-colnames(gexp)[colnames(gexp) %in% samples]
+      samples <- colnames(gexp)[colnames(gexp) %in% samples]
     } else {
-      samples<-colnames(gexp)
+      samples <- colnames(gexp)
     }
     
     ##----- set features
@@ -506,9 +495,9 @@ setMethod(
     
     ##-----get regulons
     if(tnet=="ref"){
-      listOfRegulonsAndMode<-tni.get(object,what="refregulons.and.mode")
+      listOfRegulonsAndMode <- tni.get(object, what="refregulons.and.mode")
     } else {
-      listOfRegulonsAndMode<-tni.get(object,what="regulons.and.mode")
+      listOfRegulonsAndMode <- tni.get(object, what="regulons.and.mode")
     }
     
     ##-----set regs
@@ -524,16 +513,16 @@ setMethod(
       if(length(regulatoryElements)==0)
         stop("'regulatoryElements' argument has no valid names!")
     } else {
-      regulatoryElements<-object@regulatoryElements
+      regulatoryElements <- object@regulatoryElements
     }
-    listOfRegulonsAndMode<-listOfRegulonsAndMode[regulatoryElements]
+    listOfRegulonsAndMode <- listOfRegulonsAndMode[regulatoryElements]
     
     ##-----check regulon size
     regcounts <- .regulonCounts(listOfRegulonsAndMode)
     if(sizeFilterMethod=="posANDneg"){
       idx <- regcounts$Positive >= minRegulonSize & 
         regcounts$Negative >= minRegulonSize
-    } else if(sizeFilterMethod=="posORneg"){
+    } else if(sizeFilterMethod %in% c("posORneg", "posORnegTrim")){
       idx <- regcounts$Positive >= minRegulonSize | 
         regcounts$Negative >= minRegulonSize
     } else {
@@ -543,13 +532,27 @@ setMethod(
       regulatoryElements%in%rownames(regcounts)[idx]]
     listOfRegulonsAndMode <- listOfRegulonsAndMode[regulatoryElements]
     
+    ##-----remove partial regs, below the minRegulonSize
+    if(sizeFilterMethod=="posORnegTrim"){
+      for(nm in names(listOfRegulonsAndMode)){
+        reg <- listOfRegulonsAndMode[[nm]]
+        if(sum(reg <0 ) < minRegulonSize){
+          reg <- reg[reg > 0]
+        }
+        if(sum(reg>0) < minRegulonSize){
+          reg <- reg[reg < 0]
+        }
+        listOfRegulonsAndMode[[nm]] <- reg
+      } 
+    }
+    
     ##-----stop when no regulon passes the size requirement
     if(length(listOfRegulonsAndMode)==0){
       stop("no regulon passed the 'minRegulonSize' requirement!")
     }
     
     #-----get phenotypes
-    phenotypes <- gexp-gxref
+    phenotypes <- gexp - gxref
     
     #-----reset names to integer values
     listOfRegulons <- lapply(listOfRegulonsAndMode, names)
@@ -558,7 +561,7 @@ setMethod(
       names(listOfRegulonsAndMode[[i]]) <- match(names(reg), rownames(phenotypes))
     }
     rnames_phenotypes <- rownames(phenotypes)
-    rownames(phenotypes)<-1:nrow(phenotypes)
+    rownames(phenotypes) <- seq_len(nrow(phenotypes))
     
     ##-----get ranked phenotypes
     phenoranks <- apply(-phenotypes, 2, rank)
@@ -589,32 +592,32 @@ setMethod(
       regulonActivity$positive <- t(sapply(res, function(r) r$positive))
       regulonActivity$negative <- t(sapply(res, function(r) r$negative))
     } else {
-      if(verbose)cat("-Performing two-tailed GSEA...\n")
-      if(verbose)cat("--For", length(listOfRegulonsAndMode), "regulon(s) and",
+      if(verbose) cat("-Performing two-tailed GSEA...\n")
+      if(verbose) cat("--For", length(listOfRegulonsAndMode), "regulon(s) and",
                      length(samples),'sample(s)...\n')
-      if(verbose)pb <- txtProgressBar(style=3)
+      if(verbose) pb <- txtProgressBar(style=3)
       regulonActivity<-list()
       for(i in 1:length(samples)){
         res <- .run.tni.gsea2.alternative(
-          listOfRegulonsAndMode=listOfRegulonsAndMode,
-          phenotype=phenotypes[, samples[i]],
-          phenorank=phenoranks[, samples[i]],
-          exponent=exponent,
-          alternative=alternative
+          listOfRegulonsAndMode = listOfRegulonsAndMode,
+          phenotype = phenotypes[, samples[i]],
+          phenorank = phenoranks[, samples[i]],
+          exponent = exponent,
+          alternative = alternative
         )
-        regulonActivity$differential<-rbind(regulonActivity$differential,
-                                            res$differential[regulatoryElements])
-        regulonActivity$positive<-rbind(regulonActivity$positive,
-                                        res$positive[regulatoryElements])
-        regulonActivity$negative<-rbind(regulonActivity$negative,
-                                        res$negative[regulatoryElements])
+        regulonActivity$differential <- rbind(regulonActivity$differential,
+          res$differential[regulatoryElements])
+        regulonActivity$positive <- rbind(regulonActivity$positive,
+          res$positive[regulatoryElements])
+        regulonActivity$negative <- rbind(regulonActivity$negative,
+          res$negative[regulatoryElements])
         if(verbose) setTxtProgressBar(pb, i/length(samples))
       }
       if(verbose) close(pb)
     }
-    rownames(regulonActivity$differential)<-samples
-    rownames(regulonActivity$positive)<-samples
-    rownames(regulonActivity$negative)<-samples
+    rownames(regulonActivity$differential) <- samples
+    rownames(regulonActivity$positive) <- samples
+    rownames(regulonActivity$negative) <- samples
     regulonActivity <- .tni.stratification.gsea2(regulonActivity)
     if(targetContribution){
       tc <- .target.contribution(listOfRegulonsAndMode, regulonActivity, 
@@ -631,12 +634,13 @@ setMethod(
       regulonActivity$data$exponent <- exponent
       regulonActivity$data$alternative <- alternative
     } else {
-      colnames(regulonActivity$differential)<-names(regulatoryElements)
-      colnames(regulonActivity$positive)<-names(regulatoryElements)
-      colnames(regulonActivity$negative)<-names(regulatoryElements)
-      colnames(regulonActivity$status)<-names(regulatoryElements)
+      colnames(regulonActivity$differential) <- names(regulatoryElements)
+      colnames(regulonActivity$positive) <- names(regulatoryElements)
+      colnames(regulonActivity$negative) <- names(regulatoryElements)
+      colnames(regulonActivity$status) <- names(regulatoryElements)
       regulonActivity$regulatoryElements <- regulatoryElements
     }
+    
     object@results$regulonActivity <- regulonActivity
     
     #---
@@ -653,7 +657,7 @@ setMethod(
   "TNI",function(object, minRegulonSize=15, sizeFilterMethod="posORneg",
                  scale=FALSE, tnet="dpi", regulatoryElements=NULL, 
                  samples=NULL, features=NULL, refsamp=NULL, log=FALSE, 
-                 verbose=TRUE, doSizeFilter=NULL){
+                 verbose=TRUE){
     
     #---check compatibility
     object <- upgradeTNI(object)
@@ -679,16 +683,6 @@ setMethod(
     object@para$area3 <- list(minRegulonSize=minRegulonSize, 
                               sizeFilterMethod=sizeFilterMethod,
                               scale=scale, tnet=tnet, log=log)
-    
-    if(!is.null(doSizeFilter)){
-      warning("'doSizeFilter' is deprecated, please use the 'sizeFilterMethod' parameter.")
-      tnai.checks(name="doSizeFilter",para=doSizeFilter)
-      if(doSizeFilter){
-        sizeFilterMethod="posANDneg"
-      } else {
-        sizeFilterMethod="posORneg"
-      }
-    }
     
     ##------ compute reference gx vec
     gexp <- object@gexp[object@targetElements,,drop=FALSE]
@@ -1842,15 +1836,15 @@ upgradeTNI <- function(object){
       object@targetElements <- rownames(object@rowAnnotation)
     }
     if(is.null(object@summary$targetElements)){
-      sum.info.targetElements<-matrix(,1,2)
-      rownames(sum.info.targetElements)<-"targetElements"
-      colnames(sum.info.targetElements)<-c("input","valid") 
+      sum.info.targetElements <- matrix(,1,2)
+      rownames(sum.info.targetElements) <- "targetElements"
+      colnames(sum.info.targetElements) <- c("input","valid") 
       object@summary$targetElements <- sum.info.targetElements
     }
     if(is.null(object@summary$regulatoryElements)){
-      sum.info.regulatoryElements<-matrix(,1,2)
-      rownames(sum.info.regulatoryElements)<-"regulatoryElements"
-      colnames(sum.info.regulatoryElements)<-c("input","valid") 
+      sum.info.regulatoryElements <- matrix(,1,2)
+      rownames(sum.info.regulatoryElements) <- "regulatoryElements"
+      colnames(sum.info.regulatoryElements) <- c("input","valid") 
       object@summary$regulatoryElements <- sum.info.regulatoryElements
     }
     sum.info.results <- object@summary$results

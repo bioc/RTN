@@ -67,19 +67,13 @@ setMethod(
 setMethod(
   "tni.annotate.regulons",
   "TNI",
-  function(object, geneSetList, sampleSetList = NULL, regulatoryElements = NULL, 
+  function(object, geneSetList, sampleSet = NULL, regulatoryElements = NULL, 
            minSetSize = 15, sizeFilterMethod="posORneg",
            exponent = 1, verbose = TRUE){
     
     #-- Basic checks
     if(object@status["DPI.filter"]!="[x]")
       stop("input 'object' needs dpi analysis!")
-    if(is.null(sampleSetList)){
-      if(missing(geneSetList)) stop("missing 'geneSetList'.")
-      tnai.checks("geneSetList", geneSetList)
-    } else {
-      tnai.checks("sampleSetList",sampleSetList)
-    }
     tnai.checks("regulatoryElements",regulatoryElements)
     tnai.checks("minSetSize", minSetSize)
     tnai.checks("sizeFilterMethod", sizeFilterMethod)
@@ -93,20 +87,21 @@ setMethod(
     if(verbose)cat("-Preprocessing for input data...\n")
     
     #--- check geneSetList
-    if(is.null(sampleSetList)){
-      if(is.null(names(geneSetList)))
-        stop("'geneSetList' should be named (unique names)!")
-      if(any(duplicated(names(geneSetList))))
-        stop("'geneSetList' should have unique names!")
-      geneSetList <- .preprocess.genesets(object, geneSetList, 
-                                          minSetSize, verbose)
+    if(is.null(names(geneSetList)))
+      stop("'geneSetList' should be named (unique names)!")
+    if(any(duplicated(names(geneSetList))))
+      stop("'geneSetList' should have unique names!")
+    geneSetList <- .preprocess.genesets(object, geneSetList, 
+      minSetSize, verbose)
+    
+    #--- check sampleSet
+    colAnnotation <- tni.get(object, "colAnnotation")
+    if(!is.null(sampleSet)){
+      sampleSet <- intersect(sampleSet, rownames(colAnnotation))
+      if(length(sampleSet) < 10)
+        stop("'sampleSet' should have at least 10 samples in the 'TNI' object.")
     } else {
-      if(is.null(names(sampleSetList)))
-        stop("'sampleSetList' should be named (unique names)!")
-      if(any(duplicated(names(sampleSetList))))
-        stop("'sampleSetList' should have unique names!")
-      sampleSetList <- .preprocess.sampsets(object, sampleSetList, 
-                                            minSetSize, verbose)
+      sampleSet <- rownames(colAnnotation)
     }
     
     #--- check regulatoryElements
@@ -147,24 +142,15 @@ setMethod(
     }
     
     if(verbose) cat("--Checking log space... ")
-    gexp <- tni.get(object, "gexp")
+    gexp <- tni.get(object, "gexp")[, sampleSet]
     if(.isUnloggedData(gexp)){
       if(verbose) cat("applying log2 transformation!\n")
       gexp <- .log2transform(gexp)
     } else {
       if(verbose)cat("OK!\n")
     }
-    if(is.null(sampleSetList)){
-      results <- .annotate.regulons.gsea2.1(listOfRegulonsAndMode, 
-                                            geneSetList, gexp, 
-                                            regulatoryElements, 
-                                            exponent, verbose)
-    } else {
-      results <- .annotate.regulons.gsea2.2(listOfRegulonsAndMode, 
-                                            sampleSetList, gexp, 
-                                            regulatoryElements, 
-                                            exponent, verbose)
-    }
+    results <- .annotate.regulons.gsea2(listOfRegulonsAndMode, 
+      geneSetList, gexp, regulatoryElements, exponent, verbose)
     results <- t(results$differential)
     
     return(results)
@@ -421,9 +407,9 @@ setMethod(
 }
 
 ##------------------------------------------------------------------------------
-.annotate.regulons.gsea2.1 <- function(listOfRegulonsAndMode, geneSetList, gexp,
-                                       regulatoryElements, exponent, verbose){
- 
+.annotate.regulons.gsea2 <- function(listOfRegulonsAndMode, geneSetList, gexp,
+  regulatoryElements, exponent, verbose){
+  
   #-----get phenotypes
   genesets <- names(geneSetList)
   phenotypes <- sapply(genesets, function(gs){
@@ -480,65 +466,6 @@ setMethod(
 }
 
 ##------------------------------------------------------------------------------
-.annotate.regulons.gsea2.2 <- function(listOfRegulonsAndMode, sampleSetList, 
-                                       gexp, regulatoryElements, 
-                                       exponent, verbose){
-  
-  #-----get phenotypes
-  sgroups <- names(sampleSetList)
-  phenotypes <- sapply(sgroups, function(spg){
-    samps <- sampleSetList[[spg]]
-    sp1 <- names(samps[samps==1])
-    sp2 <- names(samps[samps==0])
-    apply(gexp[,sp1], 1, mean) - apply(gexp[,sp2], 1, mean)
-  })
-  
-  #-----reset names to integer values
-  listOfRegulons <- lapply(listOfRegulonsAndMode, names)
-  for(i in names(listOfRegulonsAndMode)){
-    reg <- listOfRegulonsAndMode[[i]]
-    names(listOfRegulonsAndMode[[i]]) <- match(names(reg),rownames(phenotypes))
-  }
-  rownames(phenotypes)<-1:nrow(phenotypes)
-  
-  ##-----get ranked phenotypes
-  phenoranks <- apply(-phenotypes, 2, rank)
-  colnames(phenoranks) <- colnames(phenotypes)
-  rownames(phenoranks) <- rownames(phenotypes)
-  
-  if(verbose)cat("-Performing two-tailed GSEA...\n")
-  if(verbose)cat("--For", length(listOfRegulonsAndMode), "regulon(s) and",
-                 length(sgroups),'sample set(s)...\n')
-  if(verbose)pb <- txtProgressBar(style=3)
-  regulonActivity<-list()
-  for(i in 1:length(sgroups)){
-    res <- .run.tni.gsea2.alternative(
-      listOfRegulonsAndMode=listOfRegulonsAndMode,
-      phenotype=phenotypes[, sgroups[i]],
-      phenorank=phenoranks[, sgroups[i]],
-      exponent=exponent,
-      alternative="two.sided"
-    )
-    regulonActivity$differential<-rbind(regulonActivity$differential,
-                                        res$differential[regulatoryElements])
-    regulonActivity$positive<-rbind(regulonActivity$positive,
-                                    res$positive[regulatoryElements])
-    regulonActivity$negative<-rbind(regulonActivity$negative,
-                                    res$negative[regulatoryElements])
-    if(verbose) setTxtProgressBar(pb, i/length(sgroups))
-  }
-  if(verbose) close(pb)
-  rownames(regulonActivity$differential) <- sgroups
-  rownames(regulonActivity$positive) <- sgroups
-  rownames(regulonActivity$negative) <- sgroups
-  colnames(regulonActivity$differential)<-names(regulatoryElements)
-  colnames(regulonActivity$positive)<-names(regulatoryElements)
-  colnames(regulonActivity$negative)<-names(regulatoryElements)
-  regulonActivity$regulatoryElements <- regulatoryElements
-  return(regulonActivity)
-}
-
-##------------------------------------------------------------------------------
 .preprocess.genesets <- function(object, geneSetList, minSetSize, verbose){
   ##----Checking geneSetList
   ids <- unique(unlist(geneSetList, use.names = FALSE))
@@ -575,35 +502,5 @@ setMethod(
   return(geneSetList)
 }
 
-##------------------------------------------------------------------------------
-.preprocess.sampsets <- function(object, sampleSetList, minSetSize, verbose){
-  ##----Checking sampleSetList
-  ids <- unique(unlist(sampleSetList, use.names = FALSE))
-  colAnnotation <- tni.get(object, 'colAnnotation')
-  if(verbose) cat("--Checking 'sampleSetList'...\n")
-  sampleSetList <- lapply(sampleSetList, function(lt){
-    if(!is.vector(lt) || !all.binaryValues(lt)){
-      stop("'sampleSetList' should list numerical or integer vectors, with '0s' and '1s'.")
-    }
-    if(is.null(names(lt))){
-      stop("Vectors listed in 'sampleSetList' should be named.")
-    }
-    lt <- lt[!is.na(lt)]
-    lt <- lt[lt%in%c(0,1)]
-    lt[names(lt)%in%rownames(colAnnotation)]
-  })
-  sz0 <- unlist(lapply(sampleSetList, function(lt){
-    sum(lt==0)
-  }))
-  sz1 <- unlist(lapply(sampleSetList, function(lt){
-    sum(lt==1)
-  }))
-  sampleSetList <- sampleSetList[sz0>=minSetSize & sz1>=minSetSize]
-  if(length(sampleSetList)==0)
-    stop("input sets in the 'sampleSetList' contains no useful data!\n", 
-         call.=FALSE)
-  
-  return(sampleSetList)
-}
 
 

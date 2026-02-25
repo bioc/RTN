@@ -10,7 +10,7 @@ This function calculates an enrichment score between gene sets and regulons.
 }
 
 \usage{
-tni.annotate.regulons(object, geneSetList, sampleSetList = NULL, 
+tni.annotate.regulons(object, geneSetList, sampleSet = NULL, 
 regulatoryElements = NULL, minSetSize = 15, sizeFilterMethod="posORneg", 
 exponent = 1, verbose = TRUE)
 }
@@ -25,10 +25,8 @@ method.
 \item{geneSetList}{
 a list with gene sets.
 }
-\item{sampleSetList}{
-an optional list with sample sets. The 'sampleSetList' should list numerical or 
-integer vectors, with '0s' and '1s', which are used to split samples into
-two groups. This option overrides the 'geneSetList' parameter (see Details).
+\item{sampleSet}{
+an optional vector of samples.
 }
 \item{regulatoryElements}{
 a vector of valid regulatory elements (e.g. transcription factors).

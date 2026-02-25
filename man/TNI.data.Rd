@@ -11,8 +11,8 @@ A minimum TNI object that can be used to demonstrate RTN functionalities.
 \usage{data(stni)}
 
 \format{
-  \code{stni}{A TNI-class with a subset of samples and genes from 
-  the Fletcher2013b package.}
+\strong{stni}, A TNI-class with a subset of samples and genes from the 
+Fletcher2013b package.
 }
 
 \details{

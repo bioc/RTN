@@ -12,8 +12,7 @@ Uses \code{\link{aREA}} 3-tail algorithm to compute regulon activity for
 
 \usage{
 tni.area3(object, minRegulonSize=15, sizeFilterMethod="posORneg", scale=FALSE, tnet="dpi", 
-regulatoryElements=NULL, samples=NULL, features=NULL, refsamp=NULL, log=FALSE, verbose=TRUE, 
-doSizeFilter=NULL)
+regulatoryElements=NULL, samples=NULL, features=NULL, refsamp=NULL, log=FALSE, verbose=TRUE)
 }
 
 \arguments{
@@ -58,10 +57,6 @@ space.
 \item{verbose}{
 a single logical value specifying to display detailed messages (when verbose=TRUE) 
 or not (when verbose=FALSE).
-}
-\item{doSizeFilter}{
-a logical value. If TRUE, negative and positive targets are independently verified by the 
-'minRegulonSize' argument.
 }
 }
 

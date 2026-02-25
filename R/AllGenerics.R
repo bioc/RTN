@@ -39,13 +39,13 @@ setGeneric("tni.gsea2",
                     samples=NULL, refsamp=samples, log=TRUE,
                     alternative=c("two.sided", "less", "greater"),
                     targetContribution=FALSE, additionalData=FALSE, 
-                    verbose=TRUE, doSizeFilter=NULL)
+                    verbose=TRUE)
              standardGeneric("tni.gsea2"), package="RTN")
 setGeneric("tni.area3",
            function(object, minRegulonSize=15, sizeFilterMethod="posORneg", 
                     scale=FALSE, tnet="dpi", regulatoryElements=NULL, 
                     samples=NULL, features=NULL, 
-                    refsamp=NULL, log=FALSE, verbose=TRUE, doSizeFilter=NULL)
+                    refsamp=NULL, log=FALSE, verbose=TRUE)
              standardGeneric("tni.area3"), package="RTN")
 setGeneric("tni.regulon.summary",
            function(object, regulatoryElements = NULL, verbose = TRUE)
@@ -58,7 +58,7 @@ setGeneric("tni.overlap.genesets",
                     pAdjustMethod = "BH", verbose = TRUE)
              standardGeneric("tni.overlap.genesets"), package="RTN")
 setGeneric("tni.annotate.regulons",
-           function(object, geneSetList, sampleSetList = NULL, 
+           function(object, geneSetList, sampleSet = NULL, 
                     regulatoryElements = NULL, minSetSize = 15, 
                     sizeFilterMethod="posORneg", exponent = 1, verbose = TRUE)
              standardGeneric("tni.annotate.regulons"), package="RTN")
@@ -102,7 +102,7 @@ setGeneric("tna.gsea2",
                     minRegulonSize=15, sizeFilterMethod="posORneg", 
                     nPermutations=1000, exponent=1, tnet="dpi", 
                     signature=c("phenotype","hits"), tfs=NULL,  
-                    verbose=TRUE, doSizeFilter=NULL) 
+                    verbose=TRUE) 
              standardGeneric("tna.gsea2"), package="RTN")
 setGeneric("tna.get",
            function(object, what="summary", order=TRUE, ntop=NULL, 

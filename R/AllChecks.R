@@ -12,7 +12,7 @@ tnai.checks <- function(name, para, supp) {
       stop("'maxgap' should be an integer value >=0!\n",call.=FALSE)
   }
   else if(name=="sizeFilterMethod") {
-    opts <- c("posPLUSneg","posORneg","posANDneg")
+    opts <- c("posANDneg", "posORneg", "posORnegTrim", "posSUMneg")
     if(!is.singleString(para) || !(para %in% opts))
       stop(paste("'sizeFilterMethod' should be any one of the options: \n", 
                  opts ),call.=FALSE )
